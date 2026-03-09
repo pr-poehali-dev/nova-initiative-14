@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=PT+Mono&family=Roboto+Mono:ital,wght@0,400;0,700;1,400&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -7,6 +7,13 @@
 :root {
   --foreground-rgb: 0, 0, 0;
   --background-rgb: 255, 255, 255;
+  --drawing-bg: #faf8f0;
+  --drawing-line: #1a1a2e;
+  --drawing-line-thin: #3a3a5e;
+  --drawing-accent: #c0392b;
+  --drawing-blue: #2c3e80;
+  --drawing-grid: rgba(26, 26, 46, 0.06);
+  --drawing-paper: #f5f3e8;
 }
 
 html {
@@ -14,9 +21,311 @@ html {
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-rgb));
-  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  color: var(--drawing-line);
+  background: var(--drawing-bg);
+  font-family: "PT Mono", "Roboto Mono", "Courier New", monospace;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.font-gost {
+  font-family: "Roboto Mono", "PT Mono", monospace;
+  font-style: italic;
+}
+
+.font-gost-upright {
+  font-family: "PT Mono", "Roboto Mono", monospace;
+}
+
+.drawing-frame {
+  border: 3px solid var(--drawing-line);
+  outline: 1px solid var(--drawing-line);
+  outline-offset: 6px;
+  position: relative;
+}
+
+.drawing-frame::before {
+  content: "";
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  bottom: -10px;
+  left: -22px;
+  border: 1px solid var(--drawing-line);
+  pointer-events: none;
+}
+
+.hatching {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 4px,
+    rgba(26, 26, 46, 0.07) 4px,
+    rgba(26, 26, 46, 0.07) 5px
+  );
+}
+
+.hatching-dense {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 2px,
+    rgba(26, 26, 46, 0.1) 2px,
+    rgba(26, 26, 46, 0.1) 3px
+  );
+}
+
+.hatching-blue {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 4px,
+    rgba(44, 62, 128, 0.12) 4px,
+    rgba(44, 62, 128, 0.12) 5px
+  );
+}
+
+.grid-bg {
+  background-image:
+    linear-gradient(var(--drawing-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--drawing-grid) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.center-line {
+  border-top: 1px dashed var(--drawing-line-thin);
+  position: relative;
+}
+
+.center-line::before,
+.center-line::after {
+  content: "";
+  position: absolute;
+  top: -1px;
+  width: 8px;
+  height: 1px;
+  background: var(--drawing-line-thin);
+}
+
+.center-line::before {
+  left: 0;
+}
+.center-line::after {
+  right: 0;
+}
+
+.dimension-line {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.dimension-line::before,
+.dimension-line::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--drawing-line-thin);
+}
+
+.dimension-line::before {
+  margin-right: 8px;
+}
+
+.dimension-line::after {
+  margin-left: 8px;
+}
+
+.dim-arrow-left,
+.dim-arrow-right {
+  position: relative;
+}
+
+.dim-arrow-left::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-right: 8px solid var(--drawing-line-thin);
+}
+
+.dim-arrow-right::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 8px solid var(--drawing-line-thin);
+}
+
+.stamp-table {
+  border-collapse: collapse;
+}
+
+.stamp-table td,
+.stamp-table th {
+  border: 1.5px solid var(--drawing-line);
+  padding: 2px 6px;
+  font-size: 11px;
+  font-family: "Roboto Mono", monospace;
+  font-style: italic;
+  white-space: nowrap;
+}
+
+.stamp-table .thick-border {
+  border-width: 2.5px;
+}
+
+.zone-marker {
+  font-family: "Roboto Mono", monospace;
+  font-style: italic;
+  font-size: 10px;
+  color: var(--drawing-line-thin);
+  position: absolute;
+}
+
+.roughness-symbol {
+  display: inline-flex;
+  align-items: flex-end;
+  font-size: 10px;
+  font-style: italic;
+  line-height: 1;
+}
+
+.roughness-symbol::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 12px;
+  border-left: 1.5px solid var(--drawing-line);
+  border-bottom: 1.5px solid var(--drawing-line);
+  transform: skewX(-30deg);
+  margin-right: 2px;
+}
+
+.section-callout {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-callout::after {
+  content: "";
+  display: inline-block;
+  width: 40px;
+  height: 1.5px;
+  background: var(--drawing-line);
+}
+
+.btn-drawing {
+  border: 2px solid var(--drawing-line);
+  background: transparent;
+  color: var(--drawing-line);
+  font-family: "Roboto Mono", monospace;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 10px 24px;
+  position: relative;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.btn-drawing:hover {
+  background: var(--drawing-line);
+  color: var(--drawing-bg);
+}
+
+.btn-drawing-accent {
+  border-color: var(--drawing-accent);
+  color: var(--drawing-accent);
+}
+
+.btn-drawing-accent:hover {
+  background: var(--drawing-accent);
+  color: white;
+}
+
+.card-drawing {
+  border: 1.5px solid var(--drawing-line);
+  position: relative;
+  background: var(--drawing-bg);
+}
+
+.card-drawing::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  border-bottom: 1.5px solid var(--drawing-line);
+  background: var(--drawing-paper);
+}
+
+.tolerance {
+  font-size: 9px;
+  vertical-align: super;
+  font-style: italic;
+}
+
+.extension-line-v {
+  width: 1px;
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--drawing-line-thin) 0px,
+    var(--drawing-line-thin) 6px,
+    transparent 6px,
+    transparent 10px
+  );
+}
+
+.extension-line-h {
+  height: 1px;
+  background: repeating-linear-gradient(
+    to right,
+    var(--drawing-line-thin) 0px,
+    var(--drawing-line-thin) 6px,
+    transparent 6px,
+    transparent 10px
+  );
+}
+
+input.drawing-input,
+textarea.drawing-input,
+select.drawing-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid var(--drawing-line);
+  font-family: "Roboto Mono", monospace;
+  font-style: italic;
+  color: var(--drawing-line);
+  padding: 6px 0;
+  outline: none;
+  width: 100%;
+}
+
+input.drawing-input:focus,
+textarea.drawing-input:focus,
+select.drawing-input:focus {
+  border-bottom-color: var(--drawing-accent);
+}
+
+input.drawing-input::placeholder,
+textarea.drawing-input::placeholder {
+  color: var(--drawing-line-thin);
+  opacity: 0.5;
 }
 
 @layer utilities {
@@ -27,31 +336,31 @@ body {
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
+    --background: 45 33% 96%;
+    --foreground: 240 33% 14%;
+    --card: 45 33% 96%;
+    --card-foreground: 240 33% 14%;
+    --popover: 45 33% 96%;
+    --popover-foreground: 240 33% 14%;
+    --primary: 240 33% 14%;
+    --primary-foreground: 45 33% 96%;
+    --secondary: 45 20% 90%;
+    --secondary-foreground: 240 33% 14%;
+    --muted: 45 20% 90%;
+    --muted-foreground: 240 10% 40%;
+    --accent: 0 66% 47%;
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
+    --border: 240 33% 14%;
+    --input: 240 10% 70%;
+    --ring: 240 33% 14%;
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
+    --radius: 0px;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -59,40 +368,6 @@ body {
     --sidebar-accent: 240 4.8% 95.9%;
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-  .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
