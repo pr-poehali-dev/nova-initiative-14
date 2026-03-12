@@ -1,0 +1,14 @@
+{
+  "tests": [
+    {
+      "name": "GET tariffs list",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "tariffs": "array"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

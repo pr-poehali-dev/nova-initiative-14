@@ -1,111 +1,34 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
+import funcUrls from "../../backend/func2url.json";
 
-const tariffs = [
-  {
-    pos: "01",
-    duration: "3 мес.",
-    title: "Сопровождение 3 месяца",
-    audience: "Для тех, кто на ранней стадии: тема утверждена, но работа не начата или в самом начале. Есть 3+ месяца до защиты.",
-    format: "12 индивидуальных встреч, смешанный формат (видео + Telegram)",
-    price: "{цена_3м}",
-    includes: [
-      "12 индивидуальных встреч по 60 мин",
-      "Пошаговый план на весь период",
-      "Проверка всех разделов ПЗ и чертежей",
-      "Работа с замечаниями научрука",
-      "Подготовка к защите: презентация + прогон",
-      "Чат-поддержка 10:00–20:00 ежедневно",
-    ],
-    between: "Проверка текста и чертежей между встречами — до 30 стр. или 3 листов КД в неделю.",
-    review: "Проверка материалов: без ограничений в рамках плана",
-    limits: "Ответ на проверку — до 48 часов. Дополнительный объём — по согласованию.",
-    cta: "Записаться на диагностику",
-    ctaTo: "/contacts",
-    popular: false,
-  },
-  {
-    pos: "02",
-    duration: "1 мес.",
-    title: "Групповой месяц",
-    audience: "Бюджет ограничен, но нужна системная работа. Есть 1–1.5 месяца. Подходит, если нужна мотивация группы.",
-    format: "4 групповых занятия (до 4 человек), онлайн",
-    price: "{цена_группа_1м}",
-    includes: [
-      "4 групповых занятия по 90 мин",
-      "Индивидуальный план внутри группы",
-      "Проверка ключевых разделов ПЗ",
-      "Разбор типовых ошибок на примерах группы",
-      "Подготовка к защите в группе",
-      "Чат-поддержка 10:00–20:00 ежедневно",
-    ],
-    between: "Проверка текста между занятиями — до 15 стр. в неделю.",
-    review: "Проверка материалов: до 4 итераций за курс",
-    limits: "Приоритет ответа — 72 часа. Чертежи — базовая проверка оформления.",
-    cta: "Записаться в группу",
-    ctaTo: "/contacts",
-    popular: true,
-  },
-  {
-    pos: "03",
-    duration: "1 мес.",
-    title: "Индивидуальный месяц",
-    audience: "Интенсивная работа: работа частично готова, много замечаний или мало времени. Есть 1–1.5 месяца.",
-    format: "8 индивидуальных встреч, смешанный формат (видео + Telegram)",
-    price: "{цена_инд_1м}",
-    includes: [
-      "8 индивидуальных встреч по 60 мин",
-      "Фокусированный план на месяц",
-      "Проверка основных разделов ПЗ и КД",
-      "Работа с замечаниями научрука",
-      "Подготовка к защите: презентация + прогон",
-      "Чат-поддержка 10:00–20:00 ежедневно",
-    ],
-    between: "Проверка текста и чертежей между встречами — до 25 стр. или 2 листов КД в неделю.",
-    review: "Проверка материалов: без ограничений в рамках плана",
-    limits: "Ответ на проверку — до 48 часов.",
-    cta: "Записаться на диагностику",
-    ctaTo: "/contacts",
-    popular: false,
-  },
-  {
-    pos: "04",
-    duration: "3 дня",
-    title: "Экспресс 3 дня",
-    audience: "Критическая ситуация: не допускают к защите, осталось меньше недели, нужен срочный разбор.",
-    format: "3 индивидуальных встречи, видео + Telegram",
-    price: "{цена_экспресс_3д}",
-    includes: [
-      "3 индивидуальных встречи по 60–90 мин",
-      "Экспресс-аудит текущего состояния работы",
-      "Критические правки: структура, логика, оформление",
-      "Работа с главными замечаниями научрука",
-      "Подготовка к вопросам комиссии",
-      "Чат-поддержка в режиме реального времени",
-    ],
-    between: "Проверка — приоритетная, в течение 12 часов.",
-    review: "Проверка материалов: до 40 стр. за 3 дня",
-    limits: "По согласованию, мест мало. Объём работы ограничен сроком.",
-    cta: "Нужен экспресс-разбор",
-    ctaTo: "/contacts",
-    popular: false,
-    warning: true,
-  },
-];
+interface Tariff {
+  id: number;
+  pos: string;
+  slug: string;
+  title: string;
+  duration: string;
+  audience: string;
+  format: string;
+  price: number;
+  price_label: string | null;
+  includes: string[];
+  between_sessions: string | null;
+  review_policy: string | null;
+  limits_info: string | null;
+  cta_text: string;
+  cta_link: string;
+  is_popular: boolean;
+  is_warning: boolean;
+  sort_order: number;
+}
 
-const comparisonRows = [
-  { label: "Длительность", values: ["3 месяца", "1 месяц", "1 месяц", "3 дня"] },
-  { label: "Формат", values: ["Индивид.", "Группа (до 4)", "Индивид.", "Индивид."] },
-  { label: "Кол-во занятий", values: ["12", "4", "8", "3"] },
-  { label: "Чат 10:00–20:00", values: ["check", "check", "check", "check"] },
-  { label: "Проверка глав между занятиями", values: ["check", "check", "check", "check"] },
-  { label: "Работа с замечаниями научрука", values: ["check", "partial", "check", "check"] },
-  { label: "Проверка логики и структуры", values: ["check", "check", "check", "check"] },
-  { label: "Работа с КД / ЕСКД", values: ["check", "partial", "check", "partial"] },
-  { label: "Подготовка к защите", values: ["check", "check", "check", "check"] },
-  { label: "До дедлайна осталось", values: ["3+ мес.", "1–1.5 мес.", "1–1.5 мес.", "< 1 нед."] },
-  { label: "Цена", values: ["{цена_3м}", "{цена_группа_1м}", "{цена_инд_1м}", "{цена_экспресс_3д}"] },
-];
+const formatPrice = (t: Tariff) => {
+  if (t.price_label) return t.price_label;
+  if (t.price > 0) return t.price.toLocaleString("ru-RU");
+  return "по запросу";
+};
 
 const scenarios = [
   { situation: "Тема утверждена, работа не начата, 3+ мес. до защиты", tariff: "Сопровождение 3 мес." },
@@ -124,7 +47,43 @@ const renderCellValue = (val: string) => {
   return <span>{val}</span>;
 };
 
+const staticComparisonRows = [
+  { label: "Формат", keys: ["format_short"] },
+  { label: "Кол-во занятий", keys: ["sessions_count"] },
+  { label: "Чат 10:00–20:00", values: ["check", "check", "check", "check"] },
+  { label: "Проверка глав между занятиями", values: ["check", "check", "check", "check"] },
+  { label: "Работа с замечаниями научрука", values: ["check", "partial", "check", "check"] },
+  { label: "Проверка логики и структуры", values: ["check", "check", "check", "check"] },
+  { label: "Работа с КД / ЕСКД", values: ["check", "partial", "check", "partial"] },
+  { label: "Подготовка к защите", values: ["check", "check", "check", "check"] },
+  { label: "До дедлайна осталось", values: ["3+ мес.", "1–1.5 мес.", "1–1.5 мес.", "< 1 нед."] },
+];
+
 const Pricing = () => {
+  const [tariffs, setTariffs] = useState<Tariff[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(funcUrls["get-tariffs"])
+      .then((r) => r.json())
+      .then((data) => setTariffs(data.tariffs || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const buildComparisonRows = () => {
+    if (tariffs.length === 0) return [];
+    const rows = [
+      { label: "Длительность", values: tariffs.map((t) => t.duration) },
+      ...staticComparisonRows.map((r) => {
+        if (r.values) return { label: r.label, values: r.values };
+        return { label: r.label, values: tariffs.map(() => "") };
+      }),
+      { label: "Цена", values: tariffs.map((t) => formatPrice(t) + (t.price > 0 ? " ₽" : "")) },
+    ];
+    return rows;
+  };
+
   return (
     <main className="min-h-screen grid-bg">
       <section className="pt-28 pb-16 px-4 md:px-8 max-w-[1200px] mx-auto">
@@ -152,153 +111,170 @@ const Pricing = () => {
       </section>
 
       <section className="px-4 md:px-8 max-w-[1200px] mx-auto pb-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {tariffs.map((t) => (
-            <div
-              key={t.pos}
-              className={`relative flex flex-col ${
-                t.popular
-                  ? "border-2 border-[var(--drawing-accent)]"
-                  : "border-[1.5px] border-[var(--drawing-line)]"
-              }`}
-            >
+        {loading ? (
+          <div className="text-center py-16">
+            <span className="font-gost text-sm text-[var(--drawing-line-thin)]">Загрузка тарифов...</span>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {tariffs.map((t) => (
               <div
-                className={`px-6 py-3 flex justify-between items-center ${
-                  t.popular
-                    ? "bg-[var(--drawing-accent)] text-[var(--drawing-bg)]"
-                    : "bg-[var(--drawing-paper)] border-b-[1.5px] border-[var(--drawing-line)]"
+                key={t.id}
+                className={`relative flex flex-col ${
+                  t.is_popular
+                    ? "border-2 border-[var(--drawing-accent)]"
+                    : "border-[1.5px] border-[var(--drawing-line)]"
                 }`}
               >
-                <span className={`font-gost text-[10px] uppercase tracking-[0.2em] ${t.popular ? "" : "text-[var(--drawing-line-thin)]"}`}>
-                  Поз. {t.pos}{t.popular ? " \u00B7 Популярный" : ""}
-                </span>
-                <span className={`font-gost text-[10px] ${t.popular ? "" : "text-[var(--drawing-line-thin)]"}`}>
-                  {t.duration}
-                </span>
-              </div>
-
-              <div className="p-6 flex flex-col flex-1">
-                <span className="font-gost-upright text-5xl font-bold text-[var(--drawing-line)] opacity-[0.07] leading-none select-none mb-2">
-                  {t.pos}
-                </span>
-
-                <h3 className="font-gost-upright text-xl font-bold uppercase tracking-tight text-[var(--drawing-line)] mb-2">
-                  {t.title}
-                </h3>
-
-                <p className="font-gost text-xs text-[var(--drawing-line-thin)] leading-relaxed mb-3">
-                  {t.audience}
-                </p>
-
-                <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] mb-4">
-                  <span className="uppercase tracking-[0.15em]">Формат:</span> {t.format}
-                </p>
-
-                <div className="extension-line-h w-full mb-4" />
-
-                <p className="font-gost-upright text-2xl font-bold tracking-tight text-[var(--drawing-line)] mb-4">
-                  <span className="text-[var(--drawing-accent)]">{t.price}</span> &#8381;
-                </p>
-
-                <div className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-2">
-                  Что входит
+                <div
+                  className={`px-6 py-3 flex justify-between items-center ${
+                    t.is_popular
+                      ? "bg-[var(--drawing-accent)] text-[var(--drawing-bg)]"
+                      : "bg-[var(--drawing-paper)] border-b-[1.5px] border-[var(--drawing-line)]"
+                  }`}
+                >
+                  <span className={`font-gost text-[10px] uppercase tracking-[0.2em] ${t.is_popular ? "" : "text-[var(--drawing-line-thin)]"}`}>
+                    Поз. {t.pos}{t.is_popular ? " \u00B7 Популярный" : ""}
+                  </span>
+                  <span className={`font-gost text-[10px] ${t.is_popular ? "" : "text-[var(--drawing-line-thin)]"}`}>
+                    {t.duration}
+                  </span>
                 </div>
-                <ul className="space-y-1.5 mb-4">
-                  {t.includes.map((item, idx) => (
-                    <li key={idx} className="flex items-start gap-2 font-gost text-xs text-[var(--drawing-line)]">
-                      <span className="w-3 h-[2px] bg-[var(--drawing-accent)] mt-2 shrink-0" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
 
-                <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] leading-relaxed mb-1">
-                  <span className="font-bold">Между занятиями:</span> {t.between}
-                </p>
-                <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] leading-relaxed mb-1">
-                  <span className="font-bold">Проверка:</span> {t.review}
-                </p>
-                <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] leading-relaxed mb-5 opacity-70">
-                  {t.limits}
-                </p>
+                <div className="p-6 flex flex-col flex-1">
+                  <span className="font-gost-upright text-5xl font-bold text-[var(--drawing-line)] opacity-[0.07] leading-none select-none mb-2">
+                    {t.pos}
+                  </span>
 
-                {t.warning && (
-                  <div className="flex items-center gap-2 mb-4 p-2 border border-[var(--drawing-accent)] bg-[rgba(192,57,43,0.04)]">
-                    <Icon name="AlertTriangle" size={14} className="text-[var(--drawing-accent)] shrink-0" />
-                    <span className="font-gost text-[10px] text-[var(--drawing-accent)]">По согласованию, мест мало</span>
+                  <h3 className="font-gost-upright text-xl font-bold uppercase tracking-tight text-[var(--drawing-line)] mb-2">
+                    {t.title}
+                  </h3>
+
+                  <p className="font-gost text-xs text-[var(--drawing-line-thin)] leading-relaxed mb-3">
+                    {t.audience}
+                  </p>
+
+                  <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] mb-4">
+                    <span className="uppercase tracking-[0.15em]">Формат:</span> {t.format}
+                  </p>
+
+                  <div className="extension-line-h w-full mb-4" />
+
+                  <p className="font-gost-upright text-2xl font-bold tracking-tight text-[var(--drawing-line)] mb-4">
+                    <span className="text-[var(--drawing-accent)]">{formatPrice(t)}</span>
+                    {t.price > 0 && <> &#8381;</>}
+                  </p>
+
+                  <div className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-2">
+                    Что входит
                   </div>
-                )}
+                  <ul className="space-y-1.5 mb-4">
+                    {t.includes.map((item, idx) => (
+                      <li key={idx} className="flex items-start gap-2 font-gost text-xs text-[var(--drawing-line)]">
+                        <span className="w-3 h-[2px] bg-[var(--drawing-accent)] mt-2 shrink-0" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
 
-                <div className="mt-auto">
-                  <Link
-                    to={t.ctaTo}
-                    className={`block text-center py-2.5 font-gost text-xs uppercase tracking-[0.15em] transition-colors ${
-                      t.popular
-                        ? "bg-[var(--drawing-accent)] text-white hover:bg-[var(--drawing-line)] border-2 border-[var(--drawing-accent)] hover:border-[var(--drawing-line)]"
-                        : "border-2 border-[var(--drawing-line)] text-[var(--drawing-line)] hover:bg-[var(--drawing-line)] hover:text-[var(--drawing-bg)]"
-                    }`}
-                  >
-                    {t.cta}
-                  </Link>
+                  {t.between_sessions && (
+                    <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] leading-relaxed mb-1">
+                      <span className="font-bold">Между занятиями:</span> {t.between_sessions}
+                    </p>
+                  )}
+                  {t.review_policy && (
+                    <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] leading-relaxed mb-1">
+                      <span className="font-bold">Проверка:</span> {t.review_policy}
+                    </p>
+                  )}
+                  {t.limits_info && (
+                    <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] leading-relaxed mb-5 opacity-70">
+                      {t.limits_info}
+                    </p>
+                  )}
+
+                  {t.is_warning && (
+                    <div className="flex items-center gap-2 mb-4 p-2 border border-[var(--drawing-accent)] bg-[rgba(192,57,43,0.04)]">
+                      <Icon name="AlertTriangle" size={14} className="text-[var(--drawing-accent)] shrink-0" />
+                      <span className="font-gost text-[10px] text-[var(--drawing-accent)]">По согласованию, мест мало</span>
+                    </div>
+                  )}
+
+                  <div className="mt-auto">
+                    <Link
+                      to={t.cta_link}
+                      className={`block text-center py-2.5 font-gost text-xs uppercase tracking-[0.15em] transition-colors ${
+                        t.is_popular
+                          ? "bg-[var(--drawing-accent)] text-white hover:bg-[var(--drawing-line)] border-2 border-[var(--drawing-accent)] hover:border-[var(--drawing-line)]"
+                          : "border-2 border-[var(--drawing-line)] text-[var(--drawing-line)] hover:bg-[var(--drawing-line)] hover:text-[var(--drawing-bg)]"
+                      }`}
+                    >
+                      {t.cta_text}
+                    </Link>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
 
-      <section className="py-16 px-4 md:px-8 hatching">
-        <div className="max-w-[1200px] mx-auto">
-          <h2 className="section-callout font-gost-upright text-2xl md:text-3xl font-bold tracking-tight mb-3">
-            Сравнение тарифов
-          </h2>
-          <div className="extension-line-h w-48 mb-10" />
+      {!loading && tariffs.length > 0 && (
+        <section className="py-16 px-4 md:px-8 hatching">
+          <div className="max-w-[1200px] mx-auto">
+            <h2 className="section-callout font-gost-upright text-2xl md:text-3xl font-bold tracking-tight mb-3">
+              Сравнение тарифов
+            </h2>
+            <div className="extension-line-h w-48 mb-10" />
 
-          <div className="overflow-x-auto -mx-4 px-4">
-            <table className="stamp-table w-full min-w-[700px]">
-              <thead>
-                <tr>
-                  <th className="text-left !text-xs !font-bold">Параметр</th>
-                  <th className="text-center !text-xs !font-bold">3 мес.</th>
-                  <th className="text-center !text-xs !font-bold border-x-[2.5px] border-[var(--drawing-accent)]">
-                    Группа
-                  </th>
-                  <th className="text-center !text-xs !font-bold">Инд. мес.</th>
-                  <th className="text-center !text-xs !font-bold">Экспресс</th>
-                </tr>
-              </thead>
-              <tbody>
-                {comparisonRows.map((row) => (
-                  <tr key={row.label}>
-                    <td className="text-left !text-[10px] font-bold">{row.label}</td>
-                    {row.values.map((val, vi) => (
-                      <td
-                        key={vi}
-                        className={`text-center !text-[10px] ${vi === 1 ? "border-x-[2.5px] border-[var(--drawing-accent)]" : ""}`}
+            <div className="overflow-x-auto -mx-4 px-4">
+              <table className="stamp-table w-full min-w-[700px]">
+                <thead>
+                  <tr>
+                    <th className="text-left !text-xs !font-bold">Параметр</th>
+                    {tariffs.map((t, i) => (
+                      <th
+                        key={t.id}
+                        className={`text-center !text-xs !font-bold ${i === 1 ? "border-x-[2.5px] border-[var(--drawing-accent)]" : ""}`}
                       >
-                        {renderCellValue(val)}
+                        {t.pos === "01" ? "3 мес." : t.pos === "02" ? "Группа" : t.pos === "03" ? "Инд. мес." : "Экспресс"}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {buildComparisonRows().map((row) => (
+                    <tr key={row.label}>
+                      <td className="text-left !text-[10px] font-bold">{row.label}</td>
+                      {row.values.map((val, vi) => (
+                        <td
+                          key={vi}
+                          className={`text-center !text-[10px] ${vi === 1 ? "border-x-[2.5px] border-[var(--drawing-accent)]" : ""}`}
+                        >
+                          {renderCellValue(val)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                  <tr>
+                    <td className="text-left !text-[10px]" />
+                    {["Диагностика", "В группу", "Диагностика", "Экспресс"].map((label, ci) => (
+                      <td key={ci} className={`text-center ${ci === 1 ? "border-x-[2.5px] border-[var(--drawing-accent)]" : ""}`}>
+                        <Link
+                          to="/contacts"
+                          className="inline-block font-gost text-[9px] uppercase tracking-wider border border-[var(--drawing-line)] px-2 py-1 hover:bg-[var(--drawing-line)] hover:text-[var(--drawing-bg)] transition-colors"
+                        >
+                          {label}
+                        </Link>
                       </td>
                     ))}
                   </tr>
-                ))}
-                <tr>
-                  <td className="text-left !text-[10px]" />
-                  {["Диагностика", "В группу", "Диагностика", "Экспресс"].map((label, ci) => (
-                    <td key={ci} className={`text-center ${ci === 1 ? "border-x-[2.5px] border-[var(--drawing-accent)]" : ""}`}>
-                      <Link
-                        to="/contacts"
-                        className="inline-block font-gost text-[9px] uppercase tracking-wider border border-[var(--drawing-line)] px-2 py-1 hover:bg-[var(--drawing-line)] hover:text-[var(--drawing-bg)] transition-colors"
-                      >
-                        {label}
-                      </Link>
-                    </td>
-                  ))}
-                </tr>
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       <section className="py-16 px-4 md:px-8">
         <div className="max-w-[1200px] mx-auto">
