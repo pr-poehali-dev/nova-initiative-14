@@ -1,43 +1,16 @@
-import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
-import funcUrls from "../../backend/func2url.json";
-
-interface Tariff {
-  id: number;
-  pos: string;
-  slug: string;
-  title: string;
-  duration: string;
-  audience: string;
-  format: string;
-  price: number;
-  price_label: string | null;
-  includes: string[];
-  between_sessions: string | null;
-  review_policy: string | null;
-  limits_info: string | null;
-  cta_text: string;
-  cta_link: string;
-  is_popular: boolean;
-  is_warning: boolean;
-  sort_order: number;
-}
-
-const formatPrice = (t: Tariff) => {
-  if (t.price_label) return t.price_label;
-  if (t.price > 0) return t.price.toLocaleString("ru-RU");
-  return "по запросу";
-};
+import useTariffs, { formatPrice } from "@/hooks/useTariffs";
 
 const scenarios = [
-  { situation: "Тема утверждена, работа не начата, 3+ мес. до защиты", tariff: "Сопровождение 3 мес." },
+  { situation: "Тема утверждена, работа не начата, 3+ мес. до защиты", tariff: "Сопровождение 3 месяца" },
+  { situation: "3+ мес., хочу системно, но бюджет ограничен", tariff: "Групповой 3 месяца" },
   { situation: "1–1.5 мес., работа частично готова", tariff: "Индивидуальный месяц" },
   { situation: "1–1.5 мес., бюджет ограничен", tariff: "Групповой месяц" },
   { situation: "Много замечаний научрука, 2–4 недели", tariff: "Индивидуальный месяц" },
   { situation: "Не допускают к защите, < недели", tariff: "Экспресс 3 дня" },
   { situation: "Не понимаете материал перед защитой", tariff: "Экспресс 3 дня" },
-  { situation: "Хотите спокойно разобраться с нуля", tariff: "Сопровождение 3 мес." },
+  { situation: "Хотите спокойно разобраться с нуля", tariff: "Сопровождение 3 месяца" },
   { situation: "Нужна мотивация и поддержка группы", tariff: "Групповой месяц" },
 ];
 
@@ -47,35 +20,26 @@ const renderCellValue = (val: string) => {
   return <span>{val}</span>;
 };
 
-const staticComparisonRows = [
+const getStaticComparisonRows = (count: number) => [
   { label: "Формат", keys: ["format_short"] },
   { label: "Кол-во занятий", keys: ["sessions_count"] },
-  { label: "Чат 10:00–20:00", values: ["check", "check", "check", "check"] },
-  { label: "Проверка глав между занятиями", values: ["check", "check", "check", "check"] },
-  { label: "Работа с замечаниями научрука", values: ["check", "partial", "check", "check"] },
-  { label: "Проверка логики и структуры", values: ["check", "check", "check", "check"] },
-  { label: "Работа с КД / ЕСКД", values: ["check", "partial", "check", "partial"] },
-  { label: "Подготовка к защите", values: ["check", "check", "check", "check"] },
-  { label: "До дедлайна осталось", values: ["3+ мес.", "1–1.5 мес.", "1–1.5 мес.", "< 1 нед."] },
+  { label: "Чат 10:00–20:00", values: Array(count).fill("check") },
+  { label: "Проверка глав между занятиями", values: Array(count).fill("check") },
+  { label: "Работа с замечаниями научрука", values: Array(count).fill("check") },
+  { label: "Проверка логики и структуры", values: Array(count).fill("check") },
+  { label: "Работа с КД / ЕСКД", values: Array(count).fill("check") },
+  { label: "Подготовка к защите", values: Array(count).fill("check") },
 ];
 
 const Pricing = () => {
-  const [tariffs, setTariffs] = useState<Tariff[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch(funcUrls["get-tariffs"])
-      .then((r) => r.json())
-      .then((data) => setTariffs(data.tariffs || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+  const { tariffs, loading } = useTariffs();
 
   const buildComparisonRows = () => {
     if (tariffs.length === 0) return [];
+    const staticRows = getStaticComparisonRows(tariffs.length);
     const rows = [
       { label: "Длительность", values: tariffs.map((t) => t.duration) },
-      ...staticComparisonRows.map((r) => {
+      ...staticRows.map((r) => {
         if (r.values) return { label: r.label, values: r.values };
         return { label: r.label, values: tariffs.map(() => "") };
       }),
@@ -235,9 +199,9 @@ const Pricing = () => {
                     {tariffs.map((t, i) => (
                       <th
                         key={t.id}
-                        className={`text-center !text-xs !font-bold ${i === 1 ? "border-x-[2.5px] border-[var(--drawing-accent)]" : ""}`}
+                        className={`text-center !text-xs !font-bold ${t.is_popular ? "border-x-[2.5px] border-[var(--drawing-accent)]" : ""}`}
                       >
-                        {t.pos === "01" ? "3 мес." : t.pos === "02" ? "Группа" : t.pos === "03" ? "Инд. мес." : "Экспресс"}
+                        {t.title}
                       </th>
                     ))}
                   </tr>
@@ -249,7 +213,7 @@ const Pricing = () => {
                       {row.values.map((val, vi) => (
                         <td
                           key={vi}
-                          className={`text-center !text-[10px] ${vi === 1 ? "border-x-[2.5px] border-[var(--drawing-accent)]" : ""}`}
+                          className={`text-center !text-[10px] ${tariffs[vi]?.is_popular ? "border-x-[2.5px] border-[var(--drawing-accent)]" : ""}`}
                         >
                           {renderCellValue(val)}
                         </td>
@@ -258,13 +222,13 @@ const Pricing = () => {
                   ))}
                   <tr>
                     <td className="text-left !text-[10px]" />
-                    {["Диагностика", "В группу", "Диагностика", "Экспресс"].map((label, ci) => (
-                      <td key={ci} className={`text-center ${ci === 1 ? "border-x-[2.5px] border-[var(--drawing-accent)]" : ""}`}>
+                    {tariffs.map((t, ci) => (
+                      <td key={ci} className={`text-center ${t.is_popular ? "border-x-[2.5px] border-[var(--drawing-accent)]" : ""}`}>
                         <Link
-                          to="/contacts"
+                          to={t.cta_link}
                           className="inline-block font-gost text-[9px] uppercase tracking-wider border border-[var(--drawing-line)] px-2 py-1 hover:bg-[var(--drawing-line)] hover:text-[var(--drawing-bg)] transition-colors"
                         >
-                          {label}
+                          {t.cta_text}
                         </Link>
                       </td>
                     ))}

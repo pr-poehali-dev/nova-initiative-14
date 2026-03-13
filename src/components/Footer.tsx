@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
+import CONTACT from "@/constants/contactInfo";
 
 const footerLinks = [
   { label: "Программа", to: "/program" },
@@ -48,24 +49,24 @@ const Footer = () => {
               Контакты
             </span>
             <a
-              href="https://t.me/diplom_inzh"
+              href={CONTACT.telegramLink}
               target="_blank"
               rel="noopener noreferrer"
               className="font-gost text-xs text-[var(--drawing-line)] hover:text-[var(--drawing-accent)] transition-colors flex items-center gap-1.5"
             >
               <Icon name="Send" size={12} />
-              Telegram @diplom_inzh
+              Telegram {CONTACT.telegram}
             </a>
             <a
-              href="tel:+73432000000"
+              href={CONTACT.phoneTel}
               className="font-gost text-xs text-[var(--drawing-line)] hover:text-[var(--drawing-accent)] transition-colors flex items-center gap-1.5"
             >
               <Icon name="Phone" size={12} />
-              +7 (343) 200-00-00
+              {CONTACT.phone}
             </a>
             <span className="font-gost text-xs text-[var(--drawing-line-thin)] flex items-center gap-1.5">
               <Icon name="Clock" size={12} />
-              10:00–20:00 ежедневно
+              {CONTACT.workingHoursLabel}
             </span>
           </div>
         </div>

@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
+import useTariffs, { formatPriceWithCurrency } from "@/hooks/useTariffs";
 
-const faqGroups = [
+const buildFaqGroups = (expressPrice: string, accompanyPrice: string) => [
   {
     title: "Этика и законность",
     marker: "Э",
@@ -83,7 +84,7 @@ const faqGroups = [
       {
         id: 12,
         q: "Сколько стоит?",
-        a: "Четыре тарифа: от {цена_экспресс_3д} (экспресс 3\u00A0дня) до {цена_3м} (сопровождение 3\u00A0месяца). Подробности\u00A0\u2014 на странице тарифов. Итоговая стоимость фиксируется на диагностике.",
+        a: `Четыре тарифа: от ${expressPrice} (экспресс 3\u00A0дня) до ${accompanyPrice} (сопровождение 3\u00A0месяца). Подробности\u00A0\u2014 на странице тарифов. Итоговая стоимость фиксируется на диагностике.`,
       },
       {
         id: 13,
@@ -109,7 +110,7 @@ const faqGroups = [
       {
         id: 16,
         q: "Как быстро проверяете?",
-        a: "В течение {срок_проверки_часы} часов в\u00A0рабочее время (10:00\u201320:00). Лимит по объёму зависит от тарифа.",
+        a: "В течение 48 часов в\u00A0рабочее время (10:00\u201320:00). Лимит по объёму зависит от тарифа.",
       },
       {
         id: 17,
@@ -143,6 +144,15 @@ const faqGroups = [
 
 const Faq = () => {
   const [openId, setOpenId] = useState<number | null>(null);
+  const { tariffs } = useTariffs();
+
+  const expressTariff = tariffs.find((t) => t.slug === "express-3d");
+  const accompanyTariff = tariffs.find((t) => t.slug === "accompany-3m");
+
+  const expressPrice = expressTariff ? formatPriceWithCurrency(expressTariff) : "уточняется";
+  const accompanyPrice = accompanyTariff ? formatPriceWithCurrency(accompanyTariff) : "уточняется";
+
+  const faqGroups = buildFaqGroups(expressPrice, accompanyPrice);
 
   const toggle = (id: number) => {
     setOpenId(openId === id ? null : id);
