@@ -92,7 +92,7 @@ const Privacy = () => {
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pl-10">
             <p className="font-gost text-[10px] text-[var(--drawing-line-thin)]">
-              Дата последнего обновления: {"{"}дата{"}"}
+              Дата последнего обновления: 19 апреля 2026
             </p>
             <div className="flex items-center gap-4">
               <Link to="/contacts" className="font-gost text-xs text-[var(--drawing-accent)] hover:underline flex items-center gap-1.5">
