@@ -1,7 +1,10 @@
 import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
+import useTariffs, { formatPrice } from "@/hooks/useTariffs";
 
 const PricingMentorsSection = () => {
+  const { tariffs, loading } = useTariffs();
+
   return (
     <>
       <section className="py-16 px-4 md:px-8 bg-[var(--drawing-line)] text-[var(--drawing-bg)]">
@@ -11,75 +14,50 @@ const PricingMentorsSection = () => {
           </h2>
           <div className="extension-line-h w-48 mb-10 opacity-20" />
 
+          {loading ? (
+            <div className="py-10 text-center">
+              <span className="font-gost text-sm text-[rgba(255,255,255,0.4)]">Загрузка тарифов...</span>
+            </div>
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div className="border border-[var(--drawing-line-thin)] p-0">
-              <div className="bg-[rgba(255,255,255,0.05)] px-6 py-3 border-b border-[var(--drawing-line-thin)] flex justify-between items-center">
-                <span className="font-gost text-[10px] uppercase tracking-[0.2em] text-[rgba(255,255,255,0.4)]">Поз. 01</span>
-                <span className="font-gost text-[10px] text-[rgba(255,255,255,0.4)]">3 мес.</span>
+            {tariffs.map((t) => (
+              <div
+                key={t.id}
+                className={t.is_popular
+                  ? "border-2 border-[var(--drawing-accent)] p-0 relative"
+                  : "border border-[var(--drawing-line-thin)] p-0"
+                }
+              >
+                <div className={`px-6 py-3 flex justify-between items-center ${t.is_popular ? "bg-[var(--drawing-accent)]" : "bg-[rgba(255,255,255,0.05)] border-b border-[var(--drawing-line-thin)]"}`}>
+                  <span className={`font-gost text-[10px] uppercase tracking-[0.2em] ${t.is_popular ? "" : "text-[rgba(255,255,255,0.4)]"}`}>
+                    Поз. {t.pos}{t.is_popular ? "\u00A0\u00B7 Популярный" : ""}
+                  </span>
+                  <span className={`font-gost text-[10px] ${t.is_popular ? "" : "text-[rgba(255,255,255,0.4)]"}`}>
+                    {t.duration}
+                  </span>
+                </div>
+                <div className="p-6">
+                  <h3 className="font-gost-upright text-lg font-bold mb-1 uppercase tracking-tight">{t.title}</h3>
+                  <p className="font-gost text-xs text-[rgba(255,255,255,0.5)] mb-3">{t.format}</p>
+                  <p className="font-gost-upright text-2xl font-bold tracking-tight mb-4">
+                    <span className="text-[var(--drawing-accent)]">{formatPrice(t)}</span>
+                    {t.price > 0 && <> &#8381;</>}
+                  </p>
+                  <Link
+                    to={t.cta_link}
+                    className={`block text-center py-2.5 font-gost text-xs uppercase tracking-[0.15em] transition-colors ${
+                      t.is_popular
+                        ? "bg-[var(--drawing-accent)] hover:bg-white hover:text-[var(--drawing-line)]"
+                        : "border border-[rgba(255,255,255,0.3)] hover:bg-[var(--drawing-accent)] hover:border-[var(--drawing-accent)]"
+                    }`}
+                  >
+                    {t.cta_text}
+                  </Link>
+                </div>
               </div>
-              <div className="p-6">
-                <h3 className="font-gost-upright text-lg font-bold mb-1 uppercase tracking-tight">Сопровождение 3 мес.</h3>
-                <p className="font-gost text-xs text-[rgba(255,255,255,0.5)] mb-3">12 индивидуальных встреч</p>
-                <p className="font-gost-upright text-2xl font-bold tracking-tight mb-4">
-                  <span className="text-[var(--drawing-accent)]">{"{"}цена_3м{"}"}</span> ₽
-                </p>
-                <Link to="/contacts" className="block text-center border border-[rgba(255,255,255,0.3)] py-2.5 font-gost text-xs uppercase tracking-[0.15em] hover:bg-[var(--drawing-accent)] hover:border-[var(--drawing-accent)] transition-colors">
-                  Диагностика
-                </Link>
-              </div>
-            </div>
-
-            <div className="border-2 border-[var(--drawing-accent)] p-0 relative">
-              <div className="bg-[var(--drawing-accent)] px-6 py-3 flex justify-between items-center">
-                <span className="font-gost text-[10px] uppercase tracking-[0.2em]">Поз. 02&nbsp;&middot; Популярный</span>
-                <span className="font-gost text-[10px]">1 мес.</span>
-              </div>
-              <div className="p-6">
-                <h3 className="font-gost-upright text-lg font-bold mb-1 uppercase tracking-tight">Групповой месяц</h3>
-                <p className="font-gost text-xs text-[rgba(255,255,255,0.5)] mb-3">4 групповых занятия</p>
-                <p className="font-gost-upright text-2xl font-bold tracking-tight mb-4">
-                  <span className="text-[var(--drawing-accent)]">{"{"}цена_группа_1м{"}"}</span> ₽
-                </p>
-                <Link to="/contacts" className="block text-center bg-[var(--drawing-accent)] py-2.5 font-gost text-xs uppercase tracking-[0.15em] hover:bg-white hover:text-[var(--drawing-line)] transition-colors">
-                  В группу
-                </Link>
-              </div>
-            </div>
-
-            <div className="border border-[var(--drawing-line-thin)] p-0">
-              <div className="bg-[rgba(255,255,255,0.05)] px-6 py-3 border-b border-[var(--drawing-line-thin)] flex justify-between items-center">
-                <span className="font-gost text-[10px] uppercase tracking-[0.2em] text-[rgba(255,255,255,0.4)]">Поз. 03</span>
-                <span className="font-gost text-[10px] text-[rgba(255,255,255,0.4)]">1 мес.</span>
-              </div>
-              <div className="p-6">
-                <h3 className="font-gost-upright text-lg font-bold mb-1 uppercase tracking-tight">Индивидуальный месяц</h3>
-                <p className="font-gost text-xs text-[rgba(255,255,255,0.5)] mb-3">8 индивидуальных встреч</p>
-                <p className="font-gost-upright text-2xl font-bold tracking-tight mb-4">
-                  <span className="text-[var(--drawing-accent)]">{"{"}цена_инд_1м{"}"}</span> ₽
-                </p>
-                <Link to="/contacts" className="block text-center border border-[rgba(255,255,255,0.3)] py-2.5 font-gost text-xs uppercase tracking-[0.15em] hover:bg-[var(--drawing-accent)] hover:border-[var(--drawing-accent)] transition-colors">
-                  Диагностика
-                </Link>
-              </div>
-            </div>
-
-            <div className="border border-[var(--drawing-line-thin)] p-0">
-              <div className="bg-[rgba(255,255,255,0.05)] px-6 py-3 border-b border-[var(--drawing-line-thin)] flex justify-between items-center">
-                <span className="font-gost text-[10px] uppercase tracking-[0.2em] text-[rgba(255,255,255,0.4)]">Поз. 04</span>
-                <span className="font-gost text-[10px] text-[rgba(255,255,255,0.4)]">3 дня</span>
-              </div>
-              <div className="p-6">
-                <h3 className="font-gost-upright text-lg font-bold mb-1 uppercase tracking-tight">Экспресс 3 дня</h3>
-                <p className="font-gost text-xs text-[rgba(255,255,255,0.5)] mb-3">3 индивидуальных встречи</p>
-                <p className="font-gost-upright text-2xl font-bold tracking-tight mb-4">
-                  <span className="text-[var(--drawing-accent)]">{"{"}цена_экспресс_3д{"}"}</span> ₽
-                </p>
-                <Link to="/contacts" className="block text-center border border-[rgba(255,255,255,0.3)] py-2.5 font-gost text-xs uppercase tracking-[0.15em] hover:bg-[var(--drawing-accent)] hover:border-[var(--drawing-accent)] transition-colors">
-                  Экспресс&#8209;разбор
-                </Link>
-              </div>
-            </div>
+            ))}
           </div>
+          )}
 
           <p className="font-gost text-[10px] text-[rgba(255,255,255,0.5)] mb-4">
             Итоговая стоимость фиксируется при согласовании объёма и&nbsp;графика.
