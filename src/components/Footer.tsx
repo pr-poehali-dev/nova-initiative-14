@@ -20,9 +20,11 @@ const Footer = () => {
       <div className="max-w-[1200px] mx-auto px-4 py-10">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
           <div className="flex flex-col gap-3">
-            <Link to="/" className="font-gost text-lg tracking-wide flex items-center gap-0 w-fit">
-              <span className="text-[var(--drawing-accent)] font-bold">Диплом-Инж</span>
-              <span className="text-[var(--drawing-line-thin)]">.рф</span>
+            <Link to="/" className="font-gost font-black text-lg tracking-wide flex items-center gap-0 w-fit uppercase">
+              <span className="text-[var(--drawing-accent)]">ДИПЛОМ</span>
+              <span className="text-[var(--drawing-line)]">-</span>
+              <span className="text-[var(--drawing-accent)]">ИНЖ</span>
+              <span className="text-[var(--drawing-line)]">.РФ</span>
             </Link>
             <p className="font-gost-upright text-xs text-[var(--drawing-line-thin)] leading-relaxed max-w-[280px]">
               Наставничество по дипломному проекту&nbsp;&middot; УрФУ&nbsp;&middot; Екатеринбург
