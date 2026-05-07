@@ -97,38 +97,42 @@ const PricingMentorsSection = () => {
           </h2>
           <div className="extension-line-h w-48 mb-10" />
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            {[
-              {
-                name: "Алексей К.",
-                spec: "Инженер-конструктор, технология машиностроения",
-                exp: "Опыт: 8 лет на производстве",
-              },
-              {
-                name: "Дмитрий В.",
-                spec: "Инженер-конструктор, детали машин и механизмы",
-                exp: "Опыт: 6 лет проектирования",
-              },
-              {
-                name: "Екатерина С.",
-                spec: "Инженер, сварочное производство и металлоконструкции",
-                exp: "Опыт: 5 лет в отрасли",
-              },
-            ].map((mentor) => (
-              <div key={mentor.name} className="border-[1.5px] border-[var(--drawing-line)] p-6 relative">
-                <div className="w-12 h-12 border-[1.5px] border-[var(--drawing-line)] flex items-center justify-center mb-4">
-                  <Icon name="User" size={20} />
+          <div className="drawing-frame p-6 md:p-10 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div>
+                <div className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-4">
+                  Кто наши наставники
                 </div>
-                <h3 className="font-gost-upright text-base font-bold mb-1">{mentor.name}</h3>
-                <p className="font-gost text-xs text-[var(--drawing-line-thin)] leading-relaxed mb-2">{mentor.spec}</p>
-                <p className="font-gost text-[10px] text-[var(--drawing-accent)]">{mentor.exp}</p>
+                <p className="font-gost text-sm text-[var(--drawing-line)] leading-relaxed mb-4">
+                  Практикующие инженеры&#8209;конструкторы и&nbsp;инженеры&#8209;технологи с&nbsp;суммарным опытом более&nbsp;40&nbsp;лет в&nbsp;машиностроении. Каждый сегодня работает на&nbsp;производственном предприятии Екатеринбурга&nbsp;&mdash; не&nbsp;преподаватель, а&nbsp;действующий специалист.
+                </p>
+                <p className="font-gost text-sm text-[var(--drawing-line)] leading-relaxed">
+                  Все прошли защиту в&nbsp;УрФУ и&nbsp;знают требования кафедр изнутри: какие вопросы задаёт комиссия, что проверяет научрук, как правильно оформить КД по&nbsp;ЕСКД.
+                </p>
               </div>
-            ))}
+              <div>
+                <div className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-4">
+                  Специализации
+                </div>
+                <ul className="space-y-2">
+                  {[
+                    "Конструирование деталей и узлов машин",
+                    "Технология машиностроения, режимы резания",
+                    "CAD/CAE: КОМПАС-3D, SolidWorks, AutoCAD, Ansys",
+                    "Конструкторская документация по ЕСКД и ГОСТ",
+                    "Сварочное производство и металлоконструкции",
+                    "Детали машин: редукторы, передачи, подшипники",
+                  ].map((item) => (
+                    <li key={item} className="flex items-start gap-2.5 font-gost text-xs text-[var(--drawing-line)] leading-relaxed">
+                      <span className="w-3 h-[2px] bg-[var(--drawing-accent)] mt-2 shrink-0" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           </div>
 
-          <p className="font-gost text-xs text-[var(--drawing-line-thin)] leading-relaxed max-w-2xl mb-4">
-            Все наставники&nbsp;&mdash; практикующие инженеры Екатеринбурга, которые сегодня работают на машиностроительных предприятиях и&nbsp;знают требования УрФУ из&nbsp;первых рук.
-          </p>
           <Link to="/experts" className="font-gost text-xs text-[var(--drawing-accent)] hover:underline">
             Подробнее о наставниках&nbsp;&rarr;
           </Link>
