@@ -1,7 +1,7 @@
 import { useState, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
-import CONTACT from "@/constants/contactInfo";
+import useContacts from "@/hooks/useContacts";
 
 interface FormData {
   name: string;
@@ -30,6 +30,7 @@ const initialForm: FormData = {
 };
 
 const Contacts = () => {
+  const { contacts: c } = useContacts();
   const [form, setForm] = useState<FormData>(initialForm);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [submitted, setSubmitted] = useState(false);
@@ -99,7 +100,7 @@ const Contacts = () => {
                 <p className="font-gost text-sm text-[var(--drawing-line-thin)] leading-relaxed max-w-md mx-auto mb-6">
                   Мы свяжемся в&nbsp;течение 2&nbsp;часов в&nbsp;рабочее время (10:00&ndash;20:00).
                   <br />
-                  Или напишите нам в&nbsp;Telegram: <a href={CONTACT.telegramLink} target="_blank" rel="noopener noreferrer" className="text-[var(--drawing-accent)] hover:underline">{CONTACT.telegram}</a>
+                  Или напишите нам в&nbsp;Telegram: <a href={c.telegram_link} target="_blank" rel="noopener noreferrer" className="text-[var(--drawing-accent)] hover:underline">{c.telegram}</a>
                 </p>
                 <button
                   className="btn-drawing text-xs"
@@ -320,7 +321,7 @@ const Contacts = () => {
 
               <div className="space-y-4">
                 <a
-                  href={CONTACT.telegramLink}
+                  href={c.telegram_link}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 font-gost text-sm text-[var(--drawing-line)] hover:text-[var(--drawing-accent)] transition-colors"
@@ -328,24 +329,24 @@ const Contacts = () => {
                   <span className="shrink-0 w-9 h-9 border-[1.5px] border-[var(--drawing-line)] flex items-center justify-center">
                     <Icon name="Send" size={16} />
                   </span>
-                  Telegram {CONTACT.telegram}
+                  Telegram {c.telegram}
                 </a>
 
                 <a
-                  href={CONTACT.phoneTel}
+                  href={c.phone_tel}
                   className="flex items-center gap-3 font-gost text-sm text-[var(--drawing-line)] hover:text-[var(--drawing-accent)] transition-colors"
                 >
                   <span className="shrink-0 w-9 h-9 border-[1.5px] border-[var(--drawing-line)] flex items-center justify-center">
                     <Icon name="Phone" size={16} />
                   </span>
-                  {CONTACT.phone}
+                  {c.phone}
                 </a>
 
                 <div className="flex items-center gap-3 font-gost text-sm text-[var(--drawing-line-thin)]">
                   <span className="shrink-0 w-9 h-9 border-[1.5px] border-[var(--drawing-line)] flex items-center justify-center">
                     <Icon name="Clock" size={16} />
                   </span>
-                  {CONTACT.workingHoursLabel} ({CONTACT.city}, {CONTACT.timezone})
+                  {c.working_hours_label} ({c.city}, {c.timezone})
                 </div>
               </div>
             </div>
@@ -384,7 +385,7 @@ const Contacts = () => {
                 Если не хотите заполнять форму&nbsp;&mdash; просто напишите в&nbsp;Telegram. Расскажите тему, сколько времени до защиты и&nbsp;что уже готово.
               </p>
               <a
-                href={CONTACT.telegramLink}
+                href={c.telegram_link}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-drawing text-xs inline-block"

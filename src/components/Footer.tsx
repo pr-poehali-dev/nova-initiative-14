@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
-import CONTACT from "@/constants/contactInfo";
+import useContacts from "@/hooks/useContacts";
 
 const footerLinks = [
   { label: "Программа", to: "/program" },
@@ -13,6 +13,8 @@ const footerLinks = [
 ];
 
 const Footer = () => {
+  const { contacts: c } = useContacts();
+
   return (
     <footer className="border-t-[2.5px] border-[var(--drawing-line)] bg-[var(--drawing-bg)]">
       <div className="max-w-[1200px] mx-auto px-4 py-10">
@@ -55,24 +57,24 @@ const Footer = () => {
               Контакты
             </span>
             <a
-              href={CONTACT.telegramLink}
+              href={c.telegram_link}
               target="_blank"
               rel="noopener noreferrer"
               className="font-gost text-xs text-[var(--drawing-line)] hover:text-[var(--drawing-accent)] transition-colors flex items-center gap-1.5"
             >
               <Icon name="Send" size={12} />
-              Telegram {CONTACT.telegram}
+              Telegram {c.telegram}
             </a>
             <a
-              href={CONTACT.phoneTel}
+              href={c.phone_tel}
               className="font-gost text-xs text-[var(--drawing-line)] hover:text-[var(--drawing-accent)] transition-colors flex items-center gap-1.5"
             >
               <Icon name="Phone" size={12} />
-              {CONTACT.phone}
+              {c.phone}
             </a>
             <span className="font-gost text-xs text-[var(--drawing-line-thin)] flex items-center gap-1.5">
               <Icon name="Clock" size={12} />
-              {CONTACT.workingHoursLabel}
+              {c.working_hours_label}
             </span>
           </div>
         </div>
