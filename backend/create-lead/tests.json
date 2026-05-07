@@ -1,0 +1,23 @@
+{
+  "tests": [
+    {
+      "name": "Создать лид в Битрикс24",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "name": "Тестовый Студент",
+        "contact": "+79001234567",
+        "university": "УрФУ, кафедра ТМС",
+        "topic": "Разработка технологического процесса",
+        "timeLeft": "1-3",
+        "hasChapters": "yes",
+        "pagesReady": "40",
+        "hasComments": "no",
+        "commentsText": ""
+      },
+      "expectedStatus": 200,
+      "expectedBody": {"ok": true},
+      "bodyMatcher": "partial"
+    }
+  ]
+}

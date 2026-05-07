@@ -2,6 +2,7 @@ import { useState, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import useContacts from "@/hooks/useContacts";
+import func2url from "../../backend/func2url.json";
 
 interface FormData {
   name: string;
@@ -34,6 +35,7 @@ const Contacts = () => {
   const [form, setForm] = useState<FormData>(initialForm);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const update = (field: keyof FormData, value: string | boolean) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -50,9 +52,20 @@ const Contacts = () => {
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (validate()) {
+    if (!validate()) return;
+    setLoading(true);
+    try {
+      await fetch(func2url["create-lead"], {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+    } catch (_) {
+      console.error(_);
+    } finally {
+      setLoading(false);
       setSubmitted(true);
     }
   };
@@ -305,8 +318,8 @@ const Contacts = () => {
                     {errors.consent && <p className="font-gost text-[10px] text-[var(--drawing-accent)] mt-1">{errors.consent}</p>}
                   </div>
 
-                  <button type="submit" className="btn-drawing btn-drawing-accent text-xs w-full">
-                    Записаться на диагностику
+                  <button type="submit" disabled={loading} className="btn-drawing btn-drawing-accent text-xs w-full disabled:opacity-60">
+                    {loading ? "Отправляем..." : "Записаться на диагностику"}
                   </button>
                 </form>
               </div>
