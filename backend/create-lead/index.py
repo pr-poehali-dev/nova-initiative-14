@@ -64,6 +64,7 @@ def handler(event: dict, context) -> dict:
         'NAME': name,
         'COMMENTS': comments,
         'SOURCE_ID': 'WEB',
+        'STATUS_ID': 'NEW',
     }
 
     if phone_value:
