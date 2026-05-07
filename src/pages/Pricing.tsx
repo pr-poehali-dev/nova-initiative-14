@@ -56,7 +56,7 @@ const Pricing = () => {
           <div className="zone-marker top-2 right-3">Зона III</div>
 
           <div className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-3">
-            Тарифы и форматы работы&nbsp;&middot; ДИПЛОМ.ИНЖ
+            Тарифы и форматы работы&nbsp;&middot; Диплом-Инж.рф
           </div>
           <div className="extension-line-h w-full mb-6" />
 

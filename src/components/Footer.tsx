@@ -19,8 +19,8 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
           <div className="flex flex-col gap-3">
             <Link to="/" className="font-gost text-lg tracking-wide flex items-center gap-0 w-fit">
-              <span className="text-[var(--drawing-accent)] font-bold">ДИПЛОМ</span>
-              <span className="text-[var(--drawing-line-thin)]">.ИНЖ</span>
+              <span className="text-[var(--drawing-accent)] font-bold">Диплом-Инж</span>
+              <span className="text-[var(--drawing-line-thin)]">.рф</span>
             </Link>
             <p className="font-gost-upright text-xs text-[var(--drawing-line-thin)] leading-relaxed max-w-[280px]">
               Наставничество по дипломному проекту&nbsp;&middot; УрФУ&nbsp;&middot; Екатеринбург
@@ -81,7 +81,7 @@ const Footer = () => {
 
         <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6">
           <p className="font-gost-upright text-[10px] text-[var(--drawing-line-thin)] opacity-70">
-            &copy; {new Date().getFullYear()} ДИПЛОМ.ИНЖ&nbsp;&middot; диплом-инж.рф&nbsp;&middot; Все права защищены.
+            &copy; {new Date().getFullYear()} Диплом-Инж.рф&nbsp;&middot; Все права защищены.
           </p>
 
           <div className="overflow-x-auto">
@@ -89,7 +89,7 @@ const Footer = () => {
               <tbody>
                 <tr>
                   <td rowSpan={2} className="thick-border text-center text-[9px] px-2">
-                    ДИПЛОМ.ИНЖ
+                    Диплом-Инж.рф
                   </td>
                   <td className="text-[9px] text-center">Изм.</td>
                   <td className="text-[9px] text-center">Лист</td>

@@ -76,7 +76,7 @@ const HeroSection = () => {
           <table className="stamp-table">
             <tbody>
               <tr>
-                <td className="thick-border" rowSpan={3}>ДИПЛОМ.ИНЖ</td>
+                <td className="thick-border" rowSpan={3}>Диплом-Инж.рф</td>
                 <td>Лит.</td>
                 <td>Масса</td>
                 <td>Масштаб</td>

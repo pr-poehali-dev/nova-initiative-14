@@ -64,7 +64,7 @@ const Contacts = () => {
           <div className="zone-marker top-2 right-3">Зона VII</div>
 
           <div className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-3">
-            Контакты и запись&nbsp;&middot; ДИПЛОМ.ИНЖ
+            Контакты и запись&nbsp;&middot; Диплом-Инж.рф
           </div>
           <div className="extension-line-h w-full mb-6" />
 

@@ -10,7 +10,7 @@ const Experts = () => {
           <div className="zone-marker top-2 right-3">Зона V</div>
 
           <div className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-3">
-            Команда наставников&nbsp;&middot; ДИПЛОМ.ИНЖ
+            Команда наставников&nbsp;&middot; Диплом-Инж.рф
           </div>
           <div className="extension-line-h w-full mb-6" />
 

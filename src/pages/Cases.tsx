@@ -126,7 +126,7 @@ const Cases = () => {
           <div className="zone-marker top-2 right-3">Зона IV</div>
 
           <div className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-3">
-            Кейсы студентов&nbsp;&middot; ДИПЛОМ.ИНЖ
+            Кейсы студентов&nbsp;&middot; Диплом-Инж.рф
           </div>
           <div className="extension-line-h w-full mb-6" />
 

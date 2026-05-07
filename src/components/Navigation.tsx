@@ -18,8 +18,8 @@ const Navigation = () => {
     <nav className="fixed top-0 w-full z-50 bg-[var(--drawing-bg)] border-b-[2.5px] border-[var(--drawing-line)]">
       <div className="max-w-[1200px] mx-auto px-4 flex items-center justify-between h-14">
         <Link to="/" className="font-gost text-lg tracking-wide flex items-center gap-0 shrink-0">
-          <span className="text-[var(--drawing-accent)] font-bold">ДИПЛОМ</span>
-          <span className="text-[var(--drawing-line-thin)]">.ИНЖ</span>
+          <span className="text-[var(--drawing-accent)] font-bold">Диплом-Инж</span>
+          <span className="text-[var(--drawing-line-thin)]">.рф</span>
         </Link>
 
         <div className="hidden md:flex items-center gap-5 ml-8">
@@ -63,8 +63,8 @@ const Navigation = () => {
               onClick={() => setMenuOpen(false)}
               className="font-gost text-lg tracking-wide flex items-center"
             >
-              <span className="text-[var(--drawing-accent)] font-bold">ДИПЛОМ</span>
-              <span className="text-[var(--drawing-line-thin)]">.ИНЖ</span>
+              <span className="text-[var(--drawing-accent)] font-bold">Диплом-Инж</span>
+              <span className="text-[var(--drawing-line-thin)]">.рф</span>
             </Link>
             <button
               className="flex items-center justify-center w-10 h-10"
