@@ -25,6 +25,12 @@ const Footer = () => {
             <p className="font-gost-upright text-xs text-[var(--drawing-line-thin)] leading-relaxed max-w-[280px]">
               Наставничество по дипломному проекту&nbsp;&middot; УрФУ&nbsp;&middot; Екатеринбург
             </p>
+            <a
+              href="https://xn----7sbhgijhmco4n.xn--p1ai/"
+              className="font-gost text-[10px] uppercase tracking-[0.15em] text-[var(--drawing-line-thin)] hover:text-[var(--drawing-accent)] transition-colors w-fit"
+            >
+              диплом-инж.рф
+            </a>
           </div>
 
           <div className="flex flex-col gap-2">
@@ -75,7 +81,7 @@ const Footer = () => {
 
         <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6">
           <p className="font-gost-upright text-[10px] text-[var(--drawing-line-thin)] opacity-70">
-            &copy; {new Date().getFullYear()} ДИПЛОМ.ИНЖ. Все права защищены.
+            &copy; {new Date().getFullYear()} ДИПЛОМ.ИНЖ&nbsp;&middot; диплом-инж.рф&nbsp;&middot; Все права защищены.
           </p>
 
           <div className="overflow-x-auto">
