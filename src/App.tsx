@@ -16,14 +16,41 @@ import Faq from "./pages/Faq";
 import Contacts from "./pages/Contacts";
 import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
+import { useVisitorTracking, getVisitorData } from "./hooks/useVisitorTracking";
+import func2url from "../backend/func2url.json";
 
 const queryClient = new QueryClient();
+
+const FORM_SUBMITTED_KEY = "vt_form_submitted";
+
+export function markFormSubmitted() {
+  sessionStorage.setItem(FORM_SUBMITTED_KEY, "1");
+}
 
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [pathname]);
+  return null;
+}
+
+function VisitorTracker() {
+  useVisitorTracking();
+
+  useEffect(() => {
+    const handleUnload = () => {
+      if (sessionStorage.getItem(FORM_SUBMITTED_KEY)) return;
+      const data = getVisitorData();
+      if (!data.pages.length) return;
+      const url = (func2url as Record<string, string>)["track-visit"];
+      if (!url) return;
+      navigator.sendBeacon(url, JSON.stringify({ visitor: data }));
+    };
+    window.addEventListener("pagehide", handleUnload);
+    return () => window.removeEventListener("pagehide", handleUnload);
+  }, []);
+
   return null;
 }
 
@@ -34,6 +61,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <ScrollToTop />
+        <VisitorTracker />
         <Navigation />
         <div>
           <Routes>

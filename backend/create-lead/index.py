@@ -28,6 +28,7 @@ def handler(event: dict, context) -> dict:
     pages_ready = body.get('pagesReady', '')
     has_comments = body.get('hasComments', '')
     comments_text = body.get('commentsText', '')
+    visitor = body.get('visitor', {})
 
     time_labels = {
         '3+': 'Больше 3 месяцев',
@@ -46,12 +47,36 @@ def handler(event: dict, context) -> dict:
     if has_chapters == 'yes':
         chapters_block = f'\nСтраниц готово: {pages_ready}' if pages_ready else '\nЕсть написанные главы'
 
+    visitor_block = ''
+    if visitor:
+        pages_visited = ' → '.join(visitor.get('pages', [])) or '—'
+        referrer = visitor.get('referrer', '—')
+        time_on_site = visitor.get('timeOnSite', 0)
+        minutes = time_on_site // 60
+        seconds = time_on_site % 60
+        time_str_visit = f'{minutes} мин {seconds} сек' if minutes else f'{seconds} сек'
+        device = visitor.get('device', '—')
+        utm_parts = []
+        if visitor.get('utmSource'): utm_parts.append(f"utm_source={visitor['utmSource']}")
+        if visitor.get('utmMedium'): utm_parts.append(f"utm_medium={visitor['utmMedium']}")
+        if visitor.get('utmCampaign'): utm_parts.append(f"utm_campaign={visitor['utmCampaign']}")
+        utm_str = ', '.join(utm_parts) if utm_parts else '—'
+        visitor_block = (
+            f'\n\n--- Данные о посещении ---'
+            f'\nПуть по сайту: {pages_visited}'
+            f'\nОткуда пришёл: {referrer}'
+            f'\nВремя на сайте: {time_str_visit}'
+            f'\nУстройство: {device}'
+            f'\nUTM-метки: {utm_str}'
+        )
+
     comments = (
         f'Время до защиты: {time_str}\n'
         f'Университет/кафедра: {university}\n'
         f'Тема ВКР: {topic}'
         f'{chapters_block}'
         f'{comments_block}'
+        f'{visitor_block}'
     )
 
     webhook_url = os.environ['BITRIX24_WEBHOOK_URL'].rstrip('/')

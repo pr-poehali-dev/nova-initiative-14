@@ -2,6 +2,8 @@ import { useState, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import useContacts from "@/hooks/useContacts";
+import { getVisitorData } from "@/hooks/useVisitorTracking";
+import { markFormSubmitted } from "@/App";
 import func2url from "../../backend/func2url.json";
 
 interface FormData {
@@ -57,10 +59,11 @@ const Contacts = () => {
     if (!validate()) return;
     setLoading(true);
     try {
+      markFormSubmitted();
       await fetch(func2url["create-lead"], {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, visitor: getVisitorData() }),
       });
     } catch (_) {
       console.error(_);

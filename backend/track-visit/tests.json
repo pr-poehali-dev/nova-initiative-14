@@ -1,0 +1,29 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Трекинг анонимного посетителя",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "visitor": {
+          "pages": ["Главная", "Тарифы"],
+          "referrer": "https://google.com",
+          "timeOnSite": 95,
+          "device": "Компьютер",
+          "utmSource": "",
+          "utmMedium": "",
+          "utmCampaign": ""
+        }
+      },
+      "expectedStatus": 200,
+      "expectedBody": { "ok": true },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
