@@ -1,0 +1,25 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Создать заявку на вакансию",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "name": "Иван Иванов",
+        "contact": "+79991234567",
+        "education": "УрФУ, машиностроение",
+        "experience": "3 года",
+        "about": "Хочу делиться опытом",
+        "resumeLink": "",
+        "specialization": "Технология машиностроения"
+      },
+      "expectedStatus": 200
+    }
+  ]
+}

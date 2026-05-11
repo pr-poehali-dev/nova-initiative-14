@@ -7,6 +7,9 @@ const navLinks = [
   { label: "Тарифы", to: "/pricing" },
   { label: "Кейсы", to: "/cases" },
   { label: "Наставники", to: "/experts" },
+  { label: "О нас", to: "/about" },
+  { label: "Отзывы", to: "/reviews" },
+  { label: "Вакансии", to: "/vacancies" },
   { label: "FAQ", to: "/faq" },
   { label: "Контакты", to: "/contacts" },
 ];
@@ -24,7 +27,7 @@ const Navigation = () => {
           <span className="text-[var(--drawing-line)]">.РФ</span>
         </Link>
 
-        <div className="hidden md:flex items-center gap-5 ml-8">
+        <div className="hidden md:flex items-center gap-3 lg:gap-4 ml-6">
           {navLinks.map((link) => (
             <Link
               key={link.to}

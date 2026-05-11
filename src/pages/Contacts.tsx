@@ -115,8 +115,12 @@ const Contacts = () => {
                 <div className="extension-line-h w-32 mx-auto my-4" />
                 <p className="font-gost text-sm text-[var(--drawing-line-thin)] leading-relaxed max-w-md mx-auto mb-6">
                   Мы свяжемся в&nbsp;течение 2&nbsp;часов в&nbsp;рабочее время (10:00&ndash;20:00).
-                  <br />
-                  Или напишите нам в&nbsp;Telegram: <a href={c.telegram_link} target="_blank" rel="noopener noreferrer" className="text-[var(--drawing-accent)] hover:underline">{c.telegram}</a>
+                  {c.telegram && c.telegram_link && (
+                    <>
+                      <br />
+                      Или напишите нам в&nbsp;Telegram: <a href={c.telegram_link} target="_blank" rel="noopener noreferrer" className="text-[var(--drawing-accent)] hover:underline">{c.telegram}</a>
+                    </>
+                  )}
                 </p>
                 <button
                   className="btn-drawing text-xs"
@@ -336,34 +340,80 @@ const Contacts = () => {
               </div>
 
               <div className="space-y-4">
-                <a
-                  href={c.telegram_link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 font-gost text-sm text-[var(--drawing-line)] hover:text-[var(--drawing-accent)] transition-colors"
-                >
-                  <span className="shrink-0 w-9 h-9 border-[1.5px] border-[var(--drawing-line)] flex items-center justify-center">
-                    <Icon name="Send" size={16} />
-                  </span>
-                  Telegram {c.telegram}
-                </a>
+                {c.telegram && c.telegram_link && (
+                  <a
+                    href={c.telegram_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 font-gost text-sm text-[var(--drawing-line)] hover:text-[var(--drawing-accent)] transition-colors"
+                  >
+                    <span className="shrink-0 w-9 h-9 border-[1.5px] border-[var(--drawing-line)] flex items-center justify-center">
+                      <Icon name="Send" size={16} />
+                    </span>
+                    Telegram {c.telegram}
+                  </a>
+                )}
 
-                <a
-                  href={c.phone_tel}
-                  className="flex items-center gap-3 font-gost text-sm text-[var(--drawing-line)] hover:text-[var(--drawing-accent)] transition-colors"
-                >
-                  <span className="shrink-0 w-9 h-9 border-[1.5px] border-[var(--drawing-line)] flex items-center justify-center">
-                    <Icon name="Phone" size={16} />
-                  </span>
-                  {c.phone}
-                </a>
+                {c.vk && c.vk_link && (
+                  <a
+                    href={c.vk_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 font-gost text-sm text-[var(--drawing-line)] hover:text-[var(--drawing-accent)] transition-colors"
+                  >
+                    <span className="shrink-0 w-9 h-9 border-[1.5px] border-[var(--drawing-line)] flex items-center justify-center">
+                      <Icon name="Users" size={16} />
+                    </span>
+                    ВКонтакте {c.vk}
+                  </a>
+                )}
 
-                <div className="flex items-center gap-3 font-gost text-sm text-[var(--drawing-line-thin)]">
-                  <span className="shrink-0 w-9 h-9 border-[1.5px] border-[var(--drawing-line)] flex items-center justify-center">
-                    <Icon name="Clock" size={16} />
-                  </span>
-                  {c.working_hours_label} ({c.city}, {c.timezone})
-                </div>
+                {c.max && c.max_link && (
+                  <a
+                    href={c.max_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 font-gost text-sm text-[var(--drawing-line)] hover:text-[var(--drawing-accent)] transition-colors"
+                  >
+                    <span className="shrink-0 w-9 h-9 border-[1.5px] border-[var(--drawing-line)] flex items-center justify-center">
+                      <Icon name="MessageCircle" size={16} />
+                    </span>
+                    MAX {c.max}
+                  </a>
+                )}
+
+                {c.phone && (
+                  <a
+                    href={c.phone_tel || `tel:${c.phone}`}
+                    className="flex items-center gap-3 font-gost text-sm text-[var(--drawing-line)] hover:text-[var(--drawing-accent)] transition-colors"
+                  >
+                    <span className="shrink-0 w-9 h-9 border-[1.5px] border-[var(--drawing-line)] flex items-center justify-center">
+                      <Icon name="Phone" size={16} />
+                    </span>
+                    {c.phone}
+                  </a>
+                )}
+
+                {c.email && (
+                  <a
+                    href={`mailto:${c.email}`}
+                    className="flex items-center gap-3 font-gost text-sm text-[var(--drawing-line)] hover:text-[var(--drawing-accent)] transition-colors"
+                  >
+                    <span className="shrink-0 w-9 h-9 border-[1.5px] border-[var(--drawing-line)] flex items-center justify-center">
+                      <Icon name="Mail" size={16} />
+                    </span>
+                    {c.email}
+                  </a>
+                )}
+
+                {c.working_hours_label && (
+                  <div className="flex items-center gap-3 font-gost text-sm text-[var(--drawing-line-thin)]">
+                    <span className="shrink-0 w-9 h-9 border-[1.5px] border-[var(--drawing-line)] flex items-center justify-center">
+                      <Icon name="Clock" size={16} />
+                    </span>
+                    {c.working_hours_label}{c.city && ` (${c.city}${c.timezone ? `, ${c.timezone}` : ''})`}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -393,22 +443,38 @@ const Contacts = () => {
               </div>
             </div>
 
-            <div className="border-[1.5px] border-[var(--drawing-line)] p-5">
-              <div className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-3">
-                Быстрая связь
-              </div>
-              <p className="font-gost text-xs text-[var(--drawing-line-thin)] leading-relaxed mb-3">
-                Если не хотите заполнять форму&nbsp;&mdash; просто напишите в&nbsp;Telegram. Расскажите тему, сколько времени до защиты и&nbsp;что уже готово.
-              </p>
-              <a
-                href={c.telegram_link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-drawing text-xs inline-block"
-              >
-                Написать в Telegram&nbsp;&rarr;
-              </a>
-            </div>
+            {(() => {
+              const quick = c.telegram_link
+                ? { label: `Написать в Telegram`, href: c.telegram_link, channel: "Telegram", external: true }
+                : c.vk_link
+                ? { label: `Написать ВКонтакте`, href: c.vk_link, channel: "ВКонтакте", external: true }
+                : c.max_link
+                ? { label: `Написать в MAX`, href: c.max_link, channel: "MAX", external: true }
+                : c.phone
+                ? { label: `Позвонить ${c.phone}`, href: c.phone_tel || `tel:${c.phone}`, channel: "по телефону", external: false }
+                : c.email
+                ? { label: `Написать на ${c.email}`, href: `mailto:${c.email}`, channel: "по почте", external: false }
+                : null;
+              if (!quick) return null;
+              return (
+                <div className="border-[1.5px] border-[var(--drawing-line)] p-5">
+                  <div className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-3">
+                    Быстрая связь
+                  </div>
+                  <p className="font-gost text-xs text-[var(--drawing-line-thin)] leading-relaxed mb-3">
+                    Если не хотите заполнять форму&nbsp;&mdash; напишите нам {quick.channel}. Расскажите тему, сколько времени до защиты и&nbsp;что уже готово.
+                  </p>
+                  <a
+                    href={quick.href}
+                    target={quick.external ? "_blank" : undefined}
+                    rel={quick.external ? "noopener noreferrer" : undefined}
+                    className="btn-drawing text-xs inline-block"
+                  >
+                    {quick.label}&nbsp;&rarr;
+                  </a>
+                </div>
+              );
+            })()}
           </div>
         </div>
       </section>

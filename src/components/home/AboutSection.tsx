@@ -5,19 +5,18 @@ const AboutSection = () => {
     <>
       <section className="py-14 px-4 md:px-8 hatching">
         <div className="max-w-[1200px] mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-6">
             {[
-              { num: "120", label: "студентов прошли наставничество" },
-              { num: "94", label: "% допущены к защите" },
-              { num: "6", label: "наставников-инженеров" },
-              { num: "12", label: "лет совокупного опыта" },
-            ].map((stat) => (
-              <div key={stat.label} className="text-center">
-                <p className="font-gost-upright text-4xl md:text-5xl font-bold text-[var(--drawing-line)] leading-none mb-1">
-                  {stat.num}<span className="text-[var(--drawing-accent)]">+</span>
+              { title: "Инженеры, а не репетиторы", desc: "Каждый наставник работает на производстве и ведёт реальные проекты." },
+              { title: "Профиль — машиностроение и механика", desc: "Конструирование, технология, детали машин, CAD/CAE, ЕСКД." },
+              { title: "Учим, а не пишем за вас", desc: "Цель — чтобы вы разбирались в своей работе и могли её защитить." },
+            ].map((item) => (
+              <div key={item.title} className="border-[1.5px] border-[var(--drawing-line)] p-5 bg-[var(--drawing-bg)]">
+                <p className="font-gost-upright text-sm md:text-base font-bold text-[var(--drawing-line)] mb-2">
+                  {item.title}
                 </p>
-                <p className="font-gost text-[11px] text-[var(--drawing-line-thin)] leading-snug">
-                  {stat.label}
+                <p className="font-gost text-xs text-[var(--drawing-line-thin)] leading-relaxed">
+                  {item.desc}
                 </p>
               </div>
             ))}

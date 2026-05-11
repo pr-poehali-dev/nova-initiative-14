@@ -15,6 +15,9 @@ import Experts from "./pages/Experts";
 import Faq from "./pages/Faq";
 import Contacts from "./pages/Contacts";
 import Privacy from "./pages/Privacy";
+import About from "./pages/About";
+import Reviews from "./pages/Reviews";
+import Vacancies from "./pages/Vacancies";
 import NotFound from "./pages/NotFound";
 import { useVisitorTracking, getVisitorData } from "./hooks/useVisitorTracking";
 import func2url from "../backend/func2url.json";
@@ -73,6 +76,9 @@ const App = () => (
             <Route path="/faq" element={<Faq />} />
             <Route path="/contacts" element={<Contacts />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/reviews" element={<Reviews />} />
+            <Route path="/vacancies" element={<Vacancies />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </div>

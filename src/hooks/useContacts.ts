@@ -13,21 +13,27 @@ export interface ContactsData {
   address: string;
   email: string;
   vk: string;
+  vk_link: string;
+  max: string;
+  max_link: string;
   instagram: string;
 }
 
 const FALLBACK: ContactsData = {
-  telegram: "@diplom_inzh",
-  telegram_link: "https://t.me/diplom_inzh",
-  phone: "+7 (343) 200-00-00",
-  phone_tel: "tel:+73432000000",
+  telegram: "",
+  telegram_link: "",
+  phone: "",
+  phone_tel: "",
   working_hours: "10:00–20:00",
   working_hours_label: "Ежедневно 10:00–20:00",
   city: "Екатеринбург",
   timezone: "UTC+5",
-  address: "Екатеринбург, УрФУ",
+  address: "",
   email: "",
   vk: "",
+  vk_link: "",
+  max: "",
+  max_link: "",
   instagram: "",
 };
 
@@ -44,7 +50,7 @@ const fetchContacts = (): Promise<ContactsData> => {
       const raw = data.contacts || {};
       const result: ContactsData = { ...FALLBACK };
       for (const key of Object.keys(FALLBACK) as (keyof ContactsData)[]) {
-        if (raw[key]?.value !== undefined && raw[key].value !== "") {
+        if (raw[key]?.value !== undefined) {
           result[key] = raw[key].value;
         }
       }

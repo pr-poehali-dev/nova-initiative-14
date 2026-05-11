@@ -93,7 +93,7 @@ const FaqCtaSection = () => {
               Записаться на диагностику ВКР
             </Link>
             <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] opacity-70 mt-4">
-              Ответим в Telegram в течение 2 часов в рабочее время (10:00&ndash;20:00).
+              Ответим в течение 2 часов в рабочее время (10:00&ndash;20:00).
             </p>
           </div>
         </div>

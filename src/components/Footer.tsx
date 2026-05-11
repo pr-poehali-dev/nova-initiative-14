@@ -7,6 +7,9 @@ const footerLinks = [
   { label: "Тарифы", to: "/pricing" },
   { label: "Кейсы", to: "/cases" },
   { label: "Наставники", to: "/experts" },
+  { label: "О нас", to: "/about" },
+  { label: "Отзывы", to: "/reviews" },
+  { label: "Вакансии", to: "/vacancies" },
   { label: "FAQ", to: "/faq" },
   { label: "Контакты", to: "/contacts" },
   { label: "Политика конфиденциальности", to: "/privacy" },
@@ -27,7 +30,7 @@ const Footer = () => {
               <span className="text-[var(--drawing-line)]">.РФ</span>
             </Link>
             <p className="font-gost-upright text-xs text-[var(--drawing-line-thin)] leading-relaxed max-w-[280px]">
-              Наставничество по дипломному проекту&nbsp;&middot; УрФУ&nbsp;&middot; Екатеринбург
+              Наставничество по дипломному проекту&nbsp;&middot; Машиностроение и&nbsp;механика&nbsp;&middot; Екатеринбург
             </p>
             <a
               href="https://xn----7sbhgijhmco4n.xn--p1ai/"
@@ -58,26 +61,63 @@ const Footer = () => {
             <span className="font-gost text-[10px] uppercase tracking-widest text-[var(--drawing-line-thin)] mb-1">
               Контакты
             </span>
-            <a
-              href={c.telegram_link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-gost text-xs text-[var(--drawing-line)] hover:text-[var(--drawing-accent)] transition-colors flex items-center gap-1.5"
-            >
-              <Icon name="Send" size={12} />
-              Telegram {c.telegram}
-            </a>
-            <a
-              href={c.phone_tel}
-              className="font-gost text-xs text-[var(--drawing-line)] hover:text-[var(--drawing-accent)] transition-colors flex items-center gap-1.5"
-            >
-              <Icon name="Phone" size={12} />
-              {c.phone}
-            </a>
-            <span className="font-gost text-xs text-[var(--drawing-line-thin)] flex items-center gap-1.5">
-              <Icon name="Clock" size={12} />
-              {c.working_hours_label}
-            </span>
+            {c.telegram && c.telegram_link && (
+              <a
+                href={c.telegram_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-gost text-xs text-[var(--drawing-line)] hover:text-[var(--drawing-accent)] transition-colors flex items-center gap-1.5"
+              >
+                <Icon name="Send" size={12} />
+                Telegram {c.telegram}
+              </a>
+            )}
+            {c.vk && c.vk_link && (
+              <a
+                href={c.vk_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-gost text-xs text-[var(--drawing-line)] hover:text-[var(--drawing-accent)] transition-colors flex items-center gap-1.5"
+              >
+                <Icon name="Users" size={12} />
+                ВКонтакте {c.vk}
+              </a>
+            )}
+            {c.max && c.max_link && (
+              <a
+                href={c.max_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-gost text-xs text-[var(--drawing-line)] hover:text-[var(--drawing-accent)] transition-colors flex items-center gap-1.5"
+              >
+                <Icon name="MessageCircle" size={12} />
+                MAX {c.max}
+              </a>
+            )}
+            {c.phone && (
+              <a
+                href={c.phone_tel || `tel:${c.phone}`}
+                className="font-gost text-xs text-[var(--drawing-line)] hover:text-[var(--drawing-accent)] transition-colors flex items-center gap-1.5"
+              >
+                <Icon name="Phone" size={12} />
+                {c.phone}
+              </a>
+            )}
+            {c.email && (
+              <a
+                href={`mailto:${c.email}`}
+                className="font-gost text-xs text-[var(--drawing-line)] hover:text-[var(--drawing-accent)] transition-colors flex items-center gap-1.5"
+              >
+                <Icon name="Mail" size={12} />
+                {c.email}
+              </a>
+            )}
+            {c.working_hours_label && (
+              <span className="font-gost text-xs text-[var(--drawing-line-thin)] flex items-center gap-1.5">
+                <Icon name="Clock" size={12} />
+                {c.working_hours_label}
+              </span>
+            )}
           </div>
         </div>
 

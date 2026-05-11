@@ -11,7 +11,7 @@ const HeroSection = () => {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-10">
           <div className="md:col-span-7">
             <div className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-3">
-              Наставничество по дипломному проекту&nbsp;&middot; УрФУ&nbsp;&middot; Машиностроение
+              Наставничество по дипломному проекту&nbsp;&middot; Профиль: Машиностроение и&nbsp;механика
             </div>
             <div className="extension-line-h w-full mb-6" />
 
@@ -58,7 +58,7 @@ const HeroSection = () => {
               </div>
               <div className="relative z-10 w-full">
                 <p className="font-gost text-[10px] uppercase tracking-[0.15em] text-[var(--drawing-line-thin)] mb-1">
-                  Екатеринбург&nbsp;&middot; УрФУ
+                  Екатеринбург&nbsp;&middot; Машиностроение и&nbsp;механика
                 </p>
                 <p className="font-gost-upright text-2xl md:text-3xl font-bold tracking-tight leading-tight text-[var(--drawing-line)]">
                   Инженеры

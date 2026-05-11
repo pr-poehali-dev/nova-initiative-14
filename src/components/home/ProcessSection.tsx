@@ -65,7 +65,7 @@ const ProcessSection = () => {
                 <div>
                   <p className="font-gost-upright text-sm font-bold mb-1">Как сдать</p>
                   <p className="font-gost text-xs text-[var(--drawing-line-thin)] leading-relaxed">
-                    Google Docs, Word или PDF для текста. CAD-файлы для чертежей. Всё присылаете в Telegram наставнику.
+                    Google Docs, Word или PDF для текста. CAD-файлы для чертежей. Способ передачи материалов наставник и ученик выбирают сами&nbsp;&mdash; в удобном формате связи.
                   </p>
                 </div>
               </div>
@@ -101,7 +101,7 @@ const ProcessSection = () => {
                 <div>
                   <p className="font-gost-upright text-sm font-bold mb-1">Формат фидбэка</p>
                   <p className="font-gost text-xs text-[var(--drawing-line-thin)] leading-relaxed">
-                    Комментарии в документе, план правок в отдельном файле, голосовые сообщения в Telegram для сложных моментов.
+                    Комментарии в документе, план правок в отдельном файле, голосовые сообщения в выбранном мессенджере для сложных моментов.
                   </p>
                 </div>
               </div>
