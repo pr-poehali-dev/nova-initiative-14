@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import useTariffs, { formatPriceWithCurrency } from "@/hooks/useTariffs";
+import Seo from "@/components/Seo";
 
 const buildFaqGroups = (expressPrice: string, accompanyPrice: string) => [
   {
@@ -154,12 +155,25 @@ const Faq = () => {
 
   const faqGroups = buildFaqGroups(expressPrice, accompanyPrice);
 
+  const faqLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqGroups.flatMap((g) =>
+      g.items.map((it) => ({
+        "@type": "Question",
+        name: it.q,
+        acceptedAnswer: { "@type": "Answer", text: it.a },
+      })),
+    ),
+  };
+
   const toggle = (id: number) => {
     setOpenId(openId === id ? null : id);
   };
 
   return (
     <main className="min-h-screen grid-bg">
+      <Seo jsonLd={faqLd} />
       <section className="pt-28 pb-16 px-4 md:px-8 max-w-[1200px] mx-auto">
         <div className="drawing-frame p-6 md:p-10 relative">
           <div className="zone-marker top-2 left-3">Е1</div>

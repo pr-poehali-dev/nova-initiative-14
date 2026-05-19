@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import useContacts from "@/hooks/useContacts";
+import Seo from "@/components/Seo";
 
 const Privacy = () => {
   const { contacts: c } = useContacts();
@@ -45,6 +46,7 @@ const Privacy = () => {
 
   return (
     <main className="min-h-screen grid-bg">
+      <Seo noIndex />
       <section className="pt-28 pb-16 px-4 md:px-8 max-w-[1200px] mx-auto">
         <div className="drawing-frame p-6 md:p-10 relative">
           <div className="zone-marker top-2 left-3">З1</div>
