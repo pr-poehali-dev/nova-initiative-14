@@ -60,8 +60,8 @@ const Vacancies = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, visitor: getVisitorData() }),
       });
-    } catch (_) {
-      console.error(_);
+    } catch {
+      // ignore
     } finally {
       setLoading(false);
       setSubmitted(true);
