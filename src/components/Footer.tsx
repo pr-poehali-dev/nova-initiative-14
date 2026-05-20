@@ -33,7 +33,7 @@ const Footer = () => {
               Наставничество по дипломному проекту&nbsp;&middot; Машиностроение и&nbsp;механика&nbsp;&middot; Екатеринбург
             </p>
             <a
-              href="https://xn----7sbhgijhmco4n.xn--p1ai/"
+              href="https://xn----gtbhgbqhkfi.xn--p1ai/"
               className="font-gost text-[10px] uppercase tracking-[0.15em] text-[var(--drawing-line-thin)] hover:text-[var(--drawing-accent)] transition-colors w-fit"
             >
               диплом-инж.рф

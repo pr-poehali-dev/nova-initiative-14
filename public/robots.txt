@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /privacy
 
-Sitemap: https://xn----7sbhgijhmco4n.xn--p1ai/sitemap.xml
+Sitemap: https://xn----gtbhgbqhkfi.xn--p1ai/sitemap.xml

@@ -1,4 +1,4 @@
-export const SITE_URL = "https://xn----7sbhgijhmco4n.xn--p1ai";
+export const SITE_URL = "https://xn----gtbhgbqhkfi.xn--p1ai";
 export const SITE_NAME = "Диплом-Инж.рф";
 export const SITE_OG_IMAGE =
   "https://cdn.poehali.dev/projects/138efeb3-8342-4a32-95c7-e2f3ec523fb3/files/og-image-1779207387203.png";
