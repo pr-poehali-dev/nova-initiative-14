@@ -42,7 +42,7 @@ const FaqCtaSection = () => {
       <section className="py-16 px-4 md:px-8 bg-[var(--drawing-paper)]">
         <div className="max-w-[1200px] mx-auto">
           <p className="font-gost text-[10px] uppercase tracking-[0.3em] text-[var(--drawing-line-thin)] mb-2">
-            Инженерный журнал&nbsp;&middot; Раздел 06
+            Справочная часть&nbsp;&middot; Раздел 06
           </p>
           <h2 className="section-callout font-gost-upright text-3xl md:text-4xl font-bold tracking-tight mb-3">
             Частые вопросы

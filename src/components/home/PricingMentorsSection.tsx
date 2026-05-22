@@ -10,7 +10,7 @@ const PricingMentorsSection = () => {
       <section className="py-16 px-4 md:px-8 bg-[var(--drawing-line)] text-[var(--drawing-bg)]">
         <div className="max-w-[1200px] mx-auto">
           <p className="font-gost text-[10px] uppercase tracking-[0.3em] text-[var(--drawing-bg)] opacity-60 mb-2">
-            Инженерный журнал&nbsp;&middot; Раздел 04
+            Экономическая часть&nbsp;&middot; Раздел 04
           </p>
           <h2 className="section-callout font-gost-upright text-3xl md:text-4xl font-bold tracking-tight mb-3">
             Выберите формат работы
