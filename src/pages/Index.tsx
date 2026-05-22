@@ -2,6 +2,7 @@ import HeroSection from "@/components/home/HeroSection";
 import AboutSection from "@/components/home/AboutSection";
 import ProcessSection from "@/components/home/ProcessSection";
 import PricingMentorsSection from "@/components/home/PricingMentorsSection";
+import BlogTeaserSection from "@/components/home/BlogTeaserSection";
 import FaqCtaSection from "@/components/home/FaqCtaSection";
 import Seo from "@/components/Seo";
 import { SITE_NAME, SITE_URL } from "@/lib/seo";
@@ -24,6 +25,7 @@ const Index = () => {
       <AboutSection />
       <ProcessSection />
       <PricingMentorsSection />
+      <BlogTeaserSection />
       <FaqCtaSection />
     </main>
   );
