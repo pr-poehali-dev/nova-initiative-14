@@ -22,7 +22,7 @@ const BlogTeaserSection = () => {
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
           <div>
             <p className="font-gost text-[10px] uppercase tracking-[0.3em] text-[var(--drawing-line-thin)] mb-2">
-              Инженерный журнал · Раздел 07
+              Инженерный журнал&nbsp;&middot; Раздел 05
             </p>
             <h2 className="font-gost-upright text-2xl sm:text-3xl md:text-4xl font-black uppercase tracking-wide text-[var(--drawing-line)] break-words">
               Свежие материалы блога

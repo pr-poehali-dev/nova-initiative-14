@@ -10,8 +10,8 @@ const HeroSection = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-10">
           <div className="md:col-span-7">
-            <div className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-3">
-              Наставничество по дипломному проекту&nbsp;&middot; Профиль: Машиностроение и&nbsp;механика
+            <div className="font-gost text-[10px] uppercase tracking-[0.3em] text-[var(--drawing-line-thin)] mb-3">
+              Инженерный журнал&nbsp;&middot; Раздел 01
             </div>
             <div className="extension-line-h w-full mb-6" />
 
