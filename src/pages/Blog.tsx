@@ -27,12 +27,12 @@ const Blog = () => {
         <link rel="canonical" href={`${SITE_URL}/blog`} />
       </Helmet>
 
-      <div className="max-w-[1100px] mx-auto px-4 py-12">
+      <div className="max-w-[1100px] mx-auto px-4 py-8 md:py-12 pt-20 md:pt-24">
         <header className="mb-10 text-center">
           <p className="font-gost text-[11px] uppercase tracking-[0.3em] text-[var(--drawing-line-thin)] mb-3">
             Инженерный журнал · Диплом-Инж.рф
           </p>
-          <h1 className="font-gost-upright text-3xl md:text-4xl font-black uppercase tracking-wide text-[var(--drawing-line)]">
+          <h1 className="font-gost-upright text-2xl sm:text-3xl md:text-4xl font-black uppercase tracking-wide text-[var(--drawing-line)] break-words">
             Блог конструкторской школы
           </h1>
           <p className="mt-4 text-[var(--drawing-line-thin)] max-w-2xl mx-auto">
@@ -54,7 +54,7 @@ const Blog = () => {
           </p>
         )}
 
-        <div className="grid gap-5 md:grid-cols-2">
+        <div className="grid gap-4 md:gap-5 md:grid-cols-2">
           {articles.map((a) => (
             <Link key={a.slug} to={`/blog/${a.slug}`} className="blog-card block">
               <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)]">

@@ -27,6 +27,13 @@ body {
   font-family: "PT Mono", "Roboto Mono", "Courier New", monospace;
   font-size: 14px;
   line-height: 1.6;
+  overflow-x: hidden;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
 }
 
 .font-gost {
@@ -187,6 +194,16 @@ body {
   border-width: 2.5px;
 }
 
+@media (max-width: 640px) {
+  .stamp-table td,
+  .stamp-table th {
+    font-size: 9px;
+    padding: 2px 3px;
+    white-space: normal;
+    word-break: break-word;
+  }
+}
+
 .zone-marker {
   font-family: "Roboto Mono", monospace;
   font-style: italic;
@@ -237,7 +254,11 @@ body {
   font-style: italic;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  padding: 10px 24px;
+  padding: 12px 24px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   position: relative;
   transition: all 0.2s;
   cursor: pointer;
@@ -662,7 +683,7 @@ textarea.drawing-input::placeholder {
   .eskd-page {
     font-size: 12pt;
     padding: 14mm 6mm 14mm 14mm;
-    margin: 8px;
+    margin: 8px auto;
   }
   .eskd-page::before {
     top: 3mm;
@@ -678,6 +699,72 @@ textarea.drawing-input::placeholder {
   }
   .eskd-page p {
     text-indent: 0.8cm;
+  }
+}
+
+@media (max-width: 600px) {
+  .eskd-page {
+    font-size: 11pt;
+    padding: 8mm 4mm 8mm 9mm;
+    margin: 4px auto;
+    max-width: 100%;
+    line-height: 1.45;
+  }
+  .eskd-page::before {
+    top: 2mm;
+    right: 2mm;
+    bottom: 2mm;
+    left: 9mm;
+  }
+  .eskd-page h1 {
+    font-size: 15pt;
+    line-height: 1.25;
+  }
+  .eskd-page h2 {
+    font-size: 12.5pt;
+  }
+  .eskd-page h3 {
+    font-size: 11.5pt;
+  }
+  .eskd-page p {
+    text-indent: 0.5cm;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+  .eskd-page p.formula {
+    font-size: 10pt;
+    word-break: break-word;
+    overflow-x: auto;
+  }
+  .eskd-page ol,
+  .eskd-page ul {
+    padding-left: 1.1cm;
+  }
+  .eskd-title .eskd-org {
+    font-size: 9pt;
+    letter-spacing: 0.03em;
+  }
+  .eskd-title .eskd-meta {
+    font-size: 9pt;
+  }
+  .eskd-quickfacts {
+    padding: 10px 12px;
+  }
+  .eskd-quickfacts h2 {
+    font-size: 11pt;
+  }
+  .eskd-stamp {
+    font-size: 8.5pt;
+  }
+  .eskd-stamp td {
+    padding: 2px 3px;
+    word-break: break-word;
+  }
+  .eskd-stamp .lbl,
+  .eskd-stamp .name,
+  .eskd-stamp .sign,
+  .eskd-stamp .date {
+    width: auto;
   }
 }
 

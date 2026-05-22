@@ -15,7 +15,7 @@ const HeroSection = () => {
             </div>
             <div className="extension-line-h w-full mb-6" />
 
-            <h1 className="font-gost-upright text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[0.95] mb-6 text-[var(--drawing-line)]">
+            <h1 className="font-gost-upright text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[0.95] mb-6 text-[var(--drawing-line)] break-words">
               Доведём ваш
               <br />
               диплом до

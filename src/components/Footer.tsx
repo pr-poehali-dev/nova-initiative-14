@@ -45,7 +45,7 @@ const Footer = () => {
             <span className="font-gost text-[10px] uppercase tracking-widest text-[var(--drawing-line-thin)] mb-1">
               Навигация
             </span>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
+            <div className="grid grid-cols-2 gap-x-4 sm:gap-x-6 gap-y-1.5">
               {footerLinks.map((link) => (
                 <Link
                   key={link.to}

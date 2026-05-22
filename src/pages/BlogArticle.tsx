@@ -99,8 +99,8 @@ const BlogArticle = () => {
         {faqLd && <script type="application/ld+json">{JSON.stringify(faqLd)}</script>}
       </Helmet>
 
-      <div className="px-2 py-6 md:py-10">
-        <div className="max-w-[820px] mx-auto mb-4 px-2">
+      <div className="px-3 sm:px-4 py-6 md:py-10 pt-20 md:pt-24">
+        <div className="max-w-[820px] mx-auto mb-4">
           <Link
             to="/blog"
             className="font-gost text-[11px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] hover:text-[var(--drawing-accent)]"

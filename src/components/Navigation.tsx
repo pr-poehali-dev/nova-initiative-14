@@ -53,7 +53,7 @@ const Navigation = () => {
         </div>
 
         <button
-          className="md:hidden flex items-center justify-center w-10 h-10"
+          className="md:hidden flex items-center justify-center min-w-[44px] min-h-[44px]"
           onClick={() => setMenuOpen(true)}
           aria-label="Открыть меню"
         >
@@ -75,7 +75,7 @@ const Navigation = () => {
               <span className="text-[var(--drawing-line)]">.РФ</span>
             </Link>
             <button
-              className="flex items-center justify-center w-10 h-10"
+              className="flex items-center justify-center min-w-[44px] min-h-[44px]"
               onClick={() => setMenuOpen(false)}
               aria-label="Закрыть меню"
             >
@@ -83,13 +83,13 @@ const Navigation = () => {
             </button>
           </div>
 
-          <div className="flex-1 flex flex-col items-center justify-center gap-6 px-4">
+          <div className="flex-1 overflow-y-auto flex flex-col items-center justify-start sm:justify-center gap-4 sm:gap-5 px-4 py-6">
             {navLinks.map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
                 onClick={() => setMenuOpen(false)}
-                className="font-gost text-xl uppercase tracking-widest text-[var(--drawing-line)] hover:text-[var(--drawing-accent)] transition-colors"
+                className="font-gost text-lg sm:text-xl uppercase tracking-widest text-[var(--drawing-line)] hover:text-[var(--drawing-accent)] transition-colors py-1"
               >
                 {link.label}
               </Link>
