@@ -7,6 +7,24 @@
       "expectedStatus": 200,
       "expectedBody": {"contacts": {}},
       "bodyMatcher": "partial"
+    },
+    {
+      "name": "Get articles list",
+      "method": "GET",
+      "path": "/?resource=articles",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Sitemap XML",
+      "method": "GET",
+      "path": "/?resource=sitemap",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Unknown article slug",
+      "method": "GET",
+      "path": "/?resource=articles&slug=xxx-non-existent",
+      "expectedStatus": 404
     }
   ]
 }

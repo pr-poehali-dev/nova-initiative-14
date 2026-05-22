@@ -6,6 +6,7 @@ const navLinks = [
   { label: "Программа", to: "/program" },
   { label: "Тарифы", to: "/pricing" },
   { label: "Кейсы", to: "/cases" },
+  { label: "Блог", to: "/blog" },
   { label: "Наставники", to: "/experts" },
   { label: "О нас", to: "/about" },
   { label: "Отзывы", to: "/reviews" },
