@@ -123,8 +123,26 @@ export const PROVIDER_LABELS: Record<OAuthProvider, string> = {
   mailru: "Mail.ru",
 };
 
+export interface OauthProvidersResp {
+  providers: OAuthProvider[];
+  vk_sdk?: { enabled: boolean; app_id: string | null };
+}
+
 export async function fetchOauthProviders() {
-  return call<{ providers: OAuthProvider[] }>("oauth-providers", "GET");
+  return call<OauthProvidersResp>("oauth-providers", "GET");
+}
+
+export async function oauthVkSdkLogin(payload: {
+  access_token: string;
+  sub_provider?: "vk" | "mail_ru" | "ok_ru";
+  user?: Record<string, unknown>;
+  redirect_after?: string;
+}) {
+  return call<TokenPair & { redirect_after?: string }>(
+    "oauth-vk-sdk",
+    "POST",
+    payload,
+  );
 }
 
 export async function oauthStart(provider: OAuthProvider, redirectAfter = "/account") {

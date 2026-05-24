@@ -6,10 +6,15 @@ import {
   PROVIDER_LABELS,
   type OAuthProvider,
 } from "@/lib/auth";
+import VKIDOneTap from "@/components/VKIDOneTap";
 
 interface Props {
   redirectAfter?: string;
 }
+
+// "Простые" провайдеры рисуем кнопкой OAuth-редиректа.
+// VK / Mail.ru / OK покрываются единым VK ID OneTap SDK сверху.
+const SIMPLE_PROVIDERS: OAuthProvider[] = ["yandex", "google"];
 
 const ICONS: Record<OAuthProvider, string> = {
   yandex: "AtSign",
@@ -27,16 +32,26 @@ const COLORS: Record<OAuthProvider, string> = {
 
 const OAuthButtons = ({ redirectAfter = "/account" }: Props) => {
   const [providers, setProviders] = useState<OAuthProvider[]>([]);
+  const [vkSdkAppId, setVkSdkAppId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<OAuthProvider | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchOauthProviders()
-      .then((res) => setProviders(res.data?.providers || []))
-      .catch(() => setProviders([]))
+      .then((res) => {
+        setProviders(res.data?.providers || []);
+        const vk = res.data?.vk_sdk;
+        if (vk?.enabled && vk.app_id) setVkSdkAppId(vk.app_id);
+      })
+      .catch(() => {
+        setProviders([]);
+        setVkSdkAppId(null);
+      })
       .finally(() => setLoading(false));
   }, []);
+
+  const visibleSimple = providers.filter((p) => SIMPLE_PROVIDERS.includes(p));
 
   const onClick = async (provider: OAuthProvider) => {
     setBusy(provider);
@@ -44,14 +59,14 @@ const OAuthButtons = ({ redirectAfter = "/account" }: Props) => {
     try {
       const { authorize_url } = await oauthStart(provider, redirectAfter);
       window.location.href = authorize_url;
-    } catch (e) {
+    } catch {
       setError(`Не удалось начать вход через ${PROVIDER_LABELS[provider]}`);
       setBusy(null);
     }
   };
 
   if (loading) return null;
-  if (providers.length === 0) return null;
+  if (!vkSdkAppId && visibleSimple.length === 0) return null;
 
   return (
     <div className="space-y-3">
@@ -62,20 +77,28 @@ const OAuthButtons = ({ redirectAfter = "/account" }: Props) => {
         </span>
         <div className="flex-1 h-px bg-[var(--drawing-line-thin)] opacity-40" />
       </div>
-      <div className="grid grid-cols-2 gap-2.5">
-        {providers.map((p) => (
-          <button
-            key={p}
-            type="button"
-            onClick={() => onClick(p)}
-            disabled={busy !== null}
-            className={`${COLORS[p]} font-gost text-[11px] uppercase tracking-wider border-2 py-2.5 flex items-center justify-center gap-2 transition-colors disabled:opacity-50`}
-          >
-            <Icon name={ICONS[p]} size={14} />
-            {busy === p ? "…" : PROVIDER_LABELS[p]}
-          </button>
-        ))}
-      </div>
+
+      {vkSdkAppId && (
+        <VKIDOneTap appId={vkSdkAppId} redirectAfter={redirectAfter} />
+      )}
+
+      {visibleSimple.length > 0 && (
+        <div className="grid grid-cols-2 gap-2.5">
+          {visibleSimple.map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => onClick(p)}
+              disabled={busy !== null}
+              className={`${COLORS[p]} font-gost text-[11px] uppercase tracking-wider border-2 py-2.5 flex items-center justify-center gap-2 transition-colors disabled:opacity-50`}
+            >
+              <Icon name={ICONS[p]} size={14} />
+              {busy === p ? "…" : PROVIDER_LABELS[p]}
+            </button>
+          ))}
+        </div>
+      )}
+
       {error && (
         <p className="font-gost text-xs text-[var(--drawing-accent)] border-l-2 border-[var(--drawing-accent)] pl-3">
           {error}

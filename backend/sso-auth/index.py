@@ -860,7 +860,134 @@ def _action_oauth_callback(conn, body: dict, ua: str, ip: str) -> dict:
 def _action_oauth_providers(conn) -> dict:
     """Возвращает список настроенных OAuth-провайдеров для фронта."""
     enabled = [p for p in OAUTH_PROVIDERS if _oauth_provider_enabled(p)]
-    return _json_response(200, {'providers': enabled})
+    # VK ID SDK включён, если есть OAUTH_VK_CLIENT_ID (SDK не требует client_secret).
+    vk_sdk_enabled = bool(os.environ.get('OAUTH_VK_CLIENT_ID'))
+    return _json_response(200, {
+        'providers': enabled,
+        'vk_sdk': {
+            'enabled': vk_sdk_enabled,
+            'app_id': os.environ.get('OAUTH_VK_CLIENT_ID') if vk_sdk_enabled else None,
+        },
+    })
+
+
+def _login_or_register_by_identity(conn, provider: str, profile: dict, ua: str, ip: str, redirect_after: str) -> dict:
+    """Общая логика: найти identity, если нет — создать пользователя. Конфликт email → 409."""
+    provider_user_id = profile.get('provider_user_id')
+    email = profile.get('email')
+    if not provider_user_id:
+        return _json_response(502, {'error': 'no_provider_user_id'})
+
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT user_id FROM sso_user_identities WHERE provider = %s AND provider_user_id = %s",
+            (provider, provider_user_id),
+        )
+        existing = cur.fetchone()
+
+    if existing:
+        user_id = existing[0]
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE sso_user_identities SET last_login_at = NOW(), email = %s, raw_profile = %s "
+                "WHERE provider = %s AND provider_user_id = %s",
+                (email, json.dumps(profile.get('raw') or {}, ensure_ascii=False), provider, provider_user_id),
+            )
+        conn.commit()
+        tokens = _issue_tokens(conn, user_id, ua, ip)
+        return _json_response(200, {**tokens, 'redirect_after': redirect_after})
+
+    if email:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id FROM sso_users WHERE email = %s", (email,))
+            existing_user = cur.fetchone()
+        if existing_user:
+            return _json_response(409, {
+                'error': 'email_taken',
+                'message': f'Аккаунт с таким email уже существует. Войдите паролем — в личном кабинете вы сможете привязать вход через {provider}.',
+                'email': email,
+            })
+
+    if not email:
+        return _json_response(400, {
+            'error': 'email_not_provided',
+            'message': f'Провайдер {provider} не передал email. Войдите паролем или попробуйте другой способ входа.',
+        })
+
+    with conn.cursor() as cur:
+        random_pwd = _hash_password(secrets.token_urlsafe(32))
+        cur.execute(
+            "INSERT INTO sso_users (email, password_hash, full_name, email_verified_at) "
+            "VALUES (%s, %s, %s, NOW()) RETURNING id",
+            (email, random_pwd, profile.get('full_name') or None),
+        )
+        user_id = cur.fetchone()[0]
+        cur.execute("INSERT INTO sso_user_roles (user_id, role) VALUES (%s, 'student')", (user_id,))
+        cur.execute(
+            "INSERT INTO sso_user_identities (user_id, provider, provider_user_id, email, raw_profile) "
+            "VALUES (%s, %s, %s, %s, %s)",
+            (user_id, provider, provider_user_id, email, json.dumps(profile.get('raw') or {}, ensure_ascii=False)),
+        )
+    conn.commit()
+    tokens = _issue_tokens(conn, user_id, ua, ip)
+    return _json_response(201, {**tokens, 'redirect_after': redirect_after})
+
+
+def _action_oauth_vk_sdk(conn, body: dict, ua: str, ip: str) -> dict:
+    """Принимает access_token (или id_token) от VK ID OneTap SDK,
+    запрашивает профиль и логинит/регистрирует пользователя.
+    Дополнительно поддерживает sub_provider=mail_ru|ok_ru (VK ID отдаёт через них).
+    """
+    access_token = (body.get('access_token') or '').strip()
+    sub_provider = (body.get('sub_provider') or 'vk').strip().lower()
+    redirect_after = (body.get('redirect_after') or '/account').strip()[:512]
+    raw_user = body.get('user') or {}
+
+    if not access_token:
+        return _json_response(400, {'error': 'missing_access_token'})
+
+    # VK ID v2 user_info endpoint
+    try:
+        resp = _http_post_form(
+            'https://id.vk.com/oauth2/user_info',
+            {
+                'client_id': os.environ.get('OAUTH_VK_CLIENT_ID', ''),
+                'access_token': access_token,
+            },
+        )
+    except Exception as e:
+        print(f'[sso-auth] VK SDK user_info failed: {e!r}')
+        # Если не удалось получить — попробуем использовать данные, которые SDK прислал в payload
+        resp = {'user': raw_user}
+
+    u = resp.get('user') or raw_user or {}
+    if not u:
+        return _json_response(502, {'error': 'no_user_data'})
+
+    full_name = ' '.join(filter(None, [u.get('first_name'), u.get('last_name')])) or ''
+    email = (u.get('email') or '').lower() or None
+    provider_user_id = str(u.get('user_id') or u.get('id') or '')
+
+    # Определяем фактический провайдер: vk / mailru / ok
+    provider_map = {
+        'mail_ru': 'mailru',
+        'mailru': 'mailru',
+        'ok_ru': 'ok',
+        'ok': 'ok',
+        'vk': 'vk',
+    }
+    provider = provider_map.get(sub_provider, 'vk')
+
+    profile = {
+        'provider_user_id': provider_user_id,
+        'email': email,
+        'email_verified': True,
+        'full_name': full_name,
+        'avatar_url': u.get('avatar') or u.get('photo_200'),
+        'raw': u,
+    }
+
+    return _login_or_register_by_identity(conn, provider, profile, ua, ip, redirect_after)
 
 
 # ============ Handler ============
@@ -909,6 +1036,8 @@ def handler(event: dict, context) -> dict:
             return _action_oauth_start(conn, params, ip)
         if action == 'oauth-callback' and method == 'POST':
             return _action_oauth_callback(conn, body, ua, ip)
+        if action == 'oauth-vk-sdk' and method == 'POST':
+            return _action_oauth_vk_sdk(conn, body, ua, ip)
         return _json_response(404, {'error': 'unknown_action'})
     except Exception as e:
         import traceback
