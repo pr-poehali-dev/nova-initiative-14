@@ -1,5 +1,5 @@
 """
-Business: SSO авторизация — регистрация, логин, refresh-токен, userinfo, logout.
+Business: SSO авторизация — регистрация, логин, refresh, userinfo, logout, verify-email, resend-verification.
 Args: event.queryStringParameters.action; httpMethod POST/GET/OPTIONS; body JSON.
 Returns: HTTP-ответ с access_token, refresh_token и профилем пользователя.
 """
@@ -10,8 +10,12 @@ import json
 import os
 import re
 import secrets
+import smtplib
+import ssl
 import time
 from datetime import datetime, timezone, timedelta
+from email.message import EmailMessage
+from email.utils import formataddr, formatdate, make_msgid
 
 import psycopg2
 import psycopg2.extras
@@ -21,7 +25,12 @@ JWT_SECRET = os.environ['SSO_JWT_SECRET']
 PEPPER = os.environ['SSO_PASSWORD_PEPPER']
 ACCESS_TOKEN_TTL = 60 * 60          # 1 час
 REFRESH_TOKEN_TTL = 60 * 60 * 24 * 30  # 30 дней
+VERIFY_TOKEN_TTL = 60 * 60 * 24     # 24 часа на подтверждение email
 ISSUER = 'https://xn----gtbhgbqhkfi.xn--p1ai'
+SITE_URL = ISSUER
+
+SMTP_HOST = 'smtp.yandex.ru'
+SMTP_PORT = 465
 
 EMAIL_RE = re.compile(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
 
@@ -171,6 +180,123 @@ def _issue_tokens(conn, user_id: int, user_agent: str, ip: str, client_id: str =
     }
 
 
+def _to_punycode_email(addr: str) -> str:
+    """Преобразует email с кириллическим доменом в ASCII (Punycode)."""
+    if not addr or '@' not in addr:
+        return addr
+    local, domain = addr.rsplit('@', 1)
+    try:
+        domain_ascii = domain.encode('idna').decode('ascii')
+    except Exception:
+        domain_ascii = domain
+    return f'{local}@{domain_ascii}'
+
+
+def _create_verify_token(conn, user_id: int) -> str:
+    """Создаёт одноразовый токен подтверждения email и сохраняет его SHA-256."""
+    raw = secrets.token_urlsafe(32)
+    h = hashlib.sha256(raw.encode()).hexdigest()
+    expires_at = datetime.now(timezone.utc) + timedelta(seconds=VERIFY_TOKEN_TTL)
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO sso_action_tokens (user_id, purpose, token_hash, expires_at) "
+            "VALUES (%s, %s, %s, %s)",
+            (user_id, 'verify_email', h, expires_at),
+        )
+    conn.commit()
+    return raw
+
+
+def _send_email(to: str, subject: str, html_body: str, text_body: str) -> bool:
+    """Отправляет письмо через Яндекс 360 SMTP. Не валит запрос при ошибке."""
+    smtp_user_raw = os.environ.get('SSO_SMTP_USER')
+    smtp_password = os.environ.get('SSO_SMTP_PASSWORD')
+    if not smtp_user_raw or not smtp_password:
+        print('[sso-auth] SMTP secrets not configured, email skipped')
+        return False
+
+    smtp_user = _to_punycode_email(smtp_user_raw.strip())
+    recipient = _to_punycode_email(to.strip())
+
+    msg = EmailMessage()
+    msg.set_charset('utf-8')
+    msg['Subject'] = subject
+    msg['From'] = formataddr(('Диплом-Инж.рф', smtp_user), charset='utf-8')
+    msg['To'] = recipient
+    msg['Date'] = formatdate(localtime=True)
+    msg['Message-ID'] = make_msgid(domain=smtp_user.split('@')[-1])
+    msg.set_content(text_body)
+    msg.add_alternative(html_body, subtype='html')
+
+    try:
+        ctx = ssl.create_default_context()
+        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, context=ctx, timeout=15) as server:
+            server.login(smtp_user, smtp_password)
+            server.send_message(msg, from_addr=smtp_user, to_addrs=[recipient])
+        print(f'[sso-auth] verify email sent to {recipient}')
+        return True
+    except Exception as e:
+        print(f'[sso-auth] SMTP error: {e!r}')
+        return False
+
+
+def _send_verify_email(to_email: str, full_name: str, raw_token: str) -> bool:
+    verify_url = f"{SITE_URL}/verify-email?token={raw_token}"
+    greet = f"Здравствуйте, {full_name}!" if full_name else "Здравствуйте!"
+    subject = "Подтверждение email · Диплом-Инж.рф"
+
+    html = f"""<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#faf8f0;font-family:Georgia,'Times New Roman',serif;color:#1a1a2e;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#faf8f0;padding:40px 20px;">
+<tr><td align="center">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="560" style="max-width:560px;background:#fdfcf6;border:1.5px solid #1a1a2e;">
+<tr><td style="padding:32px 36px;">
+<p style="margin:0 0 18px;font-family:'Courier New',monospace;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#3a3a5e;">
+Диплом-Инж.рф · SSO
+</p>
+<h1 style="margin:0 0 24px;font-size:22px;font-weight:700;color:#1a1a2e;border-bottom:2px solid #1a1a2e;padding-bottom:14px;">
+Подтверждение email
+</h1>
+<p style="font-size:15px;line-height:1.55;margin:0 0 14px;">{greet}</p>
+<p style="font-size:15px;line-height:1.55;margin:0 0 22px;">
+Вы зарегистрировались на сайте <strong>Диплом-Инж.рф</strong>. Чтобы активировать аккаунт, подтвердите ваш email — нажмите на кнопку ниже.
+</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px auto;">
+<tr><td style="background:#c0392b;border:2px solid #c0392b;">
+<a href="{verify_url}" target="_blank" style="display:inline-block;padding:14px 28px;font-family:'Courier New',monospace;font-size:13px;letter-spacing:0.15em;text-transform:uppercase;color:#ffffff;text-decoration:none;font-weight:700;">
+Подтвердить email
+</a>
+</td></tr></table>
+<p style="font-size:13px;line-height:1.55;margin:24px 0 8px;color:#3a3a5e;">
+Если кнопка не открывается, скопируйте ссылку в адресную строку браузера:
+</p>
+<p style="font-size:12px;line-height:1.55;margin:0 0 24px;word-break:break-all;font-family:'Courier New',monospace;color:#2c3e80;">
+{verify_url}
+</p>
+<p style="font-size:12px;line-height:1.55;margin:0 0 6px;color:#3a3a5e;">
+Ссылка действительна <strong>24 часа</strong>. Если вы не регистрировались — просто проигнорируйте это письмо.
+</p>
+<hr style="border:none;border-top:1px solid #d9d4be;margin:28px 0 18px;">
+<p style="font-size:11px;line-height:1.5;margin:0;color:#7a7a8e;font-family:'Courier News',monospace;">
+Это автоматическое письмо. Отвечать на него не нужно.<br>
+По любым вопросам пишите на <a href="mailto:info@xn----gtbhgbqhkfi.xn--p1ai" style="color:#c0392b;">info@диплом-инж.рф</a>
+</p>
+</td></tr></table>
+</td></tr></table>
+</body></html>"""
+
+    text = (
+        f"{greet}\n\n"
+        f"Вы зарегистрировались на сайте Диплом-Инж.рф. Чтобы активировать аккаунт, "
+        f"подтвердите ваш email, перейдя по ссылке ниже:\n\n"
+        f"{verify_url}\n\n"
+        f"Ссылка действительна 24 часа. Если вы не регистрировались — просто проигнорируйте это письмо.\n\n"
+        f"— Диплом-Инж.рф\n"
+    )
+    return _send_email(to_email, subject, html, text)
+
+
 def _client_ip(event: dict) -> str:
     ctx = event.get('requestContext') or {}
     identity = ctx.get('identity') or {}
@@ -241,8 +367,15 @@ def _action_register(conn, body: dict, ua: str, ip: str) -> dict:
         )
     conn.commit()
 
-    tokens = _issue_tokens(conn, user_id, ua, ip)
-    return _json_response(201, tokens)
+    raw_token = _create_verify_token(conn, user_id)
+    sent = _send_verify_email(email, full_name, raw_token)
+
+    return _json_response(201, {
+        'ok': True,
+        'email_sent': sent,
+        'email': email,
+        'message': 'Аккаунт создан. Подтвердите email — мы отправили ссылку на ваш адрес.',
+    })
 
 
 def _action_login(conn, body: dict, ua: str, ip: str) -> dict:
@@ -256,17 +389,25 @@ def _action_login(conn, body: dict, ua: str, ip: str) -> dict:
         return _json_response(429, {'error': 'too_many_attempts', 'message': 'Слишком много попыток. Попробуйте через 10 минут.'})
 
     with conn.cursor() as cur:
-        cur.execute("SELECT id, password_hash, is_active FROM sso_users WHERE email = %s", (email,))
+        cur.execute("SELECT id, password_hash, is_active, email_verified_at FROM sso_users WHERE email = %s", (email,))
         row = cur.fetchone()
 
     if not row or not _verify_password(password, row[1]):
         _log_attempt(conn, email, ip, False, ua)
         return _json_response(401, {'error': 'invalid_credentials', 'message': 'Неверный email или пароль'})
 
-    user_id, _, is_active = row
+    user_id, _, is_active, verified_at = row
     if not is_active:
         _log_attempt(conn, email, ip, False, ua)
         return _json_response(403, {'error': 'account_disabled', 'message': 'Аккаунт деактивирован'})
+
+    if verified_at is None:
+        _log_attempt(conn, email, ip, False, ua)
+        return _json_response(403, {
+            'error': 'email_not_verified',
+            'message': 'Подтвердите email — мы отправили вам ссылку. Если письма нет, нажмите «отправить заново».',
+            'email': email,
+        })
 
     _log_attempt(conn, email, ip, True, ua)
     tokens = _issue_tokens(conn, user_id, ua, ip)
@@ -332,6 +473,64 @@ def _action_logout(conn, body: dict) -> dict:
     return _json_response(200, {'ok': True})
 
 
+def _action_verify_email(conn, body: dict, ua: str, ip: str) -> dict:
+    raw = (body.get('token') or '').strip()
+    if not raw:
+        return _json_response(400, {'error': 'missing_token'})
+    h = hashlib.sha256(raw.encode()).hexdigest()
+
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT id, user_id, expires_at, used_at FROM sso_action_tokens "
+            "WHERE token_hash = %s AND purpose = 'verify_email'",
+            (h,),
+        )
+        row = cur.fetchone()
+        if not row:
+            return _json_response(400, {'error': 'invalid_token', 'message': 'Ссылка недействительна или уже использована.'})
+        token_id, user_id, expires_at, used_at = row
+        if used_at is not None:
+            return _json_response(400, {'error': 'already_used', 'message': 'Эта ссылка уже была использована.'})
+        if expires_at < datetime.now(timezone.utc):
+            return _json_response(400, {'error': 'token_expired', 'message': 'Ссылка истекла. Запросите новую.'})
+
+        cur.execute("UPDATE sso_action_tokens SET used_at = NOW() WHERE id = %s", (token_id,))
+        cur.execute("UPDATE sso_users SET email_verified_at = NOW() WHERE id = %s", (user_id,))
+    conn.commit()
+
+    tokens = _issue_tokens(conn, user_id, ua, ip)
+    return _json_response(200, tokens)
+
+
+def _action_resend_verification(conn, body: dict) -> dict:
+    email = (body.get('email') or '').strip().lower()
+    if not EMAIL_RE.match(email):
+        return _json_response(400, {'error': 'invalid_email'})
+
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT id, full_name, email_verified_at FROM sso_users WHERE email = %s",
+            (email,),
+        )
+        row = cur.fetchone()
+
+    # Не раскрываем существование email
+    if not row:
+        return _json_response(200, {'ok': True, 'message': 'Если email зарегистрирован, мы отправили ссылку повторно.'})
+
+    user_id, full_name, verified_at = row
+    if verified_at is not None:
+        return _json_response(200, {'ok': True, 'message': 'Email уже подтверждён, можете войти.'})
+
+    raw_token = _create_verify_token(conn, user_id)
+    sent = _send_verify_email(email, full_name or '', raw_token)
+    return _json_response(200, {
+        'ok': True,
+        'email_sent': sent,
+        'message': 'Если email зарегистрирован, мы отправили ссылку повторно.',
+    })
+
+
 # ============ Handler ============
 
 def handler(event: dict, context) -> dict:
@@ -343,7 +542,7 @@ def handler(event: dict, context) -> dict:
     action = (params.get('action') or '').strip()
 
     if not action:
-        return _json_response(400, {'error': 'missing_action', 'message': 'Укажите ?action=register|login|refresh|userinfo|logout'})
+        return _json_response(400, {'error': 'missing_action', 'message': 'Укажите ?action=register|login|refresh|userinfo|logout|verify-email|resend-verification'})
 
     try:
         body_raw = event.get('body') or '{}'
@@ -368,6 +567,10 @@ def handler(event: dict, context) -> dict:
             return _action_userinfo(conn, event)
         if action == 'logout' and method == 'POST':
             return _action_logout(conn, body)
+        if action == 'verify-email' and method == 'POST':
+            return _action_verify_email(conn, body, ua, ip)
+        if action == 'resend-verification' and method == 'POST':
+            return _action_resend_verification(conn, body)
         return _json_response(404, {'error': 'unknown_action'})
     except Exception as e:
         import traceback
