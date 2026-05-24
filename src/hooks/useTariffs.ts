@@ -37,16 +37,25 @@ let cachedTariffs: Tariff[] | null = null;
 let fetchPromise: Promise<Tariff[]> | null = null;
 
 const fetchTariffs = (): Promise<Tariff[]> => {
-  if (cachedTariffs) return Promise.resolve(cachedTariffs);
+  if (cachedTariffs && cachedTariffs.length > 0) return Promise.resolve(cachedTariffs);
   if (fetchPromise) return fetchPromise;
 
-  fetchPromise = fetch(funcUrls["get-tariffs"])
-    .then((r) => r.json())
-    .then((data) => {
-      cachedTariffs = data.tariffs || [];
-      return cachedTariffs!;
+  fetchPromise = fetch(funcUrls["get-tariffs"], {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  })
+    .then((r) => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
     })
-    .catch(() => {
+    .then((data) => {
+      const list = Array.isArray(data?.tariffs) ? (data.tariffs as Tariff[]) : [];
+      if (list.length > 0) cachedTariffs = list;
+      fetchPromise = null;
+      return list;
+    })
+    .catch((e) => {
+      console.warn("[useTariffs] fetch failed:", e);
       fetchPromise = null;
       return [] as Tariff[];
     });

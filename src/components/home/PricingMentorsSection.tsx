@@ -21,6 +21,18 @@ const PricingMentorsSection = () => {
             <div className="py-10 text-center">
               <span className="font-gost text-sm text-[rgba(255,255,255,0.4)]">Загрузка тарифов...</span>
             </div>
+          ) : tariffs.length === 0 ? (
+            <div className="py-10 text-center border border-[rgba(255,255,255,0.15)]">
+              <p className="font-gost text-sm text-[rgba(255,255,255,0.6)] mb-3">
+                Тарифы временно недоступны. Это сетевая ошибка — обновите страницу.
+              </p>
+              <Link
+                to="/pricing"
+                className="font-gost text-xs uppercase tracking-[0.2em] text-[var(--drawing-accent)] hover:underline"
+              >
+                Смотреть тарифы на отдельной странице&nbsp;&rarr;
+              </Link>
+            </div>
           ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             {tariffs.map((t) => (
