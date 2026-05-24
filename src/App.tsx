@@ -25,6 +25,8 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Account from "./pages/Account";
 import OAuthCallback from "./pages/OAuthCallback";
+import CaeLanding from "./pages/CaeLanding";
+import CaeProjects from "./pages/CaeProjects";
 import NotFound from "./pages/NotFound";
 import { useVisitorTracking, getVisitorData } from "./hooks/useVisitorTracking";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -116,6 +118,8 @@ const App = () => (
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/account" element={<Account />} />
+                <Route path="/cae" element={<CaeLanding />} />
+                <Route path="/cae/projects" element={<CaeProjects />} />
                 <Route path="/oauth/callback" element={<OAuthCallback />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

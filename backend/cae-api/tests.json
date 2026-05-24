@@ -1,0 +1,11 @@
+{
+  "tests": [
+    {"name": "OPTIONS CORS", "method": "OPTIONS", "path": "/", "expectedStatus": 200},
+    {"name": "Без action — 400", "method": "GET", "path": "/", "expectedStatus": 400},
+    {"name": "Tariffs (публичный)", "method": "GET", "path": "/?action=tariffs", "expectedStatus": 200},
+    {"name": "Waitlist без email", "method": "POST", "path": "/?action=waitlist", "body": {}, "expectedStatus": 400},
+    {"name": "Waitlist валидный email", "method": "POST", "path": "/?action=waitlist", "body": {"email": "waitlist-test@example.com", "full_name": "Test"}, "expectedStatus": 201},
+    {"name": "Список проектов без токена — 401", "method": "GET", "path": "/?action=list-projects", "expectedStatus": 401},
+    {"name": "Создание проекта без токена — 401", "method": "POST", "path": "/?action=create-project", "body": {"name": "Test"}, "expectedStatus": 401}
+  ]
+}

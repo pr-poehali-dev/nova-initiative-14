@@ -90,7 +90,14 @@ const Account = () => {
                 <p className="font-gost text-[var(--drawing-line-thin)] text-xs uppercase tracking-wider mb-1">
                   CAE-калькулятор
                 </p>
-                <p className="text-[var(--drawing-line-thin)] text-xs">Скоро в&nbsp;разработке</p>
+                <p>
+                  <Link to="/cae/projects" className="text-[var(--drawing-accent)] hover:underline">
+                    Мои проекты &rarr;
+                  </Link>
+                </p>
+                <p className="text-[var(--drawing-line-thin)] text-xs mt-1">
+                  Каркас доступен. Редактор и&nbsp;решатель — скоро.
+                </p>
               </div>
             </div>
           </section>
@@ -101,7 +108,10 @@ const Account = () => {
               <Icon name="Compass" size={18} />
               <h2 className="font-gost-upright text-sm uppercase tracking-widest">Навигация</h2>
             </div>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
+              <Link to="/cae/projects" className="border border-[var(--drawing-accent)] text-[var(--drawing-accent)] px-3 py-2 text-xs font-gost uppercase tracking-widest hover:bg-[var(--drawing-accent)] hover:text-white transition">
+                Мои CAE-проекты
+              </Link>
               <Link to="/blog" className="border border-[var(--drawing-line)] px-3 py-2 text-xs font-gost uppercase tracking-widest hover:bg-[var(--drawing-line)] hover:text-[var(--drawing-bg)] transition">
                 Инженерный журнал
               </Link>
