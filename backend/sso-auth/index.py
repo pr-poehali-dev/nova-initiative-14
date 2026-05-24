@@ -119,7 +119,7 @@ def _get_user_payload(conn, user_id: int) -> dict:
         if not u:
             return {}
         cur.execute("SELECT role FROM sso_user_roles WHERE user_id = %s", (user_id,))
-        roles = [r[0] for r in cur.fetchall()]
+        roles = [r['role'] for r in cur.fetchall()]
         return {
             'id': u['id'],
             'email': u['email'],
@@ -370,7 +370,13 @@ def handler(event: dict, context) -> dict:
             return _action_logout(conn, body)
         return _json_response(404, {'error': 'unknown_action'})
     except Exception as e:
-        print(f'[sso-auth] error: {e}')
-        return _json_response(500, {'error': 'internal_error', 'message': str(e)[:200]})
+        import traceback
+        tb = traceback.format_exc()
+        print(f'[sso-auth] error type={type(e).__name__} msg={e!r}')
+        print(f'[sso-auth] traceback: {tb}')
+        return _json_response(500, {
+            'error': 'internal_error',
+            'message': f'{type(e).__name__}: {e}'[:300],
+        })
     finally:
         conn.close()
