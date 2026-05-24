@@ -21,8 +21,12 @@ import Reviews from "./pages/Reviews";
 import Vacancies from "./pages/Vacancies";
 import Blog from "./pages/Blog";
 import BlogArticle from "./pages/BlogArticle";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Account from "./pages/Account";
 import NotFound from "./pages/NotFound";
 import { useVisitorTracking, getVisitorData } from "./hooks/useVisitorTracking";
+import { AuthProvider } from "./contexts/AuthContext";
 import func2url from "../backend/func2url.json";
 
 const queryClient = new QueryClient();
@@ -67,29 +71,34 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <ScrollToTop />
-          <VisitorTracker />
-          <GlobalSeo />
-          <Navigation />
-          <div>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/program" element={<Program />} />
-              <Route path="/pricing" element={<Pricing />} />
-              <Route path="/cases" element={<Cases />} />
-              <Route path="/experts" element={<Experts />} />
-              <Route path="/faq" element={<Faq />} />
-              <Route path="/contacts" element={<Contacts />} />
-              <Route path="/privacy" element={<Privacy />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/reviews" element={<Reviews />} />
-              <Route path="/vacancies" element={<Vacancies />} />
-              <Route path="/blog" element={<Blog />} />
-              <Route path="/blog/:slug" element={<BlogArticle />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </div>
-          <Footer />
+          <AuthProvider>
+            <ScrollToTop />
+            <VisitorTracker />
+            <GlobalSeo />
+            <Navigation />
+            <div>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/program" element={<Program />} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/cases" element={<Cases />} />
+                <Route path="/experts" element={<Experts />} />
+                <Route path="/faq" element={<Faq />} />
+                <Route path="/contacts" element={<Contacts />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/reviews" element={<Reviews />} />
+                <Route path="/vacancies" element={<Vacancies />} />
+                <Route path="/blog" element={<Blog />} />
+                <Route path="/blog/:slug" element={<BlogArticle />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/account" element={<Account />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </div>
+            <Footer />
+          </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

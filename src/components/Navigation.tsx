@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navLinks = [
   { label: "Программа", to: "/program" },
@@ -17,6 +18,7 @@ const navLinks = [
 
 const Navigation = () => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user } = useAuth();
 
   return (
     <nav className="fixed top-0 w-full z-50 bg-[var(--drawing-bg)] border-b-[2.5px] border-[var(--drawing-line)]">
@@ -40,16 +42,31 @@ const Navigation = () => {
           ))}
         </div>
 
-        <div className="hidden md:flex items-center gap-4 ml-auto">
+        <div className="hidden md:flex items-center gap-3 ml-auto">
+          {user ? (
+            <Link
+              to="/account"
+              className="font-gost text-[11px] uppercase tracking-wider px-3 py-1.5 border border-[var(--drawing-line)] hover:bg-[var(--drawing-line)] hover:text-[var(--drawing-bg)] transition-colors flex items-center gap-2"
+              title={user.email}
+            >
+              <Icon name="User" size={14} />
+              <span className="max-w-[120px] truncate">{user.full_name || user.email.split("@")[0]}</span>
+            </Link>
+          ) : (
+            <Link
+              to="/login"
+              className="font-gost text-[11px] uppercase tracking-wider text-[var(--drawing-line)] hover:text-[var(--drawing-accent)] transition-colors flex items-center gap-1"
+            >
+              <Icon name="LogIn" size={14} />
+              Войти
+            </Link>
+          )}
           <Link
             to="/contacts"
             className="btn-drawing-accent font-gost text-[11px] uppercase tracking-wider px-4 py-1.5 border-2 border-[var(--drawing-accent)] transition-all hover:bg-[var(--drawing-accent)] hover:text-white"
           >
             Диагностика ВКР&nbsp;&rarr;
           </Link>
-          <span className="hidden lg:inline font-gost-upright text-[9px] text-[var(--drawing-line-thin)] opacity-60 whitespace-nowrap">
-            ГОСТ 2.104-2006
-          </span>
         </div>
 
         <button
@@ -95,10 +112,29 @@ const Navigation = () => {
               </Link>
             ))}
             <div className="extension-line-h w-32 my-2" />
+            {user ? (
+              <Link
+                to="/account"
+                onClick={() => setMenuOpen(false)}
+                className="font-gost text-sm uppercase tracking-wider px-5 py-2.5 border border-[var(--drawing-line)] flex items-center gap-2"
+              >
+                <Icon name="User" size={16} />
+                {user.full_name || user.email.split("@")[0]}
+              </Link>
+            ) : (
+              <Link
+                to="/login"
+                onClick={() => setMenuOpen(false)}
+                className="font-gost text-sm uppercase tracking-wider px-5 py-2.5 border border-[var(--drawing-line)] flex items-center gap-2"
+              >
+                <Icon name="LogIn" size={16} />
+                Войти
+              </Link>
+            )}
             <Link
               to="/contacts"
               onClick={() => setMenuOpen(false)}
-              className="btn-drawing-accent font-gost text-sm uppercase tracking-wider px-6 py-3 border-2 border-[var(--drawing-accent)] transition-all hover:bg-[var(--drawing-accent)] hover:text-white mt-2"
+              className="btn-drawing-accent font-gost text-sm uppercase tracking-wider px-6 py-3 border-2 border-[var(--drawing-accent)] transition-all hover:bg-[var(--drawing-accent)] hover:text-white"
             >
               Диагностика ВКР&nbsp;&rarr;
             </Link>

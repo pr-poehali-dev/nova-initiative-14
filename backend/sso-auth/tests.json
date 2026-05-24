@@ -1,0 +1,58 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS возвращает CORS",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Без action возвращает 400",
+      "method": "POST",
+      "path": "/",
+      "body": {},
+      "expectedStatus": 400
+    },
+    {
+      "name": "Регистрация с некорректным email",
+      "method": "POST",
+      "path": "/?action=register",
+      "body": {"email": "not-an-email", "password": "verylongpassword123"},
+      "expectedStatus": 400
+    },
+    {
+      "name": "Регистрация с коротким паролем",
+      "method": "POST",
+      "path": "/?action=register",
+      "body": {"email": "ok@example.com", "password": "123"},
+      "expectedStatus": 400
+    },
+    {
+      "name": "Логин без данных",
+      "method": "POST",
+      "path": "/?action=login",
+      "body": {},
+      "expectedStatus": 400
+    },
+    {
+      "name": "Логин с несуществующим аккаунтом",
+      "method": "POST",
+      "path": "/?action=login",
+      "body": {"email": "no-such-user-xyz@example.com", "password": "anything12345"},
+      "expectedStatus": 401
+    },
+    {
+      "name": "Userinfo без токена",
+      "method": "GET",
+      "path": "/?action=userinfo",
+      "expectedStatus": 401
+    },
+    {
+      "name": "Refresh без токена",
+      "method": "POST",
+      "path": "/?action=refresh",
+      "body": {},
+      "expectedStatus": 400
+    }
+  ]
+}
