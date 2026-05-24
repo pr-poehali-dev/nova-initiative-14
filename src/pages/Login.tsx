@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/contexts/AuthContext";
 import { SITE_URL } from "@/lib/seo";
+import OAuthButtons from "@/components/OAuthButtons";
 
 const Login = () => {
   const { login, loading, error, clearError, user } = useAuth();
@@ -95,6 +96,8 @@ const Login = () => {
               Зарегистрироваться
             </Link>
           </p>
+
+          <OAuthButtons redirectAfter={from} />
         </form>
       </div>
     </>

@@ -24,6 +24,7 @@ import BlogArticle from "./pages/BlogArticle";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Account from "./pages/Account";
+import OAuthCallback from "./pages/OAuthCallback";
 import NotFound from "./pages/NotFound";
 import { useVisitorTracking, getVisitorData } from "./hooks/useVisitorTracking";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -94,6 +95,7 @@ const App = () => (
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/account" element={<Account />} />
+                <Route path="/oauth/callback" element={<OAuthCallback />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </div>

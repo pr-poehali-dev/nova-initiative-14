@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/contexts/AuthContext";
 import { SITE_URL } from "@/lib/seo";
+import OAuthButtons from "@/components/OAuthButtons";
 
 const Register = () => {
   const { register, loading, error, clearError, user } = useAuth();
@@ -137,6 +138,8 @@ const Register = () => {
               Войти
             </Link>
           </p>
+
+          <OAuthButtons redirectAfter="/account" />
         </form>
 
         <p className="font-gost text-[10px] text-center text-[var(--drawing-line-thin)] opacity-70 mt-6 leading-relaxed">

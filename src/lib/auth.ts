@@ -113,3 +113,31 @@ export async function logout(refreshToken: string) {
 export async function fetchUserInfo(accessToken: string) {
   return call<{ user: SsoUser }>("userinfo", "GET", undefined, accessToken);
 }
+
+export type OAuthProvider = "yandex" | "vk" | "google" | "mailru";
+
+export const PROVIDER_LABELS: Record<OAuthProvider, string> = {
+  yandex: "Яндекс",
+  vk: "ВКонтакте",
+  google: "Google",
+  mailru: "Mail.ru",
+};
+
+export async function fetchOauthProviders() {
+  return call<{ providers: OAuthProvider[] }>("oauth-providers", "GET");
+}
+
+export async function oauthStart(provider: OAuthProvider, redirectAfter = "/account") {
+  const url = `${API}?action=oauth-start&provider=${provider}&redirect_after=${encodeURIComponent(redirectAfter)}`;
+  const res = await fetch(url, { headers: { Accept: "application/json" } });
+  if (!res.ok) throw new Error(`oauth-start ${res.status}`);
+  return (await res.json()) as { authorize_url: string; provider: OAuthProvider };
+}
+
+export async function oauthCallback(code: string, state: string) {
+  return call<TokenPair & { redirect_after?: string }>(
+    "oauth-callback",
+    "POST",
+    { code, state },
+  );
+}
