@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex,nofollow" />
+<title>Завершаем вход…</title>
+<style>
+  html,body{margin:0;padding:0;background:#faf8f0;color:#1a1a2e;font-family:Georgia,'Times New Roman',serif;}
+  .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;}
+  .box{max-width:420px;}
+  .label{font-family:'Courier New',monospace;font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:#3a3a5e;margin-bottom:14px;}
+  h1{font-size:20px;font-weight:700;margin:0 0 10px;}
+  p{font-size:14px;color:#3a3a5e;margin:0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="box">
+    <div class="label">SSO · Авторизация</div>
+    <h1>Завершаем вход…</h1>
+    <p>Пожалуйста, подождите.</p>
+  </div>
+</div>
+<script>
+// Этот файл — фолбэк-перехватчик OAuth callback на статическом хостинге.
+// SPA-роут /oauth/callback не отдаётся серверным fallback'ом, поэтому
+// мы кладём отдельный HTML, который сразу делает client-side навигацию
+// в корневой роутер с тем же query-string. Тогда React-Router
+// корректно поднимает страницу OAuthCallback (для маршрута /oauth/callback)
+// — но через history API внутри SPA, а не через прямой запрос на сервер.
+(function () {
+  try {
+    var search = window.location.search || '';
+    var hash = window.location.hash || '';
+    // Переходим на главную и оттуда уже SPA-навигацией на /oauth/callback
+    var target = '/?__oauth_cb=1' + (search ? '&' + search.slice(1) : '') + hash;
+    window.location.replace(target);
+  } catch (e) {
+    document.querySelector('.box').innerHTML +=
+      '<p style="color:#c0392b;margin-top:12px">Ошибка переадресации: ' + e + '</p>';
+  }
+})();
+</script>
+</body>
+</html>

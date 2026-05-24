@@ -46,6 +46,26 @@ function ScrollToTop() {
   return null;
 }
 
+/**
+ * При прямом запросе /oauth/callback хостинг отдаёт public/oauth/callback/index.html,
+ * который перенаправляет на /?__oauth_cb=1&code=...&state=...
+ * Здесь мы перехватываем этот маркер и поднимаем SPA-роут /oauth/callback с теми же query.
+ */
+function OAuthCallbackBootstrap() {
+  const loc = useLocation();
+  useEffect(() => {
+    if (loc.pathname !== "/") return;
+    const sp = new URLSearchParams(loc.search);
+    if (sp.get("__oauth_cb") !== "1") return;
+    sp.delete("__oauth_cb");
+    const next = `/oauth/callback?${sp.toString()}${loc.hash || ""}`;
+    window.history.replaceState(null, "", next);
+    // Триггерим обновление роутера (popstate, чтобы react-router увидел смену URL)
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  }, [loc.pathname, loc.search, loc.hash]);
+  return null;
+}
+
 function VisitorTracker() {
   useVisitorTracking();
 
@@ -74,6 +94,7 @@ const App = () => (
         <BrowserRouter>
           <AuthProvider>
             <ScrollToTop />
+            <OAuthCallbackBootstrap />
             <VisitorTracker />
             <GlobalSeo />
             <Navigation />
