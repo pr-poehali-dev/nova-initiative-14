@@ -63,16 +63,23 @@ def _handle_articles(conn, params):
             }
         cur.execute(
             "SELECT id, slug, h1, seo_title, seo_description, seo_keywords, summary, "
-            "quick_facts, body_html, bibliography, author_name, author_role, cover_url, "
+            "author_name, author_role, cover_url, "
             "reading_minutes, published_at, updated_at "
             "FROM engineering_articles WHERE is_published = TRUE "
             "ORDER BY published_at DESC"
         )
         rows = cur.fetchall()
+        articles = []
+        for r in rows:
+            d = dict(r)
+            d['quick_facts'] = []
+            d['body_html'] = ''
+            d['bibliography'] = []
+            articles.append(_article_row(d, False))
         return {
             'statusCode': 200,
             'headers': _cors({'Content-Type': 'application/json; charset=utf-8'}),
-            'body': json.dumps({'articles': [_article_row(dict(r), False) for r in rows]}, ensure_ascii=False),
+            'body': json.dumps({'articles': articles}, ensure_ascii=False),
         }
 
 

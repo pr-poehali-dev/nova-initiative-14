@@ -35,10 +35,13 @@ export interface Article extends ArticleListItem {
 const API = (func2url as Record<string, string>)["get-contacts"];
 
 export async function fetchArticles(): Promise<ArticleListItem[]> {
-  const res = await fetch(`${API}?resource=articles`);
-  if (!res.ok) throw new Error("Failed to fetch articles");
+  const res = await fetch(`${API}?resource=articles`, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Failed to fetch articles: HTTP ${res.status}`);
   const data = await res.json();
-  return data.articles || [];
+  return Array.isArray(data?.articles) ? data.articles : [];
 }
 
 export async function fetchArticle(slug: string): Promise<Article | null> {
