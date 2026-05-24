@@ -208,35 +208,46 @@ def _create_verify_token(conn, user_id: int) -> str:
 
 
 def _send_email(to: str, subject: str, html_body: str, text_body: str) -> bool:
-    """Отправляет письмо через Яндекс 360 SMTP. Не валит запрос при ошибке."""
-    smtp_user_raw = os.environ.get('SSO_SMTP_USER')
-    smtp_password = os.environ.get('SSO_SMTP_PASSWORD')
-    if not smtp_user_raw or not smtp_password:
+    """Отправляет письмо через Яндекс 360 SMTP.
+    SMTP-аутентификация под основным аккаунтом (YANDEX_SMTP_USER, обычно info@),
+    у которого есть роль shared_mailbox_sender. Заголовок From ставится от имени
+    общего ящика no-reply@ (SSO_SMTP_FROM). Так Яндекс разрешает 'Отправить как'.
+    Не валит запрос при ошибке.
+    """
+    smtp_login_raw = os.environ.get('YANDEX_SMTP_USER') or os.environ.get('SSO_SMTP_USER')
+    smtp_password = os.environ.get('YANDEX_SMTP_PASSWORD') or os.environ.get('SSO_SMTP_PASSWORD')
+    smtp_from_raw = os.environ.get('SSO_SMTP_FROM') or os.environ.get('SSO_SMTP_USER') or smtp_login_raw
+
+    if not smtp_login_raw or not smtp_password:
         print('[sso-auth] SMTP secrets not configured, email skipped')
         return False
 
-    smtp_user = _to_punycode_email(smtp_user_raw.strip())
+    smtp_login = _to_punycode_email(smtp_login_raw.strip())
+    smtp_from = _to_punycode_email((smtp_from_raw or smtp_login_raw).strip())
     recipient = _to_punycode_email(to.strip())
 
     msg = EmailMessage()
     msg.set_charset('utf-8')
     msg['Subject'] = subject
-    msg['From'] = formataddr(('Диплом-Инж.рф', smtp_user), charset='utf-8')
+    msg['From'] = formataddr(('Диплом-Инж.рф', smtp_from), charset='utf-8')
     msg['To'] = recipient
+    msg['Reply-To'] = formataddr(('Диплом-Инж.рф · поддержка', smtp_login), charset='utf-8')
     msg['Date'] = formatdate(localtime=True)
-    msg['Message-ID'] = make_msgid(domain=smtp_user.split('@')[-1])
+    msg['Message-ID'] = make_msgid(domain=smtp_from.split('@')[-1])
     msg.set_content(text_body)
     msg.add_alternative(html_body, subtype='html')
 
     try:
         ctx = ssl.create_default_context()
-        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, context=ctx, timeout=15) as server:
-            server.login(smtp_user, smtp_password)
-            server.send_message(msg, from_addr=smtp_user, to_addrs=[recipient])
-        print(f'[sso-auth] verify email sent to {recipient}')
+        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, context=ctx, timeout=20) as server:
+            server.login(smtp_login, smtp_password)
+            # Envelope-from = реальный smtp_login (для DKIM/SPF Яндекс).
+            # Header From = no-reply@ (для пользователя в его клиенте).
+            server.send_message(msg, from_addr=smtp_login, to_addrs=[recipient])
+        print(f'[sso-auth] email sent: login={smtp_login} from_header={smtp_from} to={recipient}')
         return True
     except Exception as e:
-        print(f'[sso-auth] SMTP error: {e!r}')
+        print(f'[sso-auth] SMTP error: type={type(e).__name__} msg={e!r}')
         return False
 
 
