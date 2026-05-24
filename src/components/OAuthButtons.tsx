@@ -40,9 +40,12 @@ const OAuthButtons = ({ redirectAfter = "/account" }: Props) => {
   useEffect(() => {
     fetchOauthProviders()
       .then((res) => {
-        setProviders(res.data?.providers || []);
-        const vk = res.data?.vk_sdk;
-        if (vk?.enabled && vk.app_id) setVkSdkAppId(vk.app_id);
+        // Временно скрываем VK ID до настройки доменов и Mail.ru / OK.
+        const list = (res.data?.providers || []).filter(
+          (p) => p !== "vk" && p !== "mailru",
+        );
+        setProviders(list);
+        setVkSdkAppId(null);
       })
       .catch(() => {
         setProviders([]);
