@@ -1,4 +1,7 @@
 {
+  "create-vacancy": "https://functions.poehali.dev/3c0b1bac-5967-4f12-a8e7-70f2c3d0dbf3",
+  "track-visit": "https://functions.poehali.dev/73632746-76b9-4cb4-8cb6-6b08d5c8d133",
   "create-lead": "https://functions.poehali.dev/3f5e15dd-a5ff-4a69-9abf-c2718f06df4c",
-  "get-contacts": "https://functions.poehali.dev/9f65e248-4e08-48ce-adfa-c87094085b6d"
+  "get-contacts": "https://functions.poehali.dev/9f65e248-4e08-48ce-adfa-c87094085b6d",
+  "get-tariffs": "https://functions.poehali.dev/43b0c0e9-6384-4abf-a7be-83199d8d97d0"
 }
