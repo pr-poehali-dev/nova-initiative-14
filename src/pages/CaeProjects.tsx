@@ -31,6 +31,7 @@ const CaeProjects = () => {
   // форма создания
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [projectType, setProjectType] = useState<"frame_2d" | "frame_3d">("frame_3d");
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -62,12 +63,13 @@ const CaeProjects = () => {
     const res = await createProject({
       name: name.trim(),
       description: description.trim(),
-      project_type: "frame_3d",
+      project_type: projectType,
     });
     setCreating(false);
     if (res.ok && res.data?.project) {
       setName("");
       setDescription("");
+      setProjectType("frame_3d");
       setShowCreate(false);
       setProjects((prev) => [res.data!.project, ...prev]);
     } else {
@@ -129,7 +131,7 @@ const CaeProjects = () => {
           <div className="text-sm">
             <p className="font-gost-upright font-bold mb-1">CAE в&nbsp;разработке</p>
             <p className="text-[var(--drawing-line-thin)]">
-              Сейчас вы&nbsp;видите каркас личного кабинета. Решатель Timoshenko FEM и&nbsp;3D-редактор появятся в&nbsp;ближайших обновлениях. <Link to="/cae" className="underline text-[var(--drawing-accent)]">Записаться в&nbsp;ранний доступ</Link>, чтобы первыми получить уведомление.
+              Сейчас вы&nbsp;видите каркас личного кабинета. Конечно-элементный решатель и&nbsp;редактор схем (2D и&nbsp;3D) появятся в&nbsp;ближайших обновлениях. <Link to="/cae" className="underline text-[var(--drawing-accent)]">Записаться в&nbsp;ранний доступ</Link>, чтобы первыми получить уведомление.
             </p>
           </div>
         </div>
@@ -157,6 +159,40 @@ const CaeProjects = () => {
                 maxLength={200}
                 autoFocus
               />
+            </div>
+            <div>
+              <label className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] block mb-2">
+                Тип расчётной схемы
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setProjectType("frame_2d")}
+                  className={`border-2 py-2 px-3 text-xs font-gost uppercase tracking-wider transition ${
+                    projectType === "frame_2d"
+                      ? "border-[var(--drawing-accent)] bg-[var(--drawing-accent)] text-white"
+                      : "border-[var(--drawing-line)] hover:border-[var(--drawing-accent)]"
+                  }`}
+                >
+                  Плоская рама (2D)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setProjectType("frame_3d")}
+                  className={`border-2 py-2 px-3 text-xs font-gost uppercase tracking-wider transition ${
+                    projectType === "frame_3d"
+                      ? "border-[var(--drawing-accent)] bg-[var(--drawing-accent)] text-white"
+                      : "border-[var(--drawing-line)] hover:border-[var(--drawing-accent)]"
+                  }`}
+                >
+                  Пространственная (3D)
+                </button>
+              </div>
+              <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] mt-1.5">
+                {projectType === "frame_2d"
+                  ? "3 степени свободы на узел: u_x, u_y, поворот."
+                  : "6 степеней свободы на узел: перемещения и повороты по всем осям."}
+              </p>
             </div>
             <div>
               <label className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] block mb-2">
@@ -236,7 +272,11 @@ const CaeProjects = () => {
                 <div className="extension-line-h w-full my-3" />
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-gost text-[var(--drawing-line-thin)] uppercase tracking-wider">
-                    {p.project_type === "frame_3d" ? "Рама 3D" : p.project_type}
+                    {p.project_type === "frame_3d"
+                      ? "Рама 3D"
+                      : p.project_type === "frame_2d"
+                      ? "Рама 2D"
+                      : p.project_type}
                   </span>
                   <span className="font-gost text-[var(--drawing-line-thin)]">
                     {formatDate(p.updated_at)}
