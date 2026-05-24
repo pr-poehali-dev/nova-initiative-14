@@ -1,4 +1,5 @@
 {
+  "cae-solver": "https://functions.poehali.dev/b470871c-af29-425e-90ed-8fc6c152ab1e",
   "cae-api": "https://functions.poehali.dev/cacef945-9d0f-43b9-99f9-38f13466a35d",
   "sso-auth": "https://functions.poehali.dev/d5c87b9f-0b8c-4b2b-a277-ffbe45eaceff",
   "create-vacancy": "https://functions.poehali.dev/3c0b1bac-5967-4f12-a8e7-70f2c3d0dbf3",

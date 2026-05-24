@@ -1,0 +1,195 @@
+"""
+Business: CAE Solver — конечно-элементный расчёт балочных рам (2D/3D).
+Args: event.queryStringParameters.action; httpMethod POST/OPTIONS;
+      body — JSON SolverPayload (см. solver.py).
+Returns: JSON SolverResponse с перемещениями, реакциями, эпюрами N/Q/M, σ Мизес.
+"""
+import base64
+import hashlib
+import hmac
+import json
+import os
+import time
+from datetime import datetime
+
+import psycopg2
+
+from solver import solve as run_solver
+
+
+JWT_SECRET = os.environ['SSO_JWT_SECRET']
+
+CORS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Authorization, Authorization',
+    'Access-Control-Max-Age': '86400',
+    'Content-Type': 'application/json; charset=utf-8',
+}
+
+MAX_ELEMENTS_DEFAULT = 5000
+MAX_PAYLOAD_BYTES = 2 * 1024 * 1024  # 2 МБ
+
+
+def _json_response(status: int, body: dict) -> dict:
+    return {'statusCode': status, 'headers': CORS, 'body': json.dumps(body, ensure_ascii=False)}
+
+
+def _b64url_decode(s: str) -> bytes:
+    pad = '=' * (-len(s) % 4)
+    return base64.urlsafe_b64decode(s + pad)
+
+
+def _verify_jwt(token: str) -> dict | None:
+    try:
+        h_b, p_b, s_b = token.split('.')
+        signing_input = f'{h_b}.{p_b}'.encode()
+        expected = hmac.new(JWT_SECRET.encode(), signing_input, hashlib.sha256).digest()
+        actual = _b64url_decode(s_b)
+        if not hmac.compare_digest(expected, actual):
+            return None
+        payload = json.loads(_b64url_decode(p_b))
+        if payload.get('exp', 0) < int(time.time()):
+            return None
+        return payload
+    except Exception:
+        return None
+
+
+def _auth_user(event: dict) -> dict | None:
+    headers = event.get('headers') or {}
+    auth = headers.get('X-Authorization') or headers.get('Authorization') or ''
+    if not auth.startswith('Bearer '):
+        return None
+    return _verify_jwt(auth[7:].strip())
+
+
+def _validate_payload(payload: dict) -> tuple[bool, str | None]:
+    if not isinstance(payload, dict):
+        return False, 'Payload должен быть объектом'
+    meta = payload.get('meta') or {}
+    dim = meta.get('dim', '3d')
+    if dim not in ('2d', '3d'):
+        return False, f'meta.dim должен быть "2d" или "3d", получено "{dim}"'
+    if not payload.get('materials'):
+        return False, 'Не задано ни одного материала'
+    if not payload.get('sections'):
+        return False, 'Не задано ни одного сечения'
+    if not payload.get('nodes') or len(payload['nodes']) < 2:
+        return False, 'Нужно минимум 2 узла'
+    if not payload.get('elements'):
+        return False, 'Нужно минимум 1 элемент'
+    if len(payload['elements']) > MAX_ELEMENTS_DEFAULT:
+        return False, f'Превышен лимит элементов ({MAX_ELEMENTS_DEFAULT})'
+    if not payload.get('boundary_conditions'):
+        return False, 'Не заданы граничные условия — конструкция будет иметь жёсткое тело'
+    return True, None
+
+
+def _save_run(project_id: int | None, version_id: int | None, owner_id: int,
+              status: str, payload: dict, response: dict | None,
+              duration_ms: int, error_text: str | None):
+    """Сохраняет лог запуска в cae_solver_runs."""
+    if not project_id:
+        return
+    try:
+        conn = psycopg2.connect(os.environ['DATABASE_URL'])
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO cae_solver_runs (project_id, version_id, owner_id, status, "
+                "payload_jsonb, response_jsonb, duration_ms, error_text) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                (project_id, version_id, owner_id, status,
+                 json.dumps(payload, ensure_ascii=False),
+                 json.dumps(response, ensure_ascii=False) if response else None,
+                 duration_ms, error_text),
+            )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f'[cae-solver] save_run error: {e!r}')
+
+
+def handler(event: dict, context) -> dict:
+    method = event.get('httpMethod', 'POST')
+    if method == 'OPTIONS':
+        return {'statusCode': 200, 'headers': CORS, 'body': ''}
+
+    params = event.get('queryStringParameters') or {}
+    action = (params.get('action') or 'solve').strip()
+    if method != 'POST':
+        return _json_response(405, {'error': 'method_not_allowed'})
+
+    # Парсим body
+    body_raw = event.get('body') or '{}'
+    if event.get('isBase64Encoded'):
+        try:
+            body_raw = base64.b64decode(body_raw).decode('utf-8')
+        except Exception:
+            return _json_response(400, {'error': 'invalid_base64'})
+    if len(body_raw) > MAX_PAYLOAD_BYTES:
+        return _json_response(413, {'error': 'payload_too_large',
+                                    'message': f'Размер payload > {MAX_PAYLOAD_BYTES // 1024} КБ'})
+
+    try:
+        payload = json.loads(body_raw)
+    except Exception:
+        return _json_response(400, {'error': 'invalid_json'})
+
+    if action == 'validate':
+        ok, msg = _validate_payload(payload)
+        return _json_response(200 if ok else 400,
+                              {'valid': ok, 'message': msg or 'OK'})
+
+    if action == 'demo':
+        # Демо-режим: без авторизации, без сохранения в БД, лимит 10 элементов
+        if len(payload.get('elements', [])) > 10:
+            return _json_response(403, {'error': 'demo_limit',
+                                        'message': 'Демо ограничено 10 элементами. Войдите для полного расчёта.'})
+        ok, msg = _validate_payload(payload)
+        if not ok:
+            return _json_response(400, {'error': 'validation_failed', 'message': msg})
+        try:
+            t0 = time.time()
+            response = run_solver(payload)
+            response['duration_ms'] = int((time.time() - t0) * 1000)
+            response['demo'] = True
+            return _json_response(200, response)
+        except Exception as e:
+            import traceback
+            print(f'[cae-solver demo] error: {e!r}\n{traceback.format_exc()}')
+            return _json_response(500, {'error': 'solver_failed', 'message': str(e)[:300]})
+
+    # Авторизованный режим
+    user = _auth_user(event)
+    if not user:
+        return _json_response(401, {'error': 'unauthorized',
+                                    'message': 'Требуется вход. Используйте action=demo для пробного расчёта.'})
+
+    owner_id = int(user['sub'])
+    project_id = payload.get('meta', {}).get('project_id')
+    version_id = payload.get('meta', {}).get('version_id')
+
+    ok, msg = _validate_payload(payload)
+    if not ok:
+        _save_run(project_id, version_id, owner_id, 'error', payload, None, 0, msg)
+        return _json_response(400, {'error': 'validation_failed', 'message': msg})
+
+    # Запуск решателя
+    t0 = time.time()
+    try:
+        response = run_solver(payload)
+        duration_ms = int((time.time() - t0) * 1000)
+        response['duration_ms'] = duration_ms
+        _save_run(project_id, version_id, owner_id, 'ok', payload, response, duration_ms, None)
+        return _json_response(200, response)
+    except Exception as e:
+        duration_ms = int((time.time() - t0) * 1000)
+        import traceback
+        tb = traceback.format_exc()
+        print(f'[cae-solver] error: {e!r}\n{tb}')
+        _save_run(project_id, version_id, owner_id, 'error', payload, None, duration_ms, f'{type(e).__name__}: {e}')
+        return _json_response(500, {
+            'error': 'solver_failed',
+            'message': f'{type(e).__name__}: {e}'[:300],
+        })

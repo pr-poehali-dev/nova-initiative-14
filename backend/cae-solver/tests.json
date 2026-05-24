@@ -1,0 +1,112 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS CORS",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "GET не разрешён",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 405
+    },
+    {
+      "name": "Validate: пустой payload",
+      "method": "POST",
+      "path": "/?action=validate",
+      "body": {},
+      "expectedStatus": 400
+    },
+    {
+      "name": "Demo: консольная балка 2D — расчёт",
+      "method": "POST",
+      "path": "/?action=demo",
+      "body": {
+        "meta": { "dim": "2d" },
+        "materials": [
+          { "id": "steel", "E": 2.1e11, "G": 8.1e10, "nu": 0.3, "rho": 7850, "sigma_yield": 245e6 }
+        ],
+        "sections": [
+          { "id": "rect", "A": 0.01, "I_z": 8.333e-6, "I_y": 8.333e-6, "I_t": 0, "W_z": 1.667e-4, "h": 0.1, "shear_area_y": 0.00833 }
+        ],
+        "nodes": [
+          { "id": "n1", "coords": [0, 0] },
+          { "id": "n2", "coords": [1.0, 0] }
+        ],
+        "elements": [
+          { "id": "e1", "node_start": "n1", "node_end": "n2", "material_id": "steel", "section_id": "rect" }
+        ],
+        "boundary_conditions": [
+          { "node_id": "n1", "constrained_dofs": ["ux", "uy", "rz"] }
+        ],
+        "loads": [
+          { "type": "nodal_force", "node_id": "n2", "force": [0, -1000, 0], "moment": [0, 0, 0] }
+        ]
+      },
+      "expectedStatus": 200
+    },
+    {
+      "name": "Demo: лимит элементов",
+      "method": "POST",
+      "path": "/?action=demo",
+      "body": {
+        "meta": { "dim": "2d" },
+        "materials": [{"id": "s", "E": 2.1e11, "G": 8.1e10}],
+        "sections": [{"id": "r", "A": 0.01, "I_z": 1e-6}],
+        "nodes": [
+          {"id":"n1","coords":[0,0]},{"id":"n2","coords":[1,0]},{"id":"n3","coords":[2,0]},
+          {"id":"n4","coords":[3,0]},{"id":"n5","coords":[4,0]},{"id":"n6","coords":[5,0]},
+          {"id":"n7","coords":[6,0]},{"id":"n8","coords":[7,0]},{"id":"n9","coords":[8,0]},
+          {"id":"n10","coords":[9,0]},{"id":"n11","coords":[10,0]},{"id":"n12","coords":[11,0]}
+        ],
+        "elements": [
+          {"id":"e1","node_start":"n1","node_end":"n2","material_id":"s","section_id":"r"},
+          {"id":"e2","node_start":"n2","node_end":"n3","material_id":"s","section_id":"r"},
+          {"id":"e3","node_start":"n3","node_end":"n4","material_id":"s","section_id":"r"},
+          {"id":"e4","node_start":"n4","node_end":"n5","material_id":"s","section_id":"r"},
+          {"id":"e5","node_start":"n5","node_end":"n6","material_id":"s","section_id":"r"},
+          {"id":"e6","node_start":"n6","node_end":"n7","material_id":"s","section_id":"r"},
+          {"id":"e7","node_start":"n7","node_end":"n8","material_id":"s","section_id":"r"},
+          {"id":"e8","node_start":"n8","node_end":"n9","material_id":"s","section_id":"r"},
+          {"id":"e9","node_start":"n9","node_end":"n10","material_id":"s","section_id":"r"},
+          {"id":"e10","node_start":"n10","node_end":"n11","material_id":"s","section_id":"r"},
+          {"id":"e11","node_start":"n11","node_end":"n12","material_id":"s","section_id":"r"}
+        ],
+        "boundary_conditions": [{"node_id":"n1","constrained_dofs":["ux","uy","rz"]}],
+        "loads": []
+      },
+      "expectedStatus": 403
+    },
+    {
+      "name": "Авторизованный без токена — 401",
+      "method": "POST",
+      "path": "/?action=solve",
+      "body": {
+        "meta": {"dim": "2d"},
+        "materials": [{"id": "s", "E": 2.1e11, "G": 8.1e10}],
+        "sections": [{"id": "r", "A": 0.01, "I_z": 1e-6}],
+        "nodes": [{"id":"n1","coords":[0,0]},{"id":"n2","coords":[1,0]}],
+        "elements": [{"id":"e1","node_start":"n1","node_end":"n2","material_id":"s","section_id":"r"}],
+        "boundary_conditions": [{"node_id":"n1","constrained_dofs":["ux","uy","rz"]}]
+      },
+      "expectedStatus": 401
+    },
+    {
+      "name": "Demo: 3D-балка — сила на конце",
+      "method": "POST",
+      "path": "/?action=demo",
+      "body": {
+        "meta": { "dim": "3d" },
+        "materials": [{"id": "steel", "E": 2.1e11, "G": 8.1e10, "nu": 0.3, "sigma_yield": 245e6}],
+        "sections": [{"id": "ipipe", "A": 1e-3, "I_y": 1e-7, "I_z": 1e-7, "I_t": 2e-7, "W_y": 2e-6, "W_z": 2e-6, "h": 0.1, "shear_area_y": 8e-4, "shear_area_z": 8e-4}],
+        "nodes": [{"id": "n1", "coords": [0,0,0]}, {"id": "n2", "coords": [2.0,0,0]}],
+        "elements": [{"id": "e1", "node_start": "n1", "node_end": "n2", "material_id": "steel", "section_id": "ipipe"}],
+        "boundary_conditions": [{"node_id": "n1", "constrained_dofs": ["ux","uy","uz","rx","ry","rz"]}],
+        "loads": [{"type": "nodal_force", "node_id": "n2", "force": [0,0,-500], "moment": [0,0,0]}]
+      },
+      "expectedStatus": 200
+    }
+  ]
+}
