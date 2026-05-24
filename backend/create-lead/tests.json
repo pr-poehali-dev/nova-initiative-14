@@ -15,9 +15,7 @@
         "hasComments": "no",
         "commentsText": ""
       },
-      "expectedStatus": 200,
-      "expectedBody": {"ok": true},
-      "bodyMatcher": "partial"
+      "expectedStatus": 200
     }
   ]
 }

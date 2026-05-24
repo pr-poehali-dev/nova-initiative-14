@@ -1,7 +1,74 @@
 import json
 import os
+import smtplib
+import ssl
 import urllib.request
 import urllib.parse
+from email.message import EmailMessage
+from email.utils import formataddr, formatdate, make_msgid
+
+
+SMTP_HOST = 'smtp.yandex.ru'
+SMTP_PORT = 465
+
+
+def _to_punycode_email(addr):
+    """Преобразует email с кириллическим доменом в формат ASCII (Punycode для domain part)."""
+    if not addr or '@' not in addr:
+        return addr
+    local, domain = addr.rsplit('@', 1)
+    try:
+        domain_ascii = domain.encode('idna').decode('ascii')
+    except Exception:
+        domain_ascii = domain
+    return f'{local}@{domain_ascii}'
+
+
+def _send_lead_email(lead_id, name, contact, comments):
+    """Отправляет уведомление о новой заявке через SMTP Яндекс 360. Не валит запрос при ошибке."""
+    smtp_user_raw = os.environ.get('YANDEX_SMTP_USER')
+    smtp_password = os.environ.get('YANDEX_SMTP_PASSWORD')
+    notify_to_raw = os.environ.get('LEAD_NOTIFY_EMAIL')
+
+    if not smtp_user_raw or not smtp_password or not notify_to_raw:
+        print('[create-lead] SMTP secrets not configured, email skipped')
+        return False
+
+    smtp_user = _to_punycode_email(smtp_user_raw.strip())
+    recipients = [_to_punycode_email(a.strip()) for a in notify_to_raw.split(',') if a.strip()]
+    if not recipients:
+        return False
+
+    lead_title = f'Новая заявка с сайта Диплом-Инж.рф · #{lead_id or "—"}'
+    plain_body = (
+        f'Имя: {name or "—"}\n'
+        f'Контакт: {contact or "—"}\n'
+        f'ID лида в Битрикс24: {lead_id or "—"}\n\n'
+        f'{comments}\n'
+    )
+
+    msg = EmailMessage()
+    msg.set_charset('utf-8')
+    msg['Subject'] = lead_title
+    msg['From'] = formataddr(('Диплом-Инж.рф · сайт', smtp_user), charset='utf-8')
+    msg['To'] = ', '.join(recipients)
+    msg['Date'] = formatdate(localtime=True)
+    msg['Message-ID'] = make_msgid(domain=smtp_user.split('@')[-1])
+    if contact and '@' in contact and not contact.startswith('@'):
+        msg['Reply-To'] = _to_punycode_email(contact)
+    msg.set_content(plain_body)
+
+    try:
+        ctx = ssl.create_default_context()
+        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, context=ctx, timeout=15) as server:
+            server.login(smtp_user, smtp_password)
+            server.send_message(msg, from_addr=smtp_user, to_addrs=recipients)
+        print(f'[create-lead] Email sent to {recipients}')
+        return True
+    except Exception as e:
+        print(f'[create-lead] SMTP error: {e}')
+        return False
+
 
 def handler(event: dict, context) -> dict:
     """Создаёт лид в Битрикс24 из данных формы заявки с сайта."""
@@ -124,8 +191,10 @@ def handler(event: dict, context) -> dict:
 
     lead_id = result.get('result')
 
+    email_sent = _send_lead_email(lead_id, name, contact, comments)
+
     return {
         'statusCode': 200,
         'headers': {'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'ok': True, 'lead_id': lead_id})
+        'body': json.dumps({'ok': True, 'lead_id': lead_id, 'email_sent': email_sent})
     }
