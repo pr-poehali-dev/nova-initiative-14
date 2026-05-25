@@ -1,15 +1,10 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import Icon from "@/components/ui/icon";
 import { useAuth } from "@/contexts/AuthContext";
 import { SITE_URL } from "@/lib/seo";
-import {
-  listProjects,
-  createProject,
-  archiveProject,
-  type CaeProject,
-} from "@/lib/cae";
+import { listProjects, archiveProject, type CaeProject } from "@/lib/cae";
 
 const formatDate = (iso: string | null) => {
   if (!iso) return "";
@@ -26,13 +21,6 @@ const CaeProjects = () => {
   const [projects, setProjects] = useState<CaeProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showCreate, setShowCreate] = useState(false);
-
-  // форма создания
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [projectType, setProjectType] = useState<"frame_2d" | "frame_3d">("frame_3d");
-  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -53,27 +41,6 @@ const CaeProjects = () => {
       setError(null);
     } else {
       setError(res.message || res.error || "Не удалось загрузить проекты");
-    }
-  };
-
-  const onCreate = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
-    setCreating(true);
-    const res = await createProject({
-      name: name.trim(),
-      description: description.trim(),
-      project_type: projectType,
-    });
-    setCreating(false);
-    if (res.ok && res.data?.project) {
-      setName("");
-      setDescription("");
-      setProjectType("frame_3d");
-      setShowCreate(false);
-      setProjects((prev) => [res.data!.project, ...prev]);
-    } else {
-      setError(res.message || res.error || "Не удалось создать проект");
     }
   };
 
@@ -113,120 +80,29 @@ const CaeProjects = () => {
               Мои проекты
             </h1>
             <p className="text-sm text-[var(--drawing-line-thin)] mt-2">
-              Бета-версия. Редактор и&nbsp;решатель — в&nbsp;разработке. Сейчас можно создавать и&nbsp;именовать проекты.
+              2D-редактор с&nbsp;каталогом ГОСТ-профилей и&nbsp;конечно-элементным решателем. Создайте проект из&nbsp;шаблона или с&nbsp;нуля.
             </p>
           </div>
-          <button
-            onClick={() => setShowCreate(true)}
-            className="btn-drawing btn-drawing-accent text-xs shrink-0 self-start md:self-end"
+          <Link
+            to="/cae/projects/new"
+            className="btn-drawing btn-drawing-accent text-xs shrink-0 self-start md:self-end inline-flex"
           >
             <Icon name="Plus" size={14} className="mr-1.5" />
             Новый проект
-          </button>
+          </Link>
         </div>
 
-        {/* Banner о бете */}
+        {/* Banner */}
         <div className="border border-[var(--drawing-accent)] bg-[var(--drawing-bg)] p-4 mb-8 flex items-start gap-3">
-          <Icon name="AlertCircle" size={18} className="text-[var(--drawing-accent)] mt-0.5 shrink-0" />
+          <Icon name="Sparkles" size={18} className="text-[var(--drawing-accent)] mt-0.5 shrink-0" />
           <div className="text-sm">
-            <p className="font-gost-upright font-bold mb-1">CAE в&nbsp;разработке</p>
+            <p className="font-gost-upright font-bold mb-1">Новое: каталоги и шаблоны</p>
             <p className="text-[var(--drawing-line-thin)]">
-              Доступен 2D-редактор и&nbsp;конечно-элементный решатель. 3D-редактор и&nbsp;PDF-отчёт по&nbsp;ЕСКД &mdash; на&nbsp;подходе. <Link to="/cae" className="underline text-[var(--drawing-accent)]">Записаться в&nbsp;ранний доступ</Link>, чтобы первыми получать обновления.
+              Доступны каталоги ГОСТ-сталей и&nbsp;сечений (двутавры, швеллеры, уголки, трубы), параметрические сечения и&nbsp;10 шаблонов типовых задач. 3D-редактор и&nbsp;PDF-отчёт по&nbsp;ЕСКД &mdash; на&nbsp;подходе.
             </p>
           </div>
         </div>
 
-        {/* Форма создания */}
-        {showCreate && (
-          <form
-            onSubmit={onCreate}
-            className="drawing-frame p-6 mb-8 bg-[var(--drawing-bg)] space-y-4"
-          >
-            <h2 className="font-gost-upright text-base font-bold uppercase tracking-wide mb-2">
-              Новый проект
-            </h2>
-            <div>
-              <label className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] block mb-2">
-                Название
-              </label>
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="drawing-input"
-                placeholder="Рама редуктора"
-                maxLength={200}
-                autoFocus
-              />
-            </div>
-            <div>
-              <label className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] block mb-2">
-                Тип расчётной схемы
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setProjectType("frame_2d")}
-                  className={`border-2 py-2 px-3 text-xs font-gost uppercase tracking-wider transition ${
-                    projectType === "frame_2d"
-                      ? "border-[var(--drawing-accent)] bg-[var(--drawing-accent)] text-white"
-                      : "border-[var(--drawing-line)] hover:border-[var(--drawing-accent)]"
-                  }`}
-                >
-                  Плоская рама (2D)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setProjectType("frame_3d")}
-                  className={`border-2 py-2 px-3 text-xs font-gost uppercase tracking-wider transition ${
-                    projectType === "frame_3d"
-                      ? "border-[var(--drawing-accent)] bg-[var(--drawing-accent)] text-white"
-                      : "border-[var(--drawing-line)] hover:border-[var(--drawing-accent)]"
-                  }`}
-                >
-                  Пространственная (3D)
-                </button>
-              </div>
-              <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] mt-1.5">
-                {projectType === "frame_2d"
-                  ? "3 степени свободы на узел: u_x, u_y, поворот."
-                  : "6 степеней свободы на узел: перемещения и повороты по всем осям."}
-              </p>
-            </div>
-            <div>
-              <label className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] block mb-2">
-                Описание (необязательно)
-              </label>
-              <textarea
-                rows={2}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="drawing-input"
-                placeholder="Что считаем, кратко"
-                maxLength={2000}
-              />
-            </div>
-            <div className="flex gap-3">
-              <button
-                type="submit"
-                disabled={creating || !name.trim()}
-                className="btn-drawing btn-drawing-accent text-xs disabled:opacity-50"
-              >
-                {creating ? "Создаём…" : "Создать"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowCreate(false)}
-                className="btn-drawing text-xs"
-              >
-                Отмена
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* Список */}
         {loading ? (
           <p className="text-center font-gost text-[var(--drawing-line-thin)] py-10">Загружаем…</p>
         ) : error ? (
@@ -240,12 +116,12 @@ const CaeProjects = () => {
             />
             <p className="font-gost-upright font-bold mb-2">Проектов пока нет</p>
             <p className="text-sm text-[var(--drawing-line-thin)] mb-5">
-              Создайте первый проект, чтобы попробовать каркас CAE.
+              Создайте первый проект, чтобы попробовать CAE.
             </p>
-            <button onClick={() => setShowCreate(true)} className="btn-drawing btn-drawing-accent text-xs">
+            <Link to="/cae/projects/new" className="btn-drawing btn-drawing-accent text-xs inline-flex">
               <Icon name="Plus" size={14} className="mr-1.5" />
               Создать проект
-            </button>
+            </Link>
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">

@@ -48,7 +48,7 @@ export type DofName = "ux" | "uy" | "uz" | "rx" | "ry" | "rz";
 export interface BoundaryCondition {
   id: string;
   node_id: string;
-  type: "fixed" | "pinned" | "roller_x" | "roller_y" | "custom";
+  type: "fixed" | "pinned" | "roller_x" | "roller_y" | "sliding" | "custom";
   constrained_dofs: DofName[];
 }
 
@@ -256,16 +256,22 @@ export function genId(prefix: string, existing: { id: string }[]): string {
 }
 
 export function constrainedFromType(t: BoundaryCondition["type"], dim: "2d" | "3d"): DofName[] {
+  // Конвенции:
+  //   roller_x — каток, перекатывающийся ВДОЛЬ оси X (запрещает перемещение по Y)
+  //   roller_y — каток, перекатывающийся ВДОЛЬ оси Y (запрещает перемещение по X)
+  //   sliding  — «ползун»: фиксирует поворот и одно перемещение, второе свободно
   if (dim === "2d") {
     if (t === "fixed") return ["ux", "uy", "rz"];
     if (t === "pinned") return ["ux", "uy"];
     if (t === "roller_x") return ["uy"];
     if (t === "roller_y") return ["ux"];
+    if (t === "sliding") return ["ux", "rz"];
     return [];
   }
   if (t === "fixed") return ["ux", "uy", "uz", "rx", "ry", "rz"];
   if (t === "pinned") return ["ux", "uy", "uz"];
   if (t === "roller_x") return ["uy", "uz"];
   if (t === "roller_y") return ["ux", "uz"];
+  if (t === "sliding") return ["ux", "uz", "rx", "ry", "rz"];
   return [];
 }

@@ -27,6 +27,7 @@ import Account from "./pages/Account";
 import OAuthCallback from "./pages/OAuthCallback";
 import CaeLanding from "./pages/CaeLanding";
 import CaeProjects from "./pages/CaeProjects";
+import CaeNewProject from "./pages/CaeNewProject";
 import CaeEditor from "./pages/CaeEditor";
 import NotFound from "./pages/NotFound";
 import { useVisitorTracking, getVisitorData } from "./hooks/useVisitorTracking";
@@ -121,6 +122,7 @@ const App = () => (
                 <Route path="/account" element={<Account />} />
                 <Route path="/cae" element={<CaeLanding />} />
                 <Route path="/cae/projects" element={<CaeProjects />} />
+                <Route path="/cae/projects/new" element={<CaeNewProject />} />
                 <Route path="/cae/projects/:id" element={<CaeEditor />} />
                 <Route path="/oauth/callback" element={<OAuthCallback />} />
                 <Route path="*" element={<NotFound />} />
