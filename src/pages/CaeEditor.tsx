@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import Icon from "@/components/ui/icon";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,14 +24,10 @@ import {
   type SolverResponse,
 } from "@/lib/cae-model";
 import { MaterialPicker, SectionPicker } from "@/components/cae/CatalogPanel";
-import { findMaterial, findSection } from "@/lib/cae-catalog";
-
-const formatNumber = (v: number, digits = 4) => {
-  if (!isFinite(v)) return "—";
-  if (Math.abs(v) >= 1000) return v.toExponential(2);
-  if (Math.abs(v) < 0.001 && v !== 0) return v.toExponential(2);
-  return v.toFixed(digits);
-};
+import EditorTopBar from "@/components/cae/editor/EditorTopBar";
+import EditorLeftPanel from "@/components/cae/editor/EditorLeftPanel";
+import EditorRightPanel from "@/components/cae/editor/EditorRightPanel";
+import EditorResultsPanel from "@/components/cae/editor/EditorResultsPanel";
 
 const CaeEditor = () => {
   const { id } = useParams<{ id: string }>();
@@ -383,10 +379,10 @@ const CaeEditor = () => {
     : null;
   const nodeBC = selectedNode
     ? model.boundary_conditions.find((b) => b.node_id === selectedNode.id)
-    : null;
+    : undefined;
   const nodeLoad = selectedNode
     ? model.loads.find((l) => l.type === "nodal_force" && l.node_id === selectedNode.id)
-    : null;
+    : undefined;
 
   if (authLoading || loadingModel) {
     return (
@@ -404,117 +400,34 @@ const CaeEditor = () => {
       </Helmet>
 
       <div className="pt-16 md:pt-16">
-        {/* Верхняя панель */}
-        <div className="bg-[var(--drawing-bg)] border-b-[2.5px] border-[var(--drawing-line)]">
-          <div className="max-w-[1400px] mx-auto px-3 py-2 flex flex-wrap items-center gap-3">
-            <Link
-              to="/cae/projects"
-              className="font-gost text-[11px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] hover:text-[var(--drawing-accent)]"
-            >
-              ← Проекты
-            </Link>
-            <div className="extension-line-h h-[2px] w-6 mx-1" />
-            <div>
-              <p className="font-gost-upright text-sm font-bold leading-tight">
-                {projectName || "Без названия"}
-              </p>
-              <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)]">
-                {model.meta.dim === "2d" ? "Плоская рама 2D" : "Пространственная 3D"}
-                {dirty && " · несохранено"}
-                {lastSaved && !dirty && ` · сохранено в ${lastSaved}`}
-              </p>
-            </div>
-            <div className="ml-auto flex flex-wrap gap-2">
-              <button
-                onClick={onSave}
-                disabled={saving || !dirty}
-                className="btn-drawing text-[11px] disabled:opacity-50"
-              >
-                {saving ? "Сохраняем…" : "Сохранить"}
-              </button>
-              <button
-                onClick={onSolve}
-                disabled={solving}
-                className="btn-drawing btn-drawing-accent text-[11px] disabled:opacity-50"
-              >
-                <Icon name="Play" size={12} className="mr-1" />
-                {solving ? "Считаем…" : "Посчитать"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <EditorTopBar
+          projectName={projectName}
+          model={model}
+          dirty={dirty}
+          lastSaved={lastSaved}
+          saving={saving}
+          solving={solving}
+          onSave={onSave}
+          onSolve={onSolve}
+        />
 
         <div className="max-w-[1400px] mx-auto px-3 py-3 grid gap-3 lg:grid-cols-[260px_1fr_320px]">
-          {/* Левая панель: инструменты */}
-          <aside className="space-y-3">
-            <div className="border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] p-3">
-              <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-2">
-                Инструменты
-              </p>
-              <div className="grid grid-cols-2 gap-1.5 text-[11px]">
-                {[
-                  { v: "draw-node", label: "Узел", icon: "Circle" },
-                  { v: "draw-element", label: "Балка", icon: "Minus" },
-                  { v: "select", label: "Выбор", icon: "MousePointer" },
-                ].map((t) => (
-                  <button
-                    key={t.v}
-                    onClick={() => setMode(t.v as EditorMode)}
-                    className={`border py-2 px-2 font-gost uppercase tracking-wider flex items-center gap-1.5 transition ${
-                      mode === t.v
-                        ? "bg-[var(--drawing-accent)] text-white border-[var(--drawing-accent)]"
-                        : "border-[var(--drawing-line)] hover:border-[var(--drawing-accent)]"
-                    }`}
-                  >
-                    <Icon name={t.icon} size={12} />
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-              <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] mt-2 leading-relaxed">
-                {mode === "draw-node" && "Клик по холсту — добавить узел"}
-                {mode === "draw-element" && "Клик на 2 узла подряд — провести балку"}
-                {mode === "select" && "Клик на узел или балку — выбрать"}
-              </p>
-            </div>
-
-            <div className="border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] p-3">
-              <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-2">
-                Сетка
-              </p>
-              <div className="flex gap-1.5">
-                {[0.1, 0.25, 0.5, 1].map((g) => (
-                  <button
-                    key={g}
-                    onClick={() => setGridStep(g)}
-                    className={`flex-1 border py-1 text-[11px] font-mono ${
-                      gridStep === g
-                        ? "bg-[var(--drawing-line)] text-[var(--drawing-bg)] border-[var(--drawing-line)]"
-                        : "border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)]"
-                    }`}
-                  >
-                    {g} м
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] p-3 text-[11px] space-y-1.5">
-              <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-2">
-                Подсказки
-              </p>
-              <p>• <b>Колесо</b> — зум</p>
-              <p>• <b>Shift+ЛКМ</b> — пан</p>
-              <p>• <b>Delete</b> — удалить выбранное</p>
-            </div>
-          </aside>
+          <EditorLeftPanel
+            mode={mode}
+            setMode={setMode}
+            gridStep={gridStep}
+            setGridStep={setGridStep}
+          />
 
           {/* Канва */}
-          <div className="border-2 border-[var(--drawing-line)] relative" style={{ height: "70vh", minHeight: 480 }}
-               tabIndex={0}
-               onKeyDown={(e) => {
-                 if (e.key === "Delete" || e.key === "Backspace") deleteSelected();
-               }}>
+          <div
+            className="border-2 border-[var(--drawing-line)] relative"
+            style={{ height: "70vh", minHeight: 480 }}
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Delete" || e.key === "Backspace") deleteSelected();
+            }}
+          >
             <FrameCanvas
               model={model}
               setModel={updateModel}
@@ -540,293 +453,36 @@ const CaeEditor = () => {
             )}
           </div>
 
-          {/* Правая панель: свойства и результаты */}
+          {/* Правая колонка: свойства + результаты */}
           <aside className="space-y-3 text-[12px]">
-            {/* Свойства выбранного */}
-            {selectedNode ? (
-              <div className="border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] p-3">
-                <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-2">
-                  Узел {selectedNode.id}
-                </p>
-                <p className="font-mono text-[11px] mb-3">
-                  x = {selectedNode.coords[0].toFixed(2)} м<br />
-                  y = {selectedNode.coords[1].toFixed(2)} м
-                </p>
+            <EditorRightPanel
+              model={model}
+              selectedNode={selectedNode}
+              selectedElementId={selectedElementId}
+              nodeBC={nodeBC}
+              nodeLoad={nodeLoad}
+              bcCustomOpen={bcCustomOpen}
+              setBcCustomOpen={setBcCustomOpen}
+              addBC={addBC}
+              removeBC={removeBC}
+              toggleCustomDof={toggleCustomDof}
+              addNodalLoad={addNodalLoad}
+              setNodalMoment={setNodalMoment}
+              removeLoadOnNode={removeLoadOnNode}
+              setMatPickerOpen={setMatPickerOpen}
+              setSecPickerOpen={setSecPickerOpen}
+              setDistributedLoad={setDistributedLoad}
+              addInSpanPoint={addInSpanPoint}
+              deleteSelected={deleteSelected}
+            />
 
-                <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-1.5">
-                  Опора
-                </p>
-                <div className="grid grid-cols-3 gap-1 mb-1">
-                  {[
-                    { v: "fixed", label: "Защ." },
-                    { v: "pinned", label: "Шарн." },
-                    { v: "roller_y", label: "Кат.Y" },
-                    { v: "roller_x", label: "Кат.X" },
-                    { v: "sliding", label: "Ползун" },
-                    { v: "custom", label: "Ручн." },
-                  ].map((b) => (
-                    <button
-                      key={b.v}
-                      onClick={() => {
-                        if (b.v === "custom") {
-                          setBcCustomOpen((x) => !x);
-                        } else {
-                          addBC(b.v as BoundaryCondition["type"]);
-                          setBcCustomOpen(false);
-                        }
-                      }}
-                      className={`border py-1.5 px-1 text-[9px] font-gost uppercase ${
-                        nodeBC?.type === b.v || (b.v === "custom" && bcCustomOpen)
-                          ? "bg-[var(--drawing-line)] text-[var(--drawing-bg)] border-[var(--drawing-line)]"
-                          : "border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)]"
-                      }`}
-                    >
-                      {b.label}
-                    </button>
-                  ))}
-                </div>
-                {bcCustomOpen && (
-                  <div className="border border-[var(--drawing-line-thin)] p-2 mt-1 mb-2 bg-[var(--drawing-paper)]">
-                    <p className="font-gost text-[9px] uppercase text-[var(--drawing-line-thin)] mb-1">
-                      Закрепления вручную:
-                    </p>
-                    <div className="grid grid-cols-3 gap-1">
-                      {(["ux", "uy", "rz"] as DofName[]).map((d) => {
-                        const checked = nodeBC?.constrained_dofs.includes(d) || false;
-                        return (
-                          <label
-                            key={d}
-                            className={`border py-1 text-center text-[10px] font-mono cursor-pointer ${
-                              checked
-                                ? "bg-[var(--drawing-accent)] text-white border-[var(--drawing-accent)]"
-                                : "border-[var(--drawing-line)] hover:bg-white"
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => toggleCustomDof(d)}
-                              className="hidden"
-                            />
-                            {d}
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-                {nodeBC && (
-                  <button onClick={removeBC} className="text-[10px] font-gost uppercase text-[var(--drawing-accent)] hover:underline mb-3">
-                    Убрать опору
-                  </button>
-                )}
-
-                <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-1.5 mt-2">
-                  Узловые нагрузки
-                </p>
-                <div className="grid grid-cols-2 gap-1.5 mb-1.5">
-                  <label className="text-[10px] font-gost">
-                    Fx, Н
-                    <input
-                      type="number"
-                      step={100}
-                      value={nodeLoad?.force?.[0] ?? 0}
-                      onChange={(e) => addNodalLoad(parseFloat(e.target.value) || 0, nodeLoad?.force?.[1] ?? 0)}
-                      className="drawing-input mt-0.5 font-mono text-[11px]"
-                    />
-                  </label>
-                  <label className="text-[10px] font-gost">
-                    Fy, Н
-                    <input
-                      type="number"
-                      step={100}
-                      value={nodeLoad?.force?.[1] ?? 0}
-                      onChange={(e) => addNodalLoad(nodeLoad?.force?.[0] ?? 0, parseFloat(e.target.value) || 0)}
-                      className="drawing-input mt-0.5 font-mono text-[11px]"
-                    />
-                  </label>
-                </div>
-                <label className="text-[10px] font-gost block mb-2">
-                  Mz (момент), Н·м
-                  <input
-                    type="number"
-                    step={50}
-                    value={nodeLoad?.moment?.[2] ?? 0}
-                    onChange={(e) => setNodalMoment(parseFloat(e.target.value) || 0)}
-                    className="drawing-input mt-0.5 font-mono text-[11px]"
-                  />
-                </label>
-                {nodeLoad && (
-                  <button onClick={removeLoadOnNode} className="text-[10px] font-gost uppercase text-[var(--drawing-accent)] hover:underline">
-                    Убрать нагрузку
-                  </button>
-                )}
-
-                <div className="extension-line-h w-full my-3" />
-                <button
-                  onClick={deleteSelected}
-                  className="w-full border border-[var(--drawing-accent)] text-[var(--drawing-accent)] py-1.5 text-[10px] font-gost uppercase tracking-wider hover:bg-[var(--drawing-accent)] hover:text-white"
-                >
-                  Удалить узел
-                </button>
-              </div>
-            ) : selectedElementId ? (() => {
-              const el = model.elements.find((x) => x.id === selectedElementId);
-              if (!el) return null;
-              const mat = model.materials.find((m) => m.id === el.material_id);
-              const sec = model.sections.find((s) => s.id === el.section_id);
-              const matName = mat?.name || el.material_id;
-              const secName = sec?.name || el.section_id;
-              const distLoad = model.loads.find(
-                (l) => l.type === "distributed_uniform" && l.element_id === selectedElementId,
-              );
-              const a = model.nodes.find((n) => n.id === el.node_start);
-              const b = model.nodes.find((n) => n.id === el.node_end);
-              const len = a && b
-                ? Math.hypot(b.coords[0] - a.coords[0], b.coords[1] - a.coords[1])
-                : 0;
-
-              return (
-              <div className="border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] p-3">
-                <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-2">
-                  Элемент {selectedElementId}
-                </p>
-                <p className="font-mono text-[11px] mb-3 text-[var(--drawing-line-thin)]">
-                  {el.node_start} → {el.node_end} · L = {len.toFixed(3)} м
-                </p>
-
-                <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-1">
-                  Материал
-                </p>
-                <button
-                  onClick={() => setMatPickerOpen(true)}
-                  className="w-full text-left border border-[var(--drawing-line)] px-2 py-1.5 mb-2 text-[11px] hover:bg-[var(--drawing-paper)] flex items-center justify-between gap-2"
-                >
-                  <span className="truncate">{matName}</span>
-                  <Icon name="ChevronRight" size={12} className="shrink-0" />
-                </button>
-
-                <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-1">
-                  Сечение
-                </p>
-                <button
-                  onClick={() => setSecPickerOpen(true)}
-                  className="w-full text-left border border-[var(--drawing-line)] px-2 py-1.5 mb-3 text-[11px] hover:bg-[var(--drawing-paper)] flex items-center justify-between gap-2"
-                >
-                  <span className="truncate">{secName}</span>
-                  <Icon name="ChevronRight" size={12} className="shrink-0" />
-                </button>
-
-                <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-1">
-                  Распределённая q (по локальной y), Н/м
-                </p>
-                <input
-                  type="number"
-                  step={100}
-                  value={distLoad?.load_local_per_length?.[1] ?? 0}
-                  onChange={(e) => setDistributedLoad(parseFloat(e.target.value) || 0)}
-                  className="drawing-input mb-3 font-mono text-[11px]"
-                  placeholder="0 (нет нагрузки)"
-                />
-
-                <details className="mb-3 text-[11px]">
-                  <summary className="cursor-pointer font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)]">
-                    Добавить точечную силу в пролёте
-                  </summary>
-                  <InSpanForm onAdd={addInSpanPoint} />
-                </details>
-
-                <button
-                  onClick={deleteSelected}
-                  className="w-full border border-[var(--drawing-accent)] text-[var(--drawing-accent)] py-1.5 text-[10px] font-gost uppercase tracking-wider hover:bg-[var(--drawing-accent)] hover:text-white"
-                >
-                  Удалить элемент
-                </button>
-              </div>
-              );
-            })() : (
-              <div className="border-2 border-dashed border-[var(--drawing-line-thin)] bg-[var(--drawing-bg)] p-3 text-[var(--drawing-line-thin)]">
-                <p className="font-gost text-[10px] uppercase tracking-[0.2em] mb-1">Подсказка</p>
-                <p className="text-[11px] leading-relaxed">
-                  Выберите узел или элемент, чтобы настроить опору, нагрузку или удалить.
-                </p>
-              </div>
-            )}
-
-            {/* Результаты */}
-            <div className="border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] p-3">
-              <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-2">
-                Результат
-              </p>
-              {!result ? (
-                <p className="text-[11px] text-[var(--drawing-line-thin)]">
-                  Нажмите «Посчитать» после построения схемы.
-                </p>
-              ) : (
-                <>
-                  <dl className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] font-mono mb-3">
-                    <dt className="text-[var(--drawing-line-thin)]">Узлов:</dt>
-                    <dd>{result.summary.n_nodes}</dd>
-                    <dt className="text-[var(--drawing-line-thin)]">Элементов:</dt>
-                    <dd>{result.summary.n_elements}</dd>
-                    <dt className="text-[var(--drawing-line-thin)]">Макс. прогиб:</dt>
-                    <dd>{formatNumber(result.summary.max_displacement * 1000, 3)} мм</dd>
-                    <dt className="text-[var(--drawing-line-thin)]">Макс σ Мизес:</dt>
-                    <dd>{formatNumber(result.summary.max_sigma_vm / 1e6, 1)} МПа</dd>
-                    <dt className="text-[var(--drawing-line-thin)]">Запас:</dt>
-                    <dd>{result.summary.min_safety_factor && result.summary.min_safety_factor < 1e5 ? result.summary.min_safety_factor.toFixed(2) : "∞"}</dd>
-                    <dt className="text-[var(--drawing-line-thin)]">Время:</dt>
-                    <dd>{result.duration_ms} мс</dd>
-                  </dl>
-
-                  <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-1.5">
-                    Эпюра
-                  </p>
-                  <div className="grid grid-cols-3 gap-1 mb-2">
-                    {[
-                      { v: "none", label: "Скр." },
-                      { v: "deformed", label: "Дефор." },
-                      { v: "N", label: "N" },
-                      { v: "Qy", label: "Q" },
-                      { v: "Mz", label: "M" },
-                      { v: "sigma", label: "σ" },
-                    ].map((d) => (
-                      <button
-                        key={d.v}
-                        onClick={() => setShowDiagram(d.v as DiagramKind)}
-                        className={`border py-1 text-[10px] font-gost uppercase ${
-                          showDiagram === d.v
-                            ? "bg-[var(--drawing-accent)] text-white border-[var(--drawing-accent)]"
-                            : "border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)]"
-                        }`}
-                      >
-                        {d.label}
-                      </button>
-                    ))}
-                  </div>
-                  <label className="text-[10px] font-gost text-[var(--drawing-line-thin)]">
-                    Масштаб эпюры
-                    <input
-                      type="range"
-                      min={0.1}
-                      max={3}
-                      step={0.1}
-                      value={diagramScale}
-                      onChange={(e) => setDiagramScale(parseFloat(e.target.value))}
-                      className="w-full mt-1"
-                    />
-                  </label>
-
-                  {result.warnings.length > 0 && (
-                    <div className="mt-3 p-2 border border-[var(--drawing-accent)] text-[10px] text-[var(--drawing-accent)]">
-                      {result.warnings.map((w, i) => (
-                        <p key={i}>⚠ {w}</p>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+            <EditorResultsPanel
+              result={result}
+              showDiagram={showDiagram}
+              setShowDiagram={setShowDiagram}
+              diagramScale={diagramScale}
+              setDiagramScale={setDiagramScale}
+            />
           </aside>
         </div>
       </div>
@@ -854,46 +510,5 @@ const CaeEditor = () => {
     </>
   );
 };
-
-// === Форма точечной силы в пролёте ===
-function InSpanForm({ onAdd }: { onAdd: (pos: number, py: number) => void }) {
-  const [pos, setPos] = useState(0.5);
-  const [py, setPy] = useState(-1000);
-  return (
-    <div className="mt-2 space-y-2">
-      <div className="grid grid-cols-2 gap-2">
-        <label className="text-[10px] font-gost">
-          Позиция (0…1)
-          <input
-            type="number"
-            step={0.1}
-            min={0}
-            max={1}
-            value={pos}
-            onChange={(e) => setPos(parseFloat(e.target.value) || 0)}
-            className="drawing-input font-mono text-[11px] mt-0.5"
-          />
-        </label>
-        <label className="text-[10px] font-gost">
-          Py, Н
-          <input
-            type="number"
-            step={100}
-            value={py}
-            onChange={(e) => setPy(parseFloat(e.target.value) || 0)}
-            className="drawing-input font-mono text-[11px] mt-0.5"
-          />
-        </label>
-      </div>
-      <button
-        type="button"
-        onClick={() => onAdd(pos, py)}
-        className="w-full border border-[var(--drawing-accent)] text-[var(--drawing-accent)] py-1.5 text-[10px] font-gost uppercase tracking-wider hover:bg-[var(--drawing-accent)] hover:text-white"
-      >
-        Добавить силу
-      </button>
-    </div>
-  );
-}
 
 export default CaeEditor;
