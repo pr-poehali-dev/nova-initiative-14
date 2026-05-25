@@ -614,6 +614,8 @@ class FrameSolver:
         # ===== Внутренние усилия по элементам =====
         element_results = []
         max_sigma_vm = 0.0
+        # Реальный максимальный прогиб (с учётом точек ВНУТРИ элемента, не только узлов)
+        max_disp_internal = max_disp
         n_sub = int(self.payload.get('analysis_options', {}).get('diagram_subdivisions', 20))
         for el in self.elements:
             cache = el_cache[el.id]
@@ -626,9 +628,26 @@ class FrameSolver:
             sec = self.sections[el.section_id]
             mat = self.materials[el.material_id]
 
+            # === Узловые перемещения элемента в локальной СК для интерполяции ===
+            # Локальные DOF: для 2D — [ux_a, uy_a, rz_a, ux_b, uy_b, rz_b]
+            # для 3D — [ux_a, uy_a, uz_a, rx_a, ry_a, rz_a, ux_b, uy_b, uz_b, rx_b, ry_b, rz_b]
+            if self.dim == '2d':
+                ux_a, uy_a, rz_a = u_el_local[0], u_el_local[1], u_el_local[2]
+                ux_b, uy_b, rz_b = u_el_local[3], u_el_local[4], u_el_local[5]
+                uz_a = uz_b = ry_a = ry_b = 0.0
+            else:
+                ux_a, uy_a, uz_a = u_el_local[0], u_el_local[1], u_el_local[2]
+                ry_a, rz_a = u_el_local[4], u_el_local[5]
+                ux_b, uy_b, uz_b = u_el_local[6], u_el_local[7], u_el_local[8]
+                ry_b, rz_b = u_el_local[10], u_el_local[11]
+
             # Эпюры в N точках (линейная интерполяция концевых усилий + интеграл нагрузки)
             xs = np.linspace(0.0, L, n_sub + 1)
             N_arr, Qy_arr, Qz_arr, My_arr, Mz_arr, T_arr = [], [], [], [], [], []
+            # Прогибы в локальной СК (в плоскости xy и xz для 3D)
+            uy_arr_local: list[float] = []
+            uz_arr_local: list[float] = []
+            ux_arr_local: list[float] = []
             for x in xs:
                 # Усилия в сечении x от концевых сил узла A:
                 # N(x) = -N_a (растяжение/сжатие)
@@ -687,6 +706,101 @@ class FrameSolver:
                     My_arr.append(0.0)
                     Mz_arr.append(float(Mza_at_x))
 
+            # === Прогиб v(x) и u(x) методом функций формы Эрмита + поправка от внутрипролётных ===
+            # Базовая часть: интерполяция узловых перемещений в локальной СК.
+            # ux(ξ) = (1-ξ)·ux_a + ξ·ux_b
+            # vy(ξ) = N1·uy_a + N2·rz_a + N3·uy_b + N4·rz_b
+            # vz(ξ) = N1·uz_a + N2·(-ry_a) + N3·uz_b + N4·(-ry_b) — знак ry противоположный для xz-плоскости
+            # Поправка от внутрипролётной нагрузки: дополнительный прогиб
+            # v_p(x) от моментной диаграммы M(x) можно получить дважды интегрируя M/EI
+            # с гранусловиями v(0) = v(L) = 0 (т.к. узловые перемещения уже учтены через N).
+            EIz = mat.E * sec.I_z if sec.I_z > 0 else 0.0
+            EIy = mat.E * sec.I_y if sec.I_y > 0 else 0.0
+            # M_extra(x) — момент от внутрипролётных нагрузок при условии,
+            # что узлы заделаны. Получаем из Mz_arr и My_arr ВЫЧИТАЯ линейный момент
+            # от концевых усилий узла A: Mz_lin(x) = Mz_a + Qy_a·(L−x) — но проще:
+            # рассмотрим, что Mz_total = Mz_узловое + Mz_от_внутрипролётных.
+            # Берём интеграл от ПОЛНОГО M(x), а потом вычитаем линейную часть так,
+            # чтобы v_p(0) = v_p(L) = 0.
+            def double_integrate_with_zero_bcs(M_arr: list, xs_arr, EI: float) -> list:
+                """Возвращает v(x) из v''(x) = -M/EI с v(0)=v(L)=0 (после вычитания линейного тренда)."""
+                if EI <= 1e-12 or len(xs_arr) < 2:
+                    return [0.0] * len(xs_arr)
+                n = len(xs_arr)
+                # Первое интегрирование: θ(x) = θ(0) + ∫(-M/EI)dx
+                # Возьмём θ(0) = 0, а потом подкорректируем через граничное условие v(L)=0.
+                theta = [0.0] * n
+                for i in range(1, n):
+                    dx = xs_arr[i] - xs_arr[i-1]
+                    avg = -(M_arr[i] + M_arr[i-1]) / 2.0 / EI
+                    theta[i] = theta[i-1] + avg * dx
+                v = [0.0] * n
+                for i in range(1, n):
+                    dx = xs_arr[i] - xs_arr[i-1]
+                    avg_theta = (theta[i] + theta[i-1]) / 2.0
+                    v[i] = v[i-1] + avg_theta * dx
+                # Корректировка чтобы v(0)=v(L)=0: вычитаем линейный тренд
+                v_L = v[-1]
+                for i in range(n):
+                    t = xs_arr[i] / xs_arr[-1] if xs_arr[-1] > 0 else 0.0
+                    v[i] -= t * v_L
+                return v
+
+            # Вспомогательная: линейный момент от концевых усилий узла A
+            # (без учёта внутрипролётных). Используем для вычитания.
+            # Mz_lin(x) = Mz_at_a − Qy_at_a · x, где Mz_at_a и Qy_at_a — концевые усилия А.
+            if self.dim == '2d':
+                Mz_a_end = -f_end[2]
+                Qy_a_end = -f_end[1]
+                Mz_lin = [Mz_a_end - Qy_a_end * x for x in xs]
+                Mz_extra = [Mz_arr[i] - Mz_lin[i] for i in range(len(xs))]
+                v_p = double_integrate_with_zero_bcs(Mz_extra, xs, EIz)
+                # Эрмитовы функции для базовой части
+                for i, x in enumerate(xs):
+                    xi = x / L if L > 0 else 0.0
+                    N1 = 1 - 3*xi**2 + 2*xi**3
+                    N2 = L * (xi - 2*xi**2 + xi**3)
+                    N3 = 3*xi**2 - 2*xi**3
+                    N4 = L * (-xi**2 + xi**3)
+                    v_base = N1*uy_a + N2*rz_a + N3*uy_b + N4*rz_b
+                    u_base = (1 - xi) * ux_a + xi * ux_b
+                    uy_arr_local.append(float(v_base + v_p[i]))
+                    ux_arr_local.append(float(u_base))
+                    uz_arr_local.append(0.0)
+            else:
+                # 3D: два изгиба + осевое
+                Mz_a_end = -f_end[5]
+                Qy_a_end = -f_end[1]
+                Mz_lin = [Mz_a_end - Qy_a_end * x for x in xs]
+                Mz_extra = [Mz_arr[i] - Mz_lin[i] for i in range(len(xs))]
+                v_p_y = double_integrate_with_zero_bcs(Mz_extra, xs, EIz)
+
+                My_a_end = -f_end[4]
+                Qz_a_end = -f_end[2]
+                # M_y(x) = M_y_a + Qz_a*x → линейная часть
+                My_lin = [My_a_end + Qz_a_end * x for x in xs]
+                My_extra = [My_arr[i] - My_lin[i] for i in range(len(xs))]
+                v_p_z = double_integrate_with_zero_bcs(My_extra, xs, EIy)
+
+                for i, x in enumerate(xs):
+                    xi = x / L if L > 0 else 0.0
+                    N1 = 1 - 3*xi**2 + 2*xi**3
+                    N2 = L * (xi - 2*xi**2 + xi**3)
+                    N3 = 3*xi**2 - 2*xi**3
+                    N4 = L * (-xi**2 + xi**3)
+                    v_base_y = N1*uy_a + N2*rz_a + N3*uy_b + N4*rz_b
+                    v_base_z = N1*uz_a + N2*(-ry_a) + N3*uz_b + N4*(-ry_b)
+                    u_base = (1 - xi) * ux_a + xi * ux_b
+                    uy_arr_local.append(float(v_base_y + v_p_y[i]))
+                    uz_arr_local.append(float(v_base_z + v_p_z[i]))
+                    ux_arr_local.append(float(u_base))
+
+            # Обновляем глобальный max_displacement по точкам внутри элемента
+            for i in range(len(xs)):
+                d = math.sqrt(ux_arr_local[i]**2 + uy_arr_local[i]**2 + uz_arr_local[i]**2)
+                if d > max_disp_internal:
+                    max_disp_internal = d
+
             # Напряжения по Мизесу в характерных точках сечения
             sigma_vm_arr = []
             for i, x in enumerate(xs):
@@ -717,12 +831,16 @@ class FrameSolver:
                     'My': My_arr,
                     'Mz': Mz_arr,
                     'sigma_vm': sigma_vm_arr,
+                    'ux_local': ux_arr_local,
+                    'uy_local': uy_arr_local,
+                    'uz_local': uz_arr_local,
                 },
                 'max_values': {
                     'abs_N_max': float(max(abs(v) for v in N_arr)),
                     'abs_Mz_max': float(max(abs(v) for v in Mz_arr)),
                     'abs_My_max': float(max(abs(v) for v in My_arr)),
                     'abs_sigma_vm_max': float(max(sigma_vm_arr)),
+                    'abs_uy_max': float(max(abs(v) for v in uy_arr_local)) if uy_arr_local else 0.0,
                     'safety_factor': float(min(sf, 1e6)),
                 },
             })
@@ -740,7 +858,7 @@ class FrameSolver:
             'n_elements': len(self.elements),
             'n_dofs': self.n_dofs,
             'n_free_dofs': len(free_indices),
-            'max_displacement': float(max_disp),
+            'max_displacement': float(max_disp_internal),
             'max_sigma_vm': float(max_sigma_vm),
             'min_safety_factor': float(min_sf) if min_sf != float('inf') else None,
         }
