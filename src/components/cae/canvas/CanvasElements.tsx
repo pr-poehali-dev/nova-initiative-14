@@ -57,12 +57,60 @@ const CanvasElements = ({
         );
       })}
 
-      {/* деформированная форма */}
+      {/* деформированная форма — рисуем через uy_local из эпюр (учитывает прогиб внутри элемента) */}
       {renderDeformed &&
         model.elements.map((el) => {
           const a = model.nodes.find((n) => n.id === el.node_start);
           const b = model.nodes.find((n) => n.id === el.node_end);
           if (!a || !b) return null;
+          const er = result?.elements.find((e) => e.element_id === el.id);
+
+          // Автоматический масштаб: подбираем k так, чтобы max прогиб ≈ 15% длины элемента
+          const dx = b.coords[0] - a.coords[0];
+          const dy = b.coords[1] - a.coords[1];
+          const len = Math.sqrt(dx * dx + dy * dy);
+          if (len < 1e-9) return null;
+          const ux = dx / len;
+          const uy = dy / len;
+          const nx = -uy;
+          const ny = ux;
+
+          // Если есть точки uy_local — рисуем кривую прогиба через них
+          if (er && er.diagrams.uy_local && er.diagrams.uy_local.length > 0) {
+            const uy_local = er.diagrams.uy_local;
+            const ux_local = er.diagrams.ux_local || uy_local.map(() => 0);
+            const xs = er.diagrams.x;
+            const maxAbs = Math.max(
+              1e-12,
+              ...uy_local.map((v) => Math.abs(v)),
+              ...ux_local.map((v) => Math.abs(v)),
+            );
+            // авто-масштаб + пользовательский diagramScale
+            const autoK = (0.15 * len) / maxAbs;
+            const k = autoK * diagramScale;
+            const points = xs.map((x, i) => {
+              const t = x / len;
+              const wx0 = a.coords[0] + dx * t;
+              const wy0 = a.coords[1] + dy * t;
+              // ux_local — вдоль оси элемента, uy_local — нормаль
+              const wx = wx0 + ux * ux_local[i] * k + nx * uy_local[i] * k;
+              const wy = wy0 + uy * ux_local[i] * k + ny * uy_local[i] * k;
+              return `${toScreenX(wx)},${toScreenY(wy)}`;
+            });
+            return (
+              <polyline
+                key={`def${el.id}`}
+                points={points.join(" ")}
+                fill="none"
+                stroke={ACCENT}
+                strokeWidth={1.5}
+                strokeDasharray="4 4"
+                pointerEvents="none"
+              />
+            );
+          }
+
+          // fallback: старая логика по узлам (если эпюр прогиба нет)
           const da = dispMap.get(a.id);
           const db = dispMap.get(b.id);
           if (!da || !db) return null;

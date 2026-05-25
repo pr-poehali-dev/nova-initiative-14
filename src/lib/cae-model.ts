@@ -225,12 +225,16 @@ export interface SolverResponse {
       My: number[];
       Mz: number[];
       sigma_vm: number[];
+      ux_local?: number[];
+      uy_local?: number[];
+      uz_local?: number[];
     };
     max_values: {
       abs_N_max: number;
       abs_Mz_max: number;
       abs_My_max: number;
       abs_sigma_vm_max: number;
+      abs_uy_max?: number;
       safety_factor: number;
     };
   }>;
