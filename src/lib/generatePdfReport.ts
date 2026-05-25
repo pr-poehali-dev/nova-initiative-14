@@ -15,13 +15,20 @@ import type { FrameModel, SolverResponse } from "./cae-model";
 
 // ── Загрузка шрифта с кириллицей ──────────────────────────────────────────
 // Стандартные шрифты jsPDF (Helvetica/Times/Courier) не поддерживают кириллицу.
-// Подгружаем Roboto Regular с jsDelivr один раз и кешируем base64 в памяти.
-const FONT_URL =
-  "https://cdn.jsdelivr.net/npm/@fontsource/roboto@5.0.8/files/roboto-cyrillic-400-normal.woff";
+// Подгружаем Roboto Regular и кешируем base64 в памяти.
+// Используем raw.githubusercontent.com — стабильный источник с правильным CORS.
 const FONT_TTF_URL =
-  "https://cdn.jsdelivr.net/gh/google/fonts@main/apache/roboto/static/Roboto-Regular.ttf";
+  "https://raw.githubusercontent.com/googlefonts/roboto-2/main/src/hinted/Roboto-Regular.ttf";
 const FONT_BOLD_TTF_URL =
-  "https://cdn.jsdelivr.net/gh/google/fonts@main/apache/roboto/static/Roboto-Bold.ttf";
+  "https://raw.githubusercontent.com/googlefonts/roboto-2/main/src/hinted/Roboto-Bold.ttf";
+
+// Запасные источники на случай блокировки основного
+const FONT_TTF_FALLBACKS = [
+  "https://cdn.jsdelivr.net/gh/googlefonts/roboto-2@main/src/hinted/Roboto-Regular.ttf",
+];
+const FONT_BOLD_TTF_FALLBACKS = [
+  "https://cdn.jsdelivr.net/gh/googlefonts/roboto-2@main/src/hinted/Roboto-Bold.ttf",
+];
 
 let cachedFontB64: string | null = null;
 let cachedBoldB64: string | null = null;
@@ -29,8 +36,11 @@ const fontState = { name: "helvetica" };
 
 async function fetchFontB64(url: string): Promise<string> {
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`Не удалось загрузить шрифт: ${res.status}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${url}`);
   const buf = await res.arrayBuffer();
+  if (buf.byteLength < 10000) {
+    throw new Error(`Подозрительно маленький файл (${buf.byteLength} байт) с ${url}`);
+  }
   // ArrayBuffer → base64
   let binary = "";
   const bytes = new Uint8Array(buf);
@@ -41,10 +51,30 @@ async function fetchFontB64(url: string): Promise<string> {
   return btoa(binary);
 }
 
+async function fetchWithFallback(primary: string, fallbacks: string[]): Promise<string> {
+  const urls = [primary, ...fallbacks];
+  let lastErr: unknown;
+  for (const url of urls) {
+    try {
+      const b64 = await fetchFontB64(url);
+      console.info(`[PDF] Шрифт загружен с ${url}`);
+      return b64;
+    } catch (e) {
+      console.warn(`[PDF] Не удалось загрузить ${url}:`, e);
+      lastErr = e;
+    }
+  }
+  throw lastErr ?? new Error("Все источники шрифта недоступны");
+}
+
 async function ensureCyrillicFont(doc: jsPDF): Promise<boolean> {
   try {
-    if (!cachedFontB64) cachedFontB64 = await fetchFontB64(FONT_TTF_URL);
-    if (!cachedBoldB64) cachedBoldB64 = await fetchFontB64(FONT_BOLD_TTF_URL);
+    if (!cachedFontB64) {
+      cachedFontB64 = await fetchWithFallback(FONT_TTF_URL, FONT_TTF_FALLBACKS);
+    }
+    if (!cachedBoldB64) {
+      cachedBoldB64 = await fetchWithFallback(FONT_BOLD_TTF_URL, FONT_BOLD_TTF_FALLBACKS);
+    }
     doc.addFileToVFS("Roboto-Regular.ttf", cachedFontB64);
     doc.addFont("Roboto-Regular.ttf", "Roboto", "normal");
     doc.addFileToVFS("Roboto-Bold.ttf", cachedBoldB64);
@@ -53,14 +83,11 @@ async function ensureCyrillicFont(doc: jsPDF): Promise<boolean> {
     fontState.name = "Roboto";
     return true;
   } catch (e) {
-    console.error("Не удалось загрузить шрифт с кириллицей:", e);
+    console.error("[PDF] Не удалось загрузить шрифт с кириллицей:", e);
     fontState.name = "helvetica";
     return false;
   }
 }
-
-// Игнорируем неиспользуемую константу
-void FONT_URL;
 
 // ── Цвета ──────────────────────────────────────────────────────────────────
 const C = {
