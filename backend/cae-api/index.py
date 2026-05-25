@@ -315,6 +315,86 @@ def _action_update_project(conn, user: dict, params: dict, body: dict) -> dict:
     return _action_get_project(conn, user, {'id': str(pid)})
 
 
+def _action_get_model(conn, user: dict, params: dict) -> dict:
+    """Возвращает текущую (последнюю) модель проекта."""
+    try:
+        pid = int(params.get('id') or '0')
+    except ValueError:
+        return _json_response(400, {'error': 'invalid_id'})
+    owner_id = int(user['sub'])
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute(
+            "SELECT p.id, p.name, p.project_type, p.units_length, p.units_force, "
+            "p.current_version_id, v.model_jsonb, v.version_number, v.created_at "
+            "FROM cae_projects p LEFT JOIN cae_project_versions v ON v.id = p.current_version_id "
+            "WHERE p.id = %s AND p.owner_id = %s",
+            (pid, owner_id),
+        )
+        row = cur.fetchone()
+        if not row:
+            return _json_response(404, {'error': 'not_found'})
+    model = row['model_jsonb'] or {}
+    return _json_response(200, {
+        'project': {
+            'id': row['id'],
+            'name': row['name'],
+            'project_type': row['project_type'],
+            'units_length': row['units_length'],
+            'units_force': row['units_force'],
+        },
+        'version_id': row['current_version_id'],
+        'version_number': row['version_number'],
+        'model': model,
+    })
+
+
+def _action_save_model(conn, user: dict, params: dict, body: dict) -> dict:
+    """Сохраняет новую версию модели и делает её current."""
+    try:
+        pid = int(params.get('id') or '0')
+    except ValueError:
+        return _json_response(400, {'error': 'invalid_id'})
+    owner_id = int(user['sub'])
+    model = body.get('model')
+    if not isinstance(model, dict):
+        return _json_response(400, {'error': 'model_required', 'message': 'Поле "model" обязательно.'})
+    comment = (body.get('comment') or 'Auto-save').strip()[:200]
+
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT id FROM cae_projects WHERE id = %s AND owner_id = %s",
+            (pid, owner_id),
+        )
+        if not cur.fetchone():
+            return _json_response(404, {'error': 'not_found'})
+
+        cur.execute(
+            "SELECT COALESCE(MAX(version_number), 0) FROM cae_project_versions WHERE project_id = %s",
+            (pid,),
+        )
+        max_ver = cur.fetchone()[0]
+        new_ver = int(max_ver) + 1
+
+        cur.execute(
+            "INSERT INTO cae_project_versions (project_id, version_number, model_jsonb, comment, created_by, is_draft) "
+            "VALUES (%s, %s, %s, %s, %s, TRUE) RETURNING id, created_at",
+            (pid, new_ver, json.dumps(model, ensure_ascii=False), comment, owner_id),
+        )
+        version_id, created_at = cur.fetchone()
+        cur.execute(
+            "UPDATE cae_projects SET current_version_id = %s, updated_at = NOW() WHERE id = %s",
+            (version_id, pid),
+        )
+    conn.commit()
+
+    return _json_response(200, {
+        'ok': True,
+        'version_id': version_id,
+        'version_number': new_ver,
+        'saved_at': created_at.isoformat(),
+    })
+
+
 def _action_archive_project(conn, user: dict, params: dict) -> dict:
     try:
         pid = int(params.get('id') or '0')
@@ -381,6 +461,10 @@ def handler(event: dict, context) -> dict:
             return _action_update_project(conn, user, params, body)
         if action == 'archive-project' and method in ('POST', 'DELETE'):
             return _action_archive_project(conn, user, params)
+        if action == 'get-model' and method == 'GET':
+            return _action_get_model(conn, user, params)
+        if action == 'save-model' and method in ('POST', 'PUT'):
+            return _action_save_model(conn, user, params, body)
 
         return _json_response(404, {'error': 'unknown_action'})
     except Exception as e:

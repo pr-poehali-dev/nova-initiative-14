@@ -131,7 +131,7 @@ const CaeProjects = () => {
           <div className="text-sm">
             <p className="font-gost-upright font-bold mb-1">CAE в&nbsp;разработке</p>
             <p className="text-[var(--drawing-line-thin)]">
-              Сейчас вы&nbsp;видите каркас личного кабинета. Конечно-элементный решатель и&nbsp;редактор схем (2D и&nbsp;3D) появятся в&nbsp;ближайших обновлениях. <Link to="/cae" className="underline text-[var(--drawing-accent)]">Записаться в&nbsp;ранний доступ</Link>, чтобы первыми получить уведомление.
+              Доступен 2D-редактор и&nbsp;конечно-элементный решатель. 3D-редактор и&nbsp;PDF-отчёт по&nbsp;ЕСКД &mdash; на&nbsp;подходе. <Link to="/cae" className="underline text-[var(--drawing-accent)]">Записаться в&nbsp;ранний доступ</Link>, чтобы первыми получать обновления.
             </p>
           </div>
         </div>
@@ -282,9 +282,12 @@ const CaeProjects = () => {
                     {formatDate(p.updated_at)}
                   </span>
                 </div>
-                <p className="font-gost text-[10px] uppercase tracking-[0.2em] mt-3 text-[var(--drawing-line-thin)] opacity-70">
-                  Редактор будет доступен после релиза
-                </p>
+                <Link
+                  to={`/cae/projects/${p.id}`}
+                  className="block mt-3 font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-accent)] hover:underline"
+                >
+                  Открыть в&nbsp;редакторе&nbsp;&rarr;
+                </Link>
               </div>
             ))}
           </div>
