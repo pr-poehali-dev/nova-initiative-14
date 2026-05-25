@@ -21,6 +21,7 @@ import CanvasElements from "./canvas/CanvasElements";
 import CanvasDiagrams from "./canvas/CanvasDiagrams";
 import CanvasOverlays from "./canvas/CanvasOverlays";
 import CanvasDiagramTooltip from "./canvas/CanvasDiagramTooltip";
+import CanvasDimensions from "./canvas/CanvasDimensions";
 
 export type EditorMode =
   | "select"
@@ -237,6 +238,13 @@ const FrameCanvas = ({
         toScreenX={toScreenX}
         toScreenY={toScreenY}
         toWorld={toWorld}
+      />
+
+      <CanvasDimensions
+        model={model}
+        toScreenX={toScreenX}
+        toScreenY={toScreenY}
+        pxPerM={view.pxPerM}
       />
 
       <CanvasElements
