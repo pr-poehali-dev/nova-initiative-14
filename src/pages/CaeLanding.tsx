@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { Helmet } from "@/lib/helmet-shim";
+import { Helmet } from "react-helmet-async";
 import Icon from "@/components/ui/icon";
 import { SITE_URL } from "@/lib/seo";
 import { useAuth } from "@/contexts/AuthContext";
