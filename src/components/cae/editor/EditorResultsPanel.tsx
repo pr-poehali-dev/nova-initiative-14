@@ -295,6 +295,7 @@ const EditorResultsPanel = ({
               { v: "Qy", label: "Q" },
               { v: "Mz", label: "M" },
               { v: "sigma", label: "σ" },
+              { v: "uy", label: "v (прогиб)" },
             ].map((d) => (
               <button
                 key={d.v}

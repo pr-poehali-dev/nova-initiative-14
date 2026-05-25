@@ -31,7 +31,7 @@ export type EditorMode =
   | "load-nodal"
   | "load-distributed";
 
-export type DiagramKind = "none" | "deformed" | "N" | "Qy" | "Mz" | "sigma";
+export type DiagramKind = "none" | "deformed" | "N" | "Qy" | "Mz" | "sigma" | "uy";
 
 interface Props {
   model: FrameModel;

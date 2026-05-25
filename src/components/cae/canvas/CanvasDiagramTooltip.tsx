@@ -5,7 +5,7 @@
  */
 import type { FrameModel, SolverResponse } from "@/lib/cae-model";
 
-type DiagramKind = "none" | "deformed" | "N" | "Qy" | "Mz" | "sigma";
+type DiagramKind = "none" | "deformed" | "N" | "Qy" | "Mz" | "sigma" | "uy";
 
 interface Props {
   model: FrameModel;
@@ -16,11 +16,12 @@ interface Props {
   toScreenY: (y: number) => number;
 }
 
-const DIAGRAM_LABELS: Record<string, { name: string; unit: string; scale: number; color: string }> = {
-  N: { name: "N", unit: "Н", scale: 1, color: "#2c3e80" },
-  Qy: { name: "Q", unit: "Н", scale: 1, color: "#1a8a5a" },
-  Mz: { name: "M", unit: "Н·м", scale: 1, color: "#c0392b" },
-  sigma: { name: "σ", unit: "МПа", scale: 1e-6, color: "#7d3c98" },
+const DIAGRAM_LABELS: Record<string, { name: string; unit: string; scale: number; color: string; key: string }> = {
+  N: { name: "N", unit: "Н", scale: 1, color: "#2c3e80", key: "N" },
+  Qy: { name: "Q", unit: "Н", scale: 1, color: "#1a8a5a", key: "Qy" },
+  Mz: { name: "M", unit: "Н·м", scale: 1, color: "#c0392b", key: "Mz" },
+  sigma: { name: "σ", unit: "МПа", scale: 1e-6, color: "#7d3c98", key: "sigma_vm" },
+  uy: { name: "v", unit: "мм", scale: 1e3, color: "#d97706", key: "uy_local" },
 };
 
 const CanvasDiagramTooltip = ({
@@ -75,7 +76,7 @@ const CanvasDiagramTooltip = ({
 
   // Интерполируем значение эпюры по параметру t (длина элемента уже в bestEl.length)
   const xs = bestEl.diagrams.x;
-  const vals = (bestEl.diagrams as Record<string, number[]>)[showDiagram];
+  const vals = (bestEl.diagrams as Record<string, number[]>)[meta.key];
   if (!vals || vals.length === 0) return null;
 
   const xAtT = bestT * bestEl.length;

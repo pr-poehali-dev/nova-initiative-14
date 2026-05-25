@@ -4,7 +4,7 @@ import { ACCENT } from "./canvas-constants";
 interface Props {
   model: FrameModel;
   result: SolverResponse | null;
-  showDiagram: "none" | "deformed" | "N" | "Qy" | "Mz" | "sigma";
+  showDiagram: "none" | "deformed" | "N" | "Qy" | "Mz" | "sigma" | "uy";
   diagramScale: number;
   toScreenX: (x: number) => number;
   toScreenY: (y: number) => number;
@@ -16,11 +16,12 @@ const UNITS: Record<string, string> = {
   Qy: "Н",
   Mz: "Н·м",
   sigma: "МПа",
+  uy: "мм",
 };
 
 // Форматирование значения: автовыбор разрядности
 const fmtVal = (v: number, kind: string): string => {
-  const val = kind === "sigma" ? v / 1e6 : v;
+  const val = kind === "sigma" ? v / 1e6 : kind === "uy" ? v * 1e3 : v;
   const abs = Math.abs(val);
   if (abs === 0) return "0";
   if (abs >= 10000) return `${(val / 1000).toFixed(1)}к`;
@@ -79,6 +80,7 @@ const CanvasDiagrams = ({ model, result, showDiagram, diagramScale, toScreenX, t
     else if (showDiagram === "Qy") { vals = er.diagrams.Qy; color = "#1a8a5a"; }
     else if (showDiagram === "Mz") { vals = er.diagrams.Mz; color = "#c0392b"; }
     else if (showDiagram === "sigma") { vals = er.diagrams.sigma_vm; color = "#7d3c98"; }
+    else if (showDiagram === "uy") { vals = er.diagrams.uy_local ?? []; color = "#d97706"; }
 
     const maxAbs = Math.max(1e-12, ...vals.map((v) => Math.abs(v)));
     elDataList.push({ el, vals, xs: er.diagrams.x, color, nx, ny, dx, dy, len, a, b, maxAbs });

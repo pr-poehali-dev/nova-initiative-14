@@ -231,27 +231,27 @@ function drawScheme(
   }
 
   // Подписи узлов
-  doc.setFont(fontState.name, "normal");
-  doc.setFontSize(5.5);
-  doc.setTextColor(...C.thin);
+  doc.setFont(fontState.name, "bold");
+  doc.setFontSize(7);
+  doc.setTextColor(...C.ink);
   for (const nd of model.nodes) {
     const x = toX(nd.coords[0]);
     const y = toY(nd.coords[1]);
-    doc.text(nd.id, x + 1.2, y - 1.2);
+    doc.text(nd.id, x + 1.5, y - 2);
   }
 
   // Размерная линия пролёта (для горизонтальной балки)
   if (spanX > 0 && model.elements.length > 0) {
-    const yDim = oy + boxH - 6;
+    const yDim = oy + boxH - 8;
     const xL = toX(minX), xR = toX(maxX);
     doc.setDrawColor(...C.thin);
-    doc.setLineWidth(0.2);
+    doc.setLineWidth(0.25);
     doc.line(xL, yDim, xR, yDim);
-    doc.line(xL, yDim - 1, xL, yDim + 1);
-    doc.line(xR, yDim - 1, xR, yDim + 1);
-    doc.setFontSize(6);
+    doc.line(xL, yDim - 1.5, xL, yDim + 1.5);
+    doc.line(xR, yDim - 1.5, xR, yDim + 1.5);
+    doc.setFontSize(7);
     doc.setTextColor(...C.thin);
-    doc.text(`L = ${spanX.toFixed(2)} м`, (xL + xR) / 2, yDim - 1, { align: "center" });
+    doc.text(`L = ${spanX.toFixed(2)} м`, (xL + xR) / 2, yDim - 1.5, { align: "center" });
   }
 
   // Нагрузки — узловые силы, распределённые и моменты
@@ -284,10 +284,10 @@ function drawScheme(
         doc.line(tipX, tipY, tipX - dirX * hL - perpX * hW, tipY - dirY * hL - perpY * hW);
         // Подпись
         doc.setFont(fontState.name, "normal");
-        doc.setFontSize(5.5);
+        doc.setFontSize(7);
         doc.setTextColor(...C.accent);
-        const lbl = formatForce(mag);
-        doc.text(lbl, tailX - dirX * 1.5, tailY - dirY * 1.5, {
+        const lbl = `F = ${formatForce(mag)}`;
+        doc.text(lbl, tailX - dirX * 1.5, tailY - dirY * 1.5 - (dirY < 0 ? 0 : 2), {
           align: dirX > 0.3 ? "right" : dirX < -0.3 ? "left" : "center",
         });
       }
@@ -308,9 +308,9 @@ function drawScheme(
           doc.line(tipX + r * Math.cos(a1), tipY + r * Math.sin(a1), tipX + r * Math.cos(a2), tipY + r * Math.sin(a2));
         }
         doc.setFont(fontState.name, "normal");
-        doc.setFontSize(5.5);
+        doc.setFontSize(7);
         doc.setTextColor(...C.accent);
-        doc.text(formatMoment(mz), tipX + r + 0.5, tipY - r + 0.5);
+        doc.text(`M = ${formatMoment(mz)}`, tipX + r + 1, tipY - r);
       }
     }
 
@@ -372,48 +372,98 @@ function drawScheme(
       const midX = (aX + bX) / 2 + offX2;
       const midY = (aY + bY) / 2 + offY2;
       doc.setFont(fontState.name, "normal");
-      doc.setFontSize(5.5);
+      doc.setFontSize(7);
       doc.setTextColor(...C.accent);
-      doc.text(`q = ${formatDistLoad(qMag)}`, midX, midY - 1.5, { align: "center" });
+      doc.text(`q = ${formatDistLoad(qMag)}`, midX, midY - 1.8, { align: "center" });
+    }
+
+    // ── Точечная сила в пролёте ──
+    if (ld.type === "in_span_point" && ld.element_id) {
+      const el = model.elements.find((e) => e.id === ld.element_id);
+      if (!el) continue;
+      const a = model.nodes.find((n) => n.id === el.node_start);
+      const b = model.nodes.find((n) => n.id === el.node_end);
+      if (!a || !b) continue;
+
+      const t = ld.position_ratio ?? 0.5;
+      const wx = a.coords[0] + (b.coords[0] - a.coords[0]) * t;
+      const wy = a.coords[1] + (b.coords[1] - a.coords[1]) * t;
+      const fx = ld.force?.[0] ?? 0;
+      const fy = ld.force?.[1] ?? 0;
+      const mag = Math.sqrt(fx * fx + fy * fy);
+      if (mag < 1e-9) continue;
+
+      const tipX = toX(wx);
+      const tipY = toY(wy);
+      const arrowLen = 9;
+      const dirX = fx / mag;
+      const dirY = -fy / mag;
+      const tailX = tipX - dirX * arrowLen;
+      const tailY = tipY - dirY * arrowLen;
+      doc.setDrawColor(...C.accent);
+      doc.setLineWidth(0.7);
+      doc.line(tailX, tailY, tipX, tipY);
+      // Наконечник
+      const hL = 2.2, hW = 1.2;
+      const perpX = -dirY, perpY = dirX;
+      doc.line(tipX, tipY, tipX - dirX * hL + perpX * hW, tipY - dirY * hL + perpY * hW);
+      doc.line(tipX, tipY, tipX - dirX * hL - perpX * hW, tipY - dirY * hL - perpY * hW);
+      // Подпись P = ...
+      doc.setFont(fontState.name, "normal");
+      doc.setFontSize(7);
+      doc.setTextColor(...C.accent);
+      const lbl = `P = ${formatForce(mag)}`;
+      const labelY = tailY - dirY * 1.5 - (dirY < 0 ? 0 : 2);
+      const labelX = tailX - dirX * 1.5;
+      doc.text(lbl, labelX, labelY, {
+        align: dirX > 0.3 ? "right" : dirX < -0.3 ? "left" : "center",
+      });
+      // Подпись положения
+      doc.setFontSize(6);
+      doc.setTextColor(...C.thin);
+      doc.text(`x=${(t * 100).toFixed(0)}%`, tipX, tipY + 3.5, { align: "center" });
     }
   }
 
-  // Реакции опор (из результата) — синими стрелками вверх
+  // Реакции опор (из результата) — зелёными стрелками
   if (result) {
     doc.setFont(fontState.name, "normal");
-    doc.setFontSize(5.5);
+    doc.setFontSize(7);
     for (const r of result.reactions) {
       const nd = model.nodes.find((n) => n.id === r.node_id);
       if (!nd) continue;
       const x = toX(nd.coords[0]);
       const y = toY(nd.coords[1]);
-      // Вертикальная реакция
+      // Вертикальная реакция — стрелка снаружи опоры под балкой, указывает к узлу
       if (Math.abs(r.fy) > 1) {
-        const arrowLen = 6;
-        const dir = r.fy > 0 ? 1 : -1; // вверх если положительная
+        const arrowLen = 8;
+        const dir = r.fy > 0 ? 1 : -1; // если реакция положительная — стрелка снизу-вверх
         doc.setDrawColor(...C.Q);
-        doc.setLineWidth(0.5);
-        // стрелка снаружи опоры — снизу вверх к узлу
-        const tailY = y + arrowLen * dir;
-        doc.line(x, tailY, x, y);
+        doc.setLineWidth(0.7);
+        // Опора уже занимает 3 мм снизу от узла, поэтому стрелку рисуем ниже опоры
+        const supportOff = 3;
+        const tailY = y + supportOff + arrowLen * dir;
+        const tipY = y + supportOff * dir;
+        doc.line(x, tailY, x, tipY);
         // наконечник
-        doc.line(x, y, x - 1, y + 1.5 * dir);
-        doc.line(x, y, x + 1, y + 1.5 * dir);
+        doc.line(x, tipY, x - 1.3, tipY + 1.8 * dir);
+        doc.line(x, tipY, x + 1.3, tipY + 1.8 * dir);
         doc.setTextColor(...C.Q);
-        doc.text(`R=${formatForce(Math.abs(r.fy))}`, x + 1, tailY + (dir > 0 ? 2 : -1));
+        doc.text(`R = ${formatForce(Math.abs(r.fy))}`, x + 1.5, tailY + (dir > 0 ? 2.5 : -1));
       }
       // Горизонтальная реакция
       if (Math.abs(r.fx) > 1) {
-        const arrowLen = 6;
+        const arrowLen = 8;
         const dir = r.fx > 0 ? -1 : 1;
         doc.setDrawColor(...C.Q);
-        doc.setLineWidth(0.5);
+        doc.setLineWidth(0.7);
         const tailX = x + arrowLen * dir;
         doc.line(tailX, y, x, y);
-        doc.line(x, y, x + 1.5 * dir, y - 1);
-        doc.line(x, y, x + 1.5 * dir, y + 1);
+        doc.line(x, y, x + 1.8 * dir, y - 1.3);
+        doc.line(x, y, x + 1.8 * dir, y + 1.3);
         doc.setTextColor(...C.Q);
-        doc.text(`H=${formatForce(Math.abs(r.fx))}`, tailX, y + (dir > 0 ? -1.5 : 3));
+        doc.text(`H = ${formatForce(Math.abs(r.fx))}`, tailX, y + (dir > 0 ? -2 : 3.5),
+          { align: dir > 0 ? "right" : "left" });
       }
     }
   }
@@ -438,96 +488,152 @@ function formatDistLoad(qNperM: number): string {
 }
 
 // ── Эпюры на PDF ───────────────────────────────────────────────────────────
+type DiagramKind = "N" | "Qy" | "Mz" | "uy";
+
+interface DiagramMeta {
+  title: string;
+  unit: string;
+  color: [number, number, number];
+  scale: number; // множитель для пересчёта значения в отображаемые единицы
+  pickVals: (d: SolverResponse["elements"][number]["diagrams"]) => number[];
+}
+
+const DIAGRAM_META: Record<DiagramKind, DiagramMeta> = {
+  N: { title: "N — продольная сила", unit: "Н", color: [44, 62, 128], scale: 1, pickVals: (d) => d.N },
+  Qy: { title: "Q — поперечная сила", unit: "Н", color: [26, 138, 90], scale: 1, pickVals: (d) => d.Qy },
+  Mz: { title: "M — изгибающий момент", unit: "Н·м", color: [192, 57, 43], scale: 1, pickVals: (d) => d.Mz },
+  uy: { title: "v — прогиб (локальный Y)", unit: "мм", color: [217, 119, 6], scale: 1e3, pickVals: (d) => d.uy_local ?? [] },
+};
+
+function fmtNum(v: number): string {
+  const a = Math.abs(v);
+  if (a === 0) return "0";
+  if (a >= 1e6) return `${(v / 1e6).toFixed(2)}·10⁶`;
+  if (a >= 1e3) return `${(v / 1e3).toFixed(2)}·10³`;
+  if (a >= 1) return v.toFixed(2);
+  if (a >= 1e-2) return v.toFixed(3);
+  return v.toExponential(2);
+}
+
 function drawDiagram(
   doc: jsPDF,
   model: FrameModel,
   result: SolverResponse,
-  kind: "N" | "Qy" | "Mz",
+  kind: DiagramKind,
   ox: number, oy: number, boxW: number, boxH: number,
 ) {
   if (model.nodes.length === 0) return;
 
-  const xs = model.nodes.map((n) => n.coords[0]);
-  const ys = model.nodes.map((n) => n.coords[1]);
-  const minX = Math.min(...xs), maxX = Math.max(...xs);
-  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const meta = DIAGRAM_META[kind];
+  const color = meta.color;
+
+  // Внутренние отступы для осей и подписей
+  const padL = 18, padR = 8, padT = 10, padB = 14;
+  const plotX = ox + padL;
+  const plotY = oy + padT;
+  const plotW = boxW - padL - padR;
+  const plotH = boxH - padT - padB;
+
+  // Границы по X (мировые координаты балки)
+  const xsCoords = model.nodes.map((n) => n.coords[0]);
+  const minX = Math.min(...xsCoords);
+  const maxX = Math.max(...xsCoords);
   const spanX = maxX - minX || 1;
-  const spanY = maxY - minY || 1;
 
-  const pad = 14;
-  const effectiveSpanY = Math.max(spanY, spanX * 0.05);
-  const scaleX = (boxW - pad * 2) / spanX;
-  const scaleY = (boxH - pad * 2) / effectiveSpanY;
-  const scale = Math.min(scaleX, scaleY);
-  const offX = ox + pad + (boxW - pad * 2 - spanX * scale) / 2;
-  const offY = oy + pad + (boxH - pad * 2 - effectiveSpanY * scale) / 2 +
-    (spanY === 0 ? effectiveSpanY * scale / 2 : 0);
+  // Собираем все значения по всем элементам для оси Y
+  let yMin = Infinity, yMax = -Infinity;
+  for (const er of result.elements) {
+    const vs = meta.pickVals(er.diagrams);
+    for (const v of vs) {
+      const sv = v * meta.scale;
+      if (sv < yMin) yMin = sv;
+      if (sv > yMax) yMax = sv;
+    }
+  }
+  if (!isFinite(yMin) || !isFinite(yMax)) {
+    yMin = -1; yMax = 1;
+  }
+  // Гарантированно включаем 0 и добавляем 10% поля
+  yMin = Math.min(yMin, 0);
+  yMax = Math.max(yMax, 0);
+  const yRange = yMax - yMin;
+  const yPad = yRange > 0 ? yRange * 0.12 : 1;
+  const yLow = yMin - yPad;
+  const yHigh = yMax + yPad;
+  const ySpan = yHigh - yLow || 1;
 
-  const toX = (x: number) => offX + (x - minX) * scale;
-  const toY = (y: number) => offY + (maxY - y) * scale;
+  // Преобразования: X — глобальная координата балки, Y — значение эпюры
+  const toPxX = (xw: number) => plotX + ((xw - minX) / spanX) * plotW;
+  const toPxY = (val: number) => plotY + plotH - ((val - yLow) / ySpan) * plotH;
+  const yZero = toPxY(0);
 
-  const color = kind === "N" ? C.N : kind === "Qy" ? C.Q : C.M;
-
-  // Рамка
+  // Внешняя рамка
   doc.setDrawColor(...C.grid);
   doc.setLineWidth(0.2);
   doc.rect(ox, oy, boxW, boxH);
 
-  // Подпись типа эпюры
+  // ── Заголовок эпюры ──
   doc.setFont(fontState.name, "bold");
-  doc.setFontSize(7);
+  doc.setFontSize(8);
   doc.setTextColor(...color);
-  const kindLabel = kind === "N" ? "N — продольная сила, Н" : kind === "Qy" ? "Q — поперечная сила, Н" : "M — изгибающий момент, Н·м";
-  doc.text(kindLabel, ox + 2, oy + 4);
+  doc.text(`${meta.title}, ${meta.unit}`, ox + 3, oy + 5);
 
-  // Ось элементов (балка) — чёрная тонкая
-  doc.setDrawColor(...C.ink);
-  doc.setLineWidth(0.5);
-  for (const el of model.elements) {
-    const a = model.nodes.find((n) => n.id === el.node_start);
-    const b = model.nodes.find((n) => n.id === el.node_end);
-    if (!a || !b) continue;
-    doc.line(toX(a.coords[0]), toY(a.coords[1]), toX(b.coords[0]), toY(b.coords[1]));
-  }
-
-  // Метки узлов на балке
-  doc.setFont(fontState.name, "normal");
-  doc.setFontSize(5.5);
-  doc.setTextColor(...C.thin);
-  for (const nd of model.nodes) {
-    const x = toX(nd.coords[0]);
-    const y = toY(nd.coords[1]);
-    doc.setFillColor(...C.ink);
-    doc.circle(x, y, 0.6, "F");
-    doc.text(nd.id, x, y + 4, { align: "center" });
-  }
-
-  // Глобальный максимум для нормировки
-  let globalMaxAbs = 1e-12;
-  for (const er of result.elements) {
-    const vals = kind === "N" ? er.diagrams.N : kind === "Qy" ? er.diagrams.Qy : er.diagrams.Mz;
-    for (const v of vals) globalMaxAbs = Math.max(globalMaxAbs, Math.abs(v));
-  }
-
-  // Если эпюра практически нулевая — рисуем подпись и выходим
-  if (globalMaxAbs < 1e-6) {
-    doc.setFont(fontState.name, "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(...C.thin);
-    const cx = (toX(minX) + toX(maxX)) / 2;
-    const cy = toY((minY + maxY) / 2);
-    doc.text("эпюра нулевая", cx, cy - 4, { align: "center" });
-    return;
-  }
-
-  const offsetMM = 14; // макс высота эпюры в мм
-
-  const fmtVal = (v: number): string => {
-    const a = Math.abs(v);
-    if (a >= 1e6) return `${(v / 1e6).toFixed(2)}М`;
-    if (a >= 1e3) return `${(v / 1e3).toFixed(1)}к`;
-    return v.toFixed(0);
+  // ── Сетка и оси ──
+  // Горизонтальные линии (значения Y)
+  const niceStep = (range: number, target = 4): number => {
+    const raw = range / target;
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const norm = raw / mag;
+    const nice = norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10;
+    return nice * mag;
   };
+  const yStep = niceStep(ySpan);
+  doc.setDrawColor(...C.grid);
+  doc.setLineWidth(0.15);
+  doc.setFont(fontState.name, "normal");
+  doc.setFontSize(6.5);
+  doc.setTextColor(...C.thin);
+  const yStart = Math.ceil(yLow / yStep) * yStep;
+  for (let yv = yStart; yv <= yHigh + 1e-9; yv += yStep) {
+    const py = toPxY(yv);
+    doc.line(plotX, py, plotX + plotW, py);
+    doc.text(fmtNum(yv), plotX - 1.5, py + 1, { align: "right" });
+  }
+
+  // Вертикальные линии (координата X по балке)
+  const xStep = niceStep(spanX, 6);
+  const xStart = Math.ceil(minX / xStep) * xStep;
+  for (let xv = xStart; xv <= maxX + 1e-9; xv += xStep) {
+    const px = toPxX(xv);
+    doc.line(px, plotY, px, plotY + plotH);
+    doc.text(`${xv.toFixed(2)}`, px, plotY + plotH + 4, { align: "center" });
+  }
+  // Подпись оси X (метры)
+  doc.setFontSize(6);
+  doc.text("x, м", plotX + plotW + 3, plotY + plotH + 1);
+
+  // Жирная ось — нулевая линия эпюры (баланс балки)
+  doc.setDrawColor(...C.ink);
+  doc.setLineWidth(0.4);
+  doc.line(plotX, yZero, plotX + plotW, yZero);
+
+  // Узлы — короткие риски по нулю
+  doc.setFillColor(...C.ink);
+  for (const nd of model.nodes) {
+    const px = toPxX(nd.coords[0]);
+    doc.circle(px, yZero, 0.7, "F");
+    doc.setFont(fontState.name, "bold");
+    doc.setFontSize(6.5);
+    doc.setTextColor(...C.ink);
+    doc.text(nd.id, px, yZero - 1.5, { align: "center" });
+    doc.setFont(fontState.name, "normal");
+  }
+
+  // ── Сама эпюра ──
+  // Найдём глобальные экстремумы по всей балке (для подписей)
+  let globalMaxV = -Infinity, globalMinV = Infinity;
+  let maxX_w = 0, minX_w = 0;
+  let maxElId = "", minElId = "";
 
   for (const el of model.elements) {
     const er = result.elements.find((e) => e.element_id === el.id);
@@ -535,87 +641,102 @@ function drawDiagram(
     const a = model.nodes.find((n) => n.id === el.node_start);
     const b = model.nodes.find((n) => n.id === el.node_end);
     if (!a || !b) continue;
+    const x0 = a.coords[0], x1 = b.coords[0];
+    const vs = meta.pickVals(er.diagrams);
+    const xs = er.diagrams.x;
+    if (!vs || vs.length === 0) continue;
 
-    const dx = b.coords[0] - a.coords[0];
-    const dy = b.coords[1] - a.coords[1];
-    const len = Math.sqrt(dx * dx + dy * dy);
-    if (len < 1e-9) continue;
-    const ux = dx / len, uy = dy / len;
-    const nx = -uy, ny = ux;
+    // Точки полилинии
+    const pts: [number, number][] = [];
+    for (let i = 0; i < xs.length; i++) {
+      const t = xs[i] / er.length;
+      const xw = x0 + (x1 - x0) * t;
+      const sv = vs[i] * meta.scale;
+      pts.push([toPxX(xw), toPxY(sv)]);
 
-    const vals = kind === "N" ? er.diagrams.N : kind === "Qy" ? er.diagrams.Qy : er.diagrams.Mz;
-    const dxArr = er.diagrams.x;
-
-    // Точки эпюры в координатах страницы
-    const epPts: [number, number][] = [];
-    for (let i = 0; i < dxArr.length; i++) {
-      const t = dxArr[i] / len;
-      const wx = a.coords[0] + dx * t;
-      const wy = a.coords[1] + dy * t;
-      const dist = (vals[i] / globalMaxAbs) * offsetMM;
-      epPts.push([toX(wx) + nx * dist, toY(wy) - ny * dist]);
+      if (sv > globalMaxV) { globalMaxV = sv; maxX_w = xw; maxElId = el.id; }
+      if (sv < globalMinV) { globalMinV = sv; minX_w = xw; minElId = el.id; }
     }
-    const baseA: [number, number] = [toX(a.coords[0]), toY(a.coords[1])];
-    const baseB: [number, number] = [toX(b.coords[0]), toY(b.coords[1])];
 
-    // Заливка полигона (балка → эпюра → балка) через path API
-    // Используем lines() — встроенный полигон в jsPDF
-    if (epPts.length >= 2) {
+    // Заливка полигона (нулевая ось → эпюра → нулевая ось)
+    if (pts.length >= 2) {
       const linesArr: number[][] = [];
-      // Стартуем в baseA — двигаемся в первую точку эпюры
-      linesArr.push([epPts[0][0] - baseA[0], epPts[0][1] - baseA[1]]);
-      // Затем по точкам эпюры
-      for (let i = 1; i < epPts.length; i++) {
-        linesArr.push([epPts[i][0] - epPts[i - 1][0], epPts[i][1] - epPts[i - 1][1]]);
+      // Старт: первая точка эпюры
+      linesArr.push([pts[0][0] - pts[0][0], pts[0][1] - yZero]); // относительно (pts[0][0], yZero)
+      for (let i = 1; i < pts.length; i++) {
+        linesArr.push([pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]]);
       }
-      // Замыкание к baseB
-      linesArr.push([baseB[0] - epPts[epPts.length - 1][0], baseB[1] - epPts[epPts.length - 1][1]]);
+      // Замыкание к нулю
+      linesArr.push([pts[pts.length - 1][0] - pts[pts.length - 1][0], yZero - pts[pts.length - 1][1]]);
+      linesArr.push([pts[0][0] - pts[pts.length - 1][0], 0]);
 
       doc.setFillColor(color[0], color[1], color[2]);
-      doc.setDrawColor(...color);
-      doc.setLineWidth(0.4);
-      // Полупрозрачная заливка
       doc.setGState(doc.GState({ opacity: 0.18 }));
-      doc.lines(linesArr, baseA[0], baseA[1], [1, 1], "F", true);
+      doc.lines(linesArr, pts[0][0], yZero, [1, 1], "F", true);
       doc.setGState(doc.GState({ opacity: 1 }));
-      // Контурная линия эпюры (без заливки)
-      doc.setLineWidth(0.7);
-      for (let i = 1; i < epPts.length; i++) {
-        doc.line(epPts[i - 1][0], epPts[i - 1][1], epPts[i][0], epPts[i][1]);
-      }
-      // Перпендикуляры — крайние ординаты от балки к эпюре
-      doc.setLineWidth(0.4);
-      doc.line(baseA[0], baseA[1], epPts[0][0], epPts[0][1]);
-      doc.line(baseB[0], baseB[1], epPts[epPts.length - 1][0], epPts[epPts.length - 1][1]);
     }
 
-    // Подписи значений: на концах и в точке макс/мин
+    // Линия эпюры
+    doc.setDrawColor(...color);
+    doc.setLineWidth(0.8);
+    for (let i = 1; i < pts.length; i++) {
+      doc.line(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]);
+    }
+  }
+
+  // Если эпюра практически нулевая
+  if (Math.abs(globalMaxV) < 1e-6 && Math.abs(globalMinV) < 1e-6) {
     doc.setFont(fontState.name, "normal");
-    doc.setFontSize(5.5);
-    doc.setTextColor(...color);
+    doc.setFontSize(9);
+    doc.setTextColor(...C.thin);
+    doc.text("эпюра нулевая (все значения = 0)", plotX + plotW / 2, plotY + plotH / 2, { align: "center" });
+    return;
+  }
 
-    const annotate = (idx: number, alignCenter = true) => {
-      const t = dxArr[idx] / len;
-      const wx = a.coords[0] + dx * t;
-      const wy = a.coords[1] + dy * t;
-      const dist = (vals[idx] / globalMaxAbs) * offsetMM;
-      const lx = toX(wx) + nx * dist;
-      const ly = toY(wy) - ny * dist;
-      // Смещаем подпись от балки
-      const sgn = dist >= 0 ? -1 : 1;
-      doc.text(fmtVal(vals[idx]), lx, ly + sgn * 1.2, { align: alignCenter ? "center" : "left" });
-    };
+  // ── Подписи экстремумов с координатами ──
+  doc.setFont(fontState.name, "bold");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...color);
 
-    // Левый конец
-    annotate(0);
-    // Правый конец
-    annotate(dxArr.length - 1);
-    // Глобальный максимум по модулю
-    let maxAbsEl = 0, maxIdx = 0;
-    vals.forEach((v, i) => { if (Math.abs(v) > maxAbsEl) { maxAbsEl = Math.abs(v); maxIdx = i; } });
-    if (maxIdx !== 0 && maxIdx !== dxArr.length - 1 && maxAbsEl > 1e-9) {
-      annotate(maxIdx);
+  const labelExtremum = (val: number, xw: number, elId: string, isMax: boolean) => {
+    if (Math.abs(val) < 1e-9) return;
+    const px = toPxX(xw);
+    const py = toPxY(val);
+    // Маркер
+    doc.setFillColor(color[0], color[1], color[2]);
+    doc.circle(px, py, 1.0, "F");
+    // Вертикальный пунктир от 0 к точке
+    doc.setDrawColor(...color);
+    doc.setLineWidth(0.25);
+    const dashLen = 1.2;
+    const yA = Math.min(py, yZero), yB = Math.max(py, yZero);
+    for (let yp = yA; yp < yB; yp += dashLen * 2) {
+      doc.line(px, yp, px, Math.min(yp + dashLen, yB));
     }
+    // Подпись со значением и координатой
+    const text = `${isMax ? "max" : "min"} = ${fmtNum(val)} ${meta.unit}`;
+    const coordText = `(${elId}, x = ${xw.toFixed(2)} м)`;
+    // Адаптивное смещение: если точка выше оси — текст выше; если ниже — текст ниже
+    const above = val >= 0;
+    // Также сдвигаем по горизонтали чтоб не выходить за рамку
+    let alignH: "left" | "center" | "right" = "center";
+    let tx = px;
+    if (px - plotX < 30) { alignH = "left"; tx = px + 2; }
+    else if (plotX + plotW - px < 30) { alignH = "right"; tx = px - 2; }
+    const ty = above ? py - 3.5 : py + 5;
+    doc.setFont(fontState.name, "bold");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...color);
+    doc.text(text, tx, ty, { align: alignH });
+    doc.setFont(fontState.name, "normal");
+    doc.setFontSize(6);
+    doc.setTextColor(...C.thin);
+    doc.text(coordText, tx, ty + (above ? -3 : 3), { align: alignH });
+  };
+
+  labelExtremum(globalMaxV, maxX_w, maxElId, true);
+  if (Math.abs(globalMinV - globalMaxV) > 1e-9) {
+    labelExtremum(globalMinV, minX_w, minElId, false);
   }
 }
 
@@ -679,7 +800,6 @@ export async function generatePdfReport(
     ["Макс. прогиб", `${fmt(s.max_displacement * 1000, 3)} мм`],
     ["Макс. σ Мизес", `${fmt(s.max_sigma_vm / 1e6, 1)} МПа`],
     ["Запас прочности", s.min_safety_factor && s.min_safety_factor < 1e5 ? s.min_safety_factor.toFixed(2) : "∞"],
-    ["Время расчёта", `${result.duration_ms ?? "—"} мс`],
   ];
 
   let sy = y + 8;
@@ -790,20 +910,34 @@ export async function generatePdfReport(
     doc.setDrawColor(...C.thin);
     sy += 4;
 
-    const mat = model.materials[0];
-    const sec = model.sections[0];
+    // Уникальные материалы/сечения, реально используемые элементами
+    const usedMatIds = new Set<string>();
+    const usedSecIds = new Set<string>();
+    for (const el of model.elements) {
+      usedMatIds.add(el.material_id);
+      usedSecIds.add(el.section_id);
+    }
+    const usedMats = model.materials.filter((m) => usedMatIds.has(m.id));
+    const usedSecs = model.sections.filter((s) => usedSecIds.has(s.id));
+    // fallback на первый, если ничего не сматчили
+    const matList = usedMats.length > 0 ? usedMats : model.materials.slice(0, 1);
+    const secList = usedSecs.length > 0 ? usedSecs : model.sections.slice(0, 1);
+
     const dataRows: [string, string][] = [];
-    if (mat) {
+    for (const mat of matList) {
       dataRows.push(["Материал", mat.name]);
-      dataRows.push(["Модуль E", `${(mat.E / 1e9).toFixed(0)} ГПа`]);
+      dataRows.push(["  Модуль E", `${(mat.E / 1e9).toFixed(0)} ГПа`]);
       if (mat.sigma_yield) {
-        dataRows.push(["Предел текучести σ_т", `${(mat.sigma_yield / 1e6).toFixed(0)} МПа`]);
+        dataRows.push(["  Предел текучести σ_т", `${(mat.sigma_yield / 1e6).toFixed(0)} МПа`]);
       }
     }
-    if (sec) {
+    for (const sec of secList) {
       dataRows.push(["Сечение", sec.name]);
-      dataRows.push(["Площадь A", `${(sec.A * 1e4).toFixed(2)} см²`]);
-      dataRows.push(["Момент инерции I_z", `${(sec.I_z * 1e8).toFixed(0)} см⁴`]);
+      dataRows.push(["  Площадь A", `${(sec.A * 1e4).toFixed(2)} см²`]);
+      dataRows.push(["  Момент инерции Iz", `${(sec.I_z * 1e8).toFixed(0)} см⁴`]);
+      if (sec.W_z) {
+        dataRows.push(["  Момент сопротивления Wz", `${(sec.W_z * 1e6).toFixed(1)} см³`]);
+      }
     }
     doc.setFont(FONT, "normal");
     doc.setFontSize(7);
@@ -836,6 +970,12 @@ export async function generatePdfReport(
           if (Math.abs(fy) > 1e-9) parts.push(`Fy=${formatForce(fy)}`);
           if (Math.abs(mz) > 1e-9) parts.push(`Mz=${formatMoment(mz)}`);
           desc = `Узел ${ld.node_id}: ${parts.join(", ")}`;
+        } else if (ld.type === "in_span_point" && ld.element_id) {
+          const fy = ld.force?.[1] ?? 0;
+          const fx = ld.force?.[0] ?? 0;
+          const pos = ((ld.position_ratio ?? 0.5) * 100).toFixed(0);
+          const f = Math.abs(fy) > Math.abs(fx) ? fy : fx;
+          desc = `Элемент ${ld.element_id}: P=${formatForce(f)} в ${pos}%`;
         } else if (ld.type === "distributed_uniform" && ld.element_id) {
           const qy = ld.load_local_per_length?.[1] ?? 0;
           desc = `Элемент ${ld.element_id}: q=${formatDistLoad(qy)}`;
@@ -849,26 +989,33 @@ export async function generatePdfReport(
     }
   }
 
-  // ── Страница 2: Эпюры N, Q, M ──────────────────────────────────────────
-  doc.addPage();
+  // ── Страницы 2 и 3: Эпюры (по 2 на странице — крупно и читаемо) ───────
+  const epyKinds: DiagramKind[] = ["N", "Qy", "Mz", "uy"];
+  const pageTitles = ["Эпюры N, Q", "Эпюра M и прогибы"];
+  const epyPerPage = 2;
 
-  // Штамп
-  doc.setFillColor(...C.ink);
-  doc.rect(ML, MT, CW, 8, "F");
-  doc.setFont(FONT, "bold");
-  doc.setFontSize(9);
-  doc.setTextColor(255, 255, 255);
-  doc.text(`${projectName || "Расчёт"} · Эпюры`, ML + 3, MT + 5.5);
-  doc.setFont(FONT, "normal");
-  doc.setFontSize(7);
-  doc.text("диплом-инж.рф", PW - MR - 3, MT + 5.5, { align: "right" });
+  for (let p = 0; p < 2; p++) {
+    doc.addPage();
+    // Штамп
+    doc.setFillColor(...C.ink);
+    doc.rect(ML, MT, CW, 8, "F");
+    doc.setFont(FONT, "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(255, 255, 255);
+    doc.text(`${projectName || "Расчёт"} · ${pageTitles[p]}`, ML + 3, MT + 5.5);
+    doc.setFont(FONT, "normal");
+    doc.setFontSize(7);
+    doc.text("диплом-инж.рф", PW - MR - 3, MT + 5.5, { align: "right" });
 
-  const epyH = (PH - MT - MB - 10 - 4) / 3;
-  const epyW = CW;
+    const epyH = (PH - MT - MB - 10 - 4) / epyPerPage;
+    const epyW = CW;
 
-  drawDiagram(doc, model, result, "N", ML, MT + 10, epyW, epyH);
-  drawDiagram(doc, model, result, "Qy", ML, MT + 10 + epyH + 2, epyW, epyH);
-  drawDiagram(doc, model, result, "Mz", ML, MT + 10 + (epyH + 2) * 2, epyW, epyH);
+    for (let i = 0; i < epyPerPage; i++) {
+      const kind = epyKinds[p * epyPerPage + i];
+      if (!kind) continue;
+      drawDiagram(doc, model, result, kind, ML, MT + 10 + (epyH + 4) * i, epyW, epyH);
+    }
+  }
 
   // Нижний колонтитул
   doc.setFont(FONT, "normal");
