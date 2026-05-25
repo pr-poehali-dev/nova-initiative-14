@@ -716,45 +716,53 @@ class FrameSolver:
             # с гранусловиями v(0) = v(L) = 0 (т.к. узловые перемещения уже учтены через N).
             EIz = mat.E * sec.I_z if sec.I_z > 0 else 0.0
             EIy = mat.E * sec.I_y if sec.I_y > 0 else 0.0
-            # M_extra(x) — момент от внутрипролётных нагрузок при условии,
-            # что узлы заделаны. Получаем из Mz_arr и My_arr ВЫЧИТАЯ линейный момент
-            # от концевых усилий узла A: Mz_lin(x) = Mz_a + Qy_a·(L−x) — но проще:
-            # рассмотрим, что Mz_total = Mz_узловое + Mz_от_внутрипролётных.
-            # Берём интеграл от ПОЛНОГО M(x), а потом вычитаем линейную часть так,
-            # чтобы v_p(0) = v_p(L) = 0.
-            def double_integrate_with_zero_bcs(M_arr: list, xs_arr, EI: float) -> list:
-                """Возвращает v(x) из v''(x) = -M/EI с v(0)=v(L)=0 (после вычитания линейного тренда)."""
-                if EI <= 1e-12 or len(xs_arr) < 2:
-                    return [0.0] * len(xs_arr)
-                n = len(xs_arr)
-                # Первое интегрирование: θ(x) = θ(0) + ∫(-M/EI)dx
-                # Возьмём θ(0) = 0, а потом подкорректируем через граничное условие v(L)=0.
-                theta = [0.0] * n
-                for i in range(1, n):
-                    dx = xs_arr[i] - xs_arr[i-1]
-                    avg = -(M_arr[i] + M_arr[i-1]) / 2.0 / EI
-                    theta[i] = theta[i-1] + avg * dx
-                v = [0.0] * n
-                for i in range(1, n):
-                    dx = xs_arr[i] - xs_arr[i-1]
-                    avg_theta = (theta[i] + theta[i-1]) / 2.0
-                    v[i] = v[i-1] + avg_theta * dx
-                # Корректировка чтобы v(0)=v(L)=0: вычитаем линейный тренд
-                v_L = v[-1]
-                for i in range(n):
-                    t = xs_arr[i] / xs_arr[-1] if xs_arr[-1] > 0 else 0.0
-                    v[i] -= t * v_L
-                return v
 
-            # Вспомогательная: линейный момент от концевых усилий узла A
-            # (без учёта внутрипролётных). Используем для вычитания.
-            # Mz_lin(x) = Mz_at_a − Qy_at_a · x, где Mz_at_a и Qy_at_a — концевые усилия А.
+            # === Частное решение v_p(x) — прогиб балки с ЗАДЕЛАННЫМИ концами
+            # (v(0)=v(L)=0, v'(0)=v'(L)=0) от внутрипролётной нагрузки.
+            # Это математически точное дополнение к эрмитовой интерполяции
+            # узловых перемещений: v_total(x) = v_эрмит(x) + v_p(x).
+            # Используем КЛАССИЧЕСКИЕ аналитические формулы (Roark / Тимошенко).
+            def fixed_fixed_deflection_at(x: float, L_el: float, EI: float) -> tuple[float, float]:
+                """Возвращает (vy, vz) — прогиб в точке x балки длины L_el
+                с заделанными концами от ВСЕХ внутрипролётных нагрузок текущего элемента.
+                Знаки vy, vz согласованы с осями локальной СК (вниз отрицательно при q,P>0 вверх)."""
+                if EI <= 1e-12 or L_el <= 1e-12:
+                    return 0.0, 0.0
+                vy_acc = 0.0
+                vz_acc = 0.0
+                for ld in self.loads:
+                    if ld.element_id != el.id:
+                        continue
+                    if ld.kind == 'in_span_point':
+                        # Точечная сила P в положении a от начала, b = L-a
+                        a = ld.position_ratio * L_el
+                        b = L_el - a
+                        Py = ld.force[1]
+                        Pz = ld.force[2] if self.dim == '3d' else 0.0
+                        # Формула fixed-fixed beam, точечная сила:
+                        # x ≤ a: v(x) = P*b²*x²*(3a*L − (3a+b)*x) / (6*EI*L³)
+                        # x ≥ a: v(x) = P*a²*(L−x)²*(3b*L − (3b+a)*(L−x)) / (6*EI*L³)
+                        if x <= a:
+                            f_unit = b * b * x * x * (3 * a * L_el - (3 * a + b) * x) \
+                                     / (6 * L_el ** 3)
+                        else:
+                            Lmx = L_el - x
+                            f_unit = a * a * Lmx * Lmx * (3 * b * L_el - (3 * b + a) * Lmx) \
+                                     / (6 * L_el ** 3)
+                        vy_acc += Py * f_unit / EI
+                        vz_acc += Pz * f_unit / EI
+                    elif ld.kind == 'distributed_uniform':
+                        # Равномерная q по всей длине (заделка-заделка):
+                        # v(x) = q*x²*(L−x)² / (24*EI)
+                        qy = ld.load_start[1]
+                        qz = ld.load_start[2] if self.dim == '3d' else 0.0
+                        f_unit = x * x * (L_el - x) ** 2 / 24.0
+                        vy_acc += qy * f_unit / EI
+                        vz_acc += qz * f_unit / EI
+                return vy_acc, vz_acc
+
             if self.dim == '2d':
-                Mz_a_end = -f_end[2]
-                Qy_a_end = -f_end[1]
-                Mz_lin = [Mz_a_end - Qy_a_end * x for x in xs]
-                Mz_extra = [Mz_arr[i] - Mz_lin[i] for i in range(len(xs))]
-                v_p = double_integrate_with_zero_bcs(Mz_extra, xs, EIz)
+                v_p = [fixed_fixed_deflection_at(x, L, EIz)[0] for x in xs]
                 # Эрмитовы функции для базовой части
                 for i, x in enumerate(xs):
                     xi = x / L if L > 0 else 0.0
@@ -768,19 +776,9 @@ class FrameSolver:
                     ux_arr_local.append(float(u_base))
                     uz_arr_local.append(0.0)
             else:
-                # 3D: два изгиба + осевое
-                Mz_a_end = -f_end[5]
-                Qy_a_end = -f_end[1]
-                Mz_lin = [Mz_a_end - Qy_a_end * x for x in xs]
-                Mz_extra = [Mz_arr[i] - Mz_lin[i] for i in range(len(xs))]
-                v_p_y = double_integrate_with_zero_bcs(Mz_extra, xs, EIz)
-
-                My_a_end = -f_end[4]
-                Qz_a_end = -f_end[2]
-                # M_y(x) = M_y_a + Qz_a*x → линейная часть
-                My_lin = [My_a_end + Qz_a_end * x for x in xs]
-                My_extra = [My_arr[i] - My_lin[i] for i in range(len(xs))]
-                v_p_z = double_integrate_with_zero_bcs(My_extra, xs, EIy)
+                # 3D: два изгиба + осевое — аналогично 2D, частное решение fixed-fixed
+                v_p_y = [fixed_fixed_deflection_at(x, L, EIz)[0] for x in xs]
+                v_p_z = [fixed_fixed_deflection_at(x, L, EIy)[1] for x in xs]
 
                 for i, x in enumerate(xs):
                     xi = x / L if L > 0 else 0.0

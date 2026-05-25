@@ -94,6 +94,38 @@
       "expectedStatus": 401
     },
     {
+      "name": "Demo: шарнирно-опёртая балка, P в центре (аналитика PL³/48EI)",
+      "comment": "L=6м, I_z=1.84e-5 (I20), E=2.1e11, P=50000Н в центре. f_аналит = 50000*216/(48*2.1e11*1.84e-5) = 0.05823 м",
+      "method": "POST",
+      "path": "/?action=demo",
+      "body": {
+        "meta": { "dim": "2d" },
+        "materials": [
+          { "id": "steel", "E": 2.1e11, "G": 8.1e10, "nu": 0.3, "rho": 7850, "sigma_yield": 245e6 }
+        ],
+        "sections": [
+          { "id": "i20", "A": 26.8e-4, "I_z": 1840e-8, "I_y": 115e-8, "W_z": 184e-6, "h": 0.2, "shear_area_y": 13.4e-4 }
+        ],
+        "nodes": [
+          { "id": "n1", "coords": [0, 0, 0] },
+          { "id": "nM", "coords": [3.0, 0, 0] },
+          { "id": "n2", "coords": [6.0, 0, 0] }
+        ],
+        "elements": [
+          { "id": "e1", "node_start": "n1", "node_end": "nM", "material_id": "steel", "section_id": "i20" },
+          { "id": "e2", "node_start": "nM", "node_end": "n2", "material_id": "steel", "section_id": "i20" }
+        ],
+        "boundary_conditions": [
+          { "node_id": "n1", "constrained_dofs": ["ux", "uy"] },
+          { "node_id": "n2", "constrained_dofs": ["uy"] }
+        ],
+        "loads": [
+          { "type": "nodal_force", "node_id": "nM", "force": [0, -50000, 0], "moment": [0, 0, 0] }
+        ]
+      },
+      "expectedStatus": 200
+    },
+    {
       "name": "Demo: 3D-балка — сила на конце",
       "method": "POST",
       "path": "/?action=demo",
