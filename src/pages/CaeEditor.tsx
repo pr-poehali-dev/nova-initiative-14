@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Helmet } from "@/lib/helmet-shim";
 import Icon from "@/components/ui/icon";
@@ -8,7 +8,10 @@ import EditorTopBar from "@/components/cae/editor/EditorTopBar";
 import EditorLeftPanel from "@/components/cae/editor/EditorLeftPanel";
 import EditorRightPanel from "@/components/cae/editor/EditorRightPanel";
 import EditorResultsPanel from "@/components/cae/editor/EditorResultsPanel";
+import EditorIssuesPanel from "@/components/cae/editor/EditorIssuesPanel";
 import KeyboardHintsDialog from "@/components/cae/editor/KeyboardHintsDialog";
+import EditorTutorial, { isTutorialCompleted } from "@/components/cae/editor/EditorTutorial";
+import EditorWelcomeDialog, { isWelcomeShown } from "@/components/cae/editor/EditorWelcomeDialog";
 import { useCaeProject } from "./cae-editor/useCaeProject";
 import { useCaeActions } from "./cae-editor/useCaeActions";
 import { useCaeSolver } from "./cae-editor/useCaeSolver";
@@ -45,6 +48,24 @@ const CaeEditor = () => {
   const [secPickerOpen, setSecPickerOpen] = useState(false);
   const [bcCustomOpen, setBcCustomOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+  const [welcomeOpen, setWelcomeOpen] = useState(false);
+
+  // При первом визите на пустой проект показываем приветственный экран.
+  // Туториал автозапускаем только если приветствие уже было показано (повторный визит)
+  // и пользователь его не проходил — это страховка, чтобы не дублировать UI.
+  useEffect(() => {
+    if (loadingModel || authLoading) return;
+    const isEmpty = model.nodes.length === 0 && model.elements.length === 0;
+    if (isEmpty && !isWelcomeShown()) {
+      const t = window.setTimeout(() => setWelcomeOpen(true), 400);
+      return () => window.clearTimeout(t);
+    }
+    if (!isEmpty && !isTutorialCompleted() && !isWelcomeShown()) {
+      const t = window.setTimeout(() => setTutorialOpen(true), 600);
+      return () => window.clearTimeout(t);
+    }
+  }, [loadingModel, authLoading, model.nodes.length, model.elements.length]);
 
   // Одиночный выбор для правой панели свойств
   const selectedNodeId = selectedNodeIds.length === 1 ? selectedNodeIds[0] : null;
@@ -60,7 +81,11 @@ const CaeEditor = () => {
     diagramScale,
     setDiagramScale,
     onSolve,
+    issues,
+    blocked,
   } = useCaeSolver(model, projectId, versionId);
+
+  const errorsCount = issues.filter((i) => i.level === "error").length;
 
   const {
     onCanvasClick,
@@ -143,6 +168,8 @@ const CaeEditor = () => {
           lastSaved={lastSaved}
           saving={saving}
           solving={solving}
+          blocked={blocked}
+          errorsCount={errorsCount}
           onSave={onSave}
           onSolve={onSolve}
         />
@@ -153,12 +180,14 @@ const CaeEditor = () => {
             setMode={setMode}
             gridStep={gridStep}
             setGridStep={setGridStep}
+            onStartTutorial={() => setTutorialOpen(true)}
           />
 
           {/* Канва */}
           <div
             className="border-2 border-[var(--drawing-line)] relative"
             style={{ height: "70vh", minHeight: 480 }}
+            data-tutorial="canvas"
           >
             {/* Плавающая панель инструментов — в левом верхнем углу, не перекрывает легенду */}
             <div className="absolute top-2 left-2 z-10 flex gap-0 bg-[var(--drawing-bg)]/95 border border-[var(--drawing-line)] shadow-sm">
@@ -212,8 +241,20 @@ const CaeEditor = () => {
             )}
           </div>
 
-          {/* Правая колонка: свойства + результаты */}
+          {/* Правая колонка: проблемы + свойства + результаты */}
           <aside className="space-y-3 text-[12px]">
+            <EditorIssuesPanel
+              issues={issues}
+              onFocusNode={(id) => {
+                setSelectedNodeIds([id]);
+                setSelectedElementIds([]);
+              }}
+              onFocusElement={(id) => {
+                setSelectedElementIds([id]);
+                setSelectedNodeIds([]);
+              }}
+            />
+            <div data-tutorial="props">
             <EditorRightPanel
               model={model}
               selectedNode={selectedNode}
@@ -235,7 +276,9 @@ const CaeEditor = () => {
               removeLoadById={removeLoadById}
               deleteSelected={deleteSelected}
             />
+            </div>
 
+            <div data-tutorial="results">
             <EditorResultsPanel
               result={result}
               model={model}
@@ -244,6 +287,7 @@ const CaeEditor = () => {
               diagramScale={diagramScale}
               setDiagramScale={setDiagramScale}
             />
+            </div>
           </aside>
         </div>
       </div>
@@ -270,6 +314,13 @@ const CaeEditor = () => {
       />
 
       <KeyboardHintsDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <EditorTutorial open={tutorialOpen} onClose={() => setTutorialOpen(false)} />
+      <EditorWelcomeDialog
+        open={welcomeOpen}
+        onClose={() => setWelcomeOpen(false)}
+        onStartTutorial={() => setTutorialOpen(true)}
+        onLoadTemplate={(tpl) => updateModel(tpl)}
+      />
     </>
   );
 };

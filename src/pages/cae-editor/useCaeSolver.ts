@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { runSolver, type FrameModel, type SolverResponse } from "@/lib/cae-model";
 import type { DiagramKind } from "@/components/cae/FrameCanvas";
+import { validateModel, hasBlockingErrors } from "@/lib/cae-validate";
 
 export function useCaeSolver(
   model: FrameModel,
@@ -13,27 +14,25 @@ export function useCaeSolver(
   const [showDiagram, setShowDiagram] = useState<DiagramKind>("none");
   const [diagramScale, setDiagramScale] = useState(1);
 
+  // Реактивный список проблем — пересчитывается при изменении модели
+  const issues = useMemo(() => validateModel(model), [model]);
+  const blocked = useMemo(() => hasBlockingErrors(issues), [issues]);
+
   const onSolve = async () => {
     setSolverError(null);
-    setSolving(true);
     setResult(null);
 
-    if (model.nodes.length < 2) {
-      setSolverError("Минимум 2 узла для расчёта");
-      setSolving(false);
-      return;
-    }
-    if (model.elements.length === 0) {
-      setSolverError("Нет ни одного элемента");
-      setSolving(false);
-      return;
-    }
-    if (model.boundary_conditions.length === 0) {
-      setSolverError("Не заданы граничные условия (опоры)");
-      setSolving(false);
+    if (blocked) {
+      const firstError = issues.find((i) => i.level === "error");
+      setSolverError(
+        firstError
+          ? `Нельзя запустить расчёт: ${firstError.message}. Проверьте список проблем.`
+          : "Нельзя запустить расчёт — модель содержит ошибки",
+      );
       return;
     }
 
+    setSolving(true);
     const r = await runSolver(model, projectId, versionId ?? undefined);
     setSolving(false);
     if (r.ok && r.data && r.data.status === "ok") {
@@ -54,5 +53,7 @@ export function useCaeSolver(
     diagramScale,
     setDiagramScale,
     onSolve,
+    issues,
+    blocked,
   };
 }

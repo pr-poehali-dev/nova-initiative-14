@@ -6,11 +6,12 @@ interface Props {
   setMode: (m: EditorMode) => void;
   gridStep: number;
   setGridStep: (g: number) => void;
+  onStartTutorial?: () => void;
 }
 
-const EditorLeftPanel = ({ mode, setMode, gridStep, setGridStep }: Props) => (
+const EditorLeftPanel = ({ mode, setMode, gridStep, setGridStep, onStartTutorial }: Props) => (
   <aside className="space-y-3">
-    <div className="border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] p-3">
+    <div className="border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] p-3" data-tutorial="tools">
       <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-2">
         Инструменты
       </p>
@@ -78,6 +79,16 @@ const EditorLeftPanel = ({ mode, setMode, gridStep, setGridStep }: Props) => (
       <p>• <b>Ctrl+Z</b> — отменить, <b>Ctrl+D</b> — дублировать</p>
       <p>• <b>F5</b> — расчёт, <b>?</b> — все клавиши</p>
     </div>
+
+    {onStartTutorial && (
+      <button
+        onClick={onStartTutorial}
+        className="w-full border-2 border-dashed border-[var(--drawing-line)] hover:border-[var(--drawing-accent)] hover:text-[var(--drawing-accent)] bg-[var(--drawing-bg)] p-2.5 text-[11px] font-gost uppercase tracking-wider flex items-center justify-center gap-2 transition"
+      >
+        <Icon name="GraduationCap" size={14} />
+        Запустить туториал
+      </button>
+    )}
   </aside>
 );
 

@@ -12,6 +12,8 @@ interface Props {
   lastSaved: string | null;
   saving: boolean;
   solving: boolean;
+  blocked?: boolean;
+  errorsCount?: number;
   onSave: () => void;
   onSolve: () => void;
 }
@@ -24,6 +26,8 @@ const EditorTopBar = ({
   lastSaved,
   saving,
   solving,
+  blocked = false,
+  errorsCount = 0,
   onSave,
   onSolve,
 }: Props) => {
@@ -72,11 +76,17 @@ const EditorTopBar = ({
         </button>
         <button
           onClick={onSolve}
-          disabled={solving}
-          className="btn-drawing btn-drawing-accent text-[11px] disabled:opacity-50"
+          disabled={solving || blocked}
+          data-tutorial="solve"
+          className="btn-drawing btn-drawing-accent text-[11px] disabled:opacity-50 disabled:cursor-not-allowed"
+          title={
+            blocked
+              ? `В модели ${errorsCount} ошиб${errorsCount === 1 ? "ка" : "ок"} — расчёт невозможен. Откройте «Проблемы модели» справа.`
+              : "Запустить расчёт (F5)"
+          }
         >
-          <Icon name="Play" size={12} className="mr-1" />
-          {solving ? "Считаем…" : "Посчитать"}
+          <Icon name={blocked ? "CircleX" : "Play"} size={12} className="mr-1" />
+          {solving ? "Считаем…" : blocked ? "Есть ошибки" : "Посчитать"}
         </button>
         <button
           onClick={handlePdf}
