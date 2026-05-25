@@ -13,6 +13,55 @@
 import { jsPDF } from "jspdf";
 import type { FrameModel, SolverResponse } from "./cae-model";
 
+// ── Загрузка шрифта с кириллицей ──────────────────────────────────────────
+// Стандартные шрифты jsPDF (Helvetica/Times/Courier) не поддерживают кириллицу.
+// Подгружаем Roboto Regular с jsDelivr один раз и кешируем base64 в памяти.
+const FONT_URL =
+  "https://cdn.jsdelivr.net/npm/@fontsource/roboto@5.0.8/files/roboto-cyrillic-400-normal.woff";
+const FONT_TTF_URL =
+  "https://cdn.jsdelivr.net/gh/google/fonts@main/apache/roboto/static/Roboto-Regular.ttf";
+const FONT_BOLD_TTF_URL =
+  "https://cdn.jsdelivr.net/gh/google/fonts@main/apache/roboto/static/Roboto-Bold.ttf";
+
+let cachedFontB64: string | null = null;
+let cachedBoldB64: string | null = null;
+const fontState = { name: "helvetica" };
+
+async function fetchFontB64(url: string): Promise<string> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Не удалось загрузить шрифт: ${res.status}`);
+  const buf = await res.arrayBuffer();
+  // ArrayBuffer → base64
+  let binary = "";
+  const bytes = new Uint8Array(buf);
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
+async function ensureCyrillicFont(doc: jsPDF): Promise<boolean> {
+  try {
+    if (!cachedFontB64) cachedFontB64 = await fetchFontB64(FONT_TTF_URL);
+    if (!cachedBoldB64) cachedBoldB64 = await fetchFontB64(FONT_BOLD_TTF_URL);
+    doc.addFileToVFS("Roboto-Regular.ttf", cachedFontB64);
+    doc.addFont("Roboto-Regular.ttf", "Roboto", "normal");
+    doc.addFileToVFS("Roboto-Bold.ttf", cachedBoldB64);
+    doc.addFont("Roboto-Bold.ttf", "Roboto", "bold");
+    doc.setFont("Roboto", "normal");
+    fontState.name = "Roboto";
+    return true;
+  } catch (e) {
+    console.error("Не удалось загрузить шрифт с кириллицей:", e);
+    fontState.name = "helvetica";
+    return false;
+  }
+}
+
+// Игнорируем неиспользуемую константу
+void FONT_URL;
+
 // ── Цвета ──────────────────────────────────────────────────────────────────
 const C = {
   ink: [26, 26, 46] as [number, number, number],
@@ -44,6 +93,7 @@ function tableHeader(
 ) {
   doc.setFillColor(...C.grid);
   doc.rect(cols[0].x, y, cols[cols.length - 1].x + cols[cols.length - 1].w - cols[0].x, rowH, "F");
+  doc.setFont(fontState.name, "bold");
   doc.setFontSize(7);
   doc.setTextColor(...C.thin);
   cols.forEach((c) => {
@@ -65,6 +115,7 @@ function tableRow(
     doc.setFillColor(245, 245, 242);
     doc.rect(cols[0].x, y, cols[cols.length - 1].x + cols[cols.length - 1].w - cols[0].x, rowH, "F");
   }
+  doc.setFont(fontState.name, "normal");
   doc.setFontSize(7);
   doc.setTextColor(...C.ink);
   cols.forEach((c) => {
@@ -95,12 +146,14 @@ function drawScheme(
   const spanX = maxX - minX || 1;
   const spanY = maxY - minY || 1;
 
-  const pad = 10; // отступ внутри рамки
+  const pad = 14; // отступ внутри рамки (место под подписи опор/нагрузок)
+  // Если вертикальный размах слишком мал (1D балка), не растягиваем по Y
+  const effectiveSpanY = Math.max(spanY, spanX * 0.05);
   const scaleX = (boxW - pad * 2) / spanX;
-  const scaleY = (boxH - pad * 2) / spanY;
+  const scaleY = (boxH - pad * 2) / effectiveSpanY;
   const scale = Math.min(scaleX, scaleY);
   const offX = ox + pad + (boxW - pad * 2 - spanX * scale) / 2;
-  const offY = oy + pad + (boxH - pad * 2 - spanY * scale) / 2;
+  const offY = oy + pad + (boxH - pad * 2 - effectiveSpanY * scale) / 2 + ((spanY === 0 ? effectiveSpanY * scale / 2 : 0));
 
   const toX = (x: number) => offX + (x - minX) * scale;
   const toY = (y: number) => offY + (maxY - y) * scale; // Y инвертирован
@@ -109,6 +162,13 @@ function drawScheme(
   doc.setDrawColor(...C.grid);
   doc.setLineWidth(0.3);
   doc.rect(ox, oy, boxW, boxH);
+
+  // Подпись над рамкой
+  doc.setFont(fontState.name, "bold");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...C.thin);
+  doc.text("РАСЧЁТНАЯ СХЕМА", ox + 3, oy + 4);
+  doc.setFont(fontState.name, "normal");
 
   // Элементы
   doc.setDrawColor(...C.ink);
@@ -187,6 +247,7 @@ function drawScheme(
 
   // Реакции опор (из результата)
   if (result) {
+    doc.setFont(fontState.name, "normal");
     doc.setTextColor(...C.Q);
     doc.setFontSize(5.5);
     for (const r of result.reactions) {
@@ -240,6 +301,7 @@ function drawDiagram(
   doc.rect(ox, oy, boxW, boxH);
 
   // Подпись типа эпюры
+  doc.setFont(fontState.name, "bold");
   doc.setFontSize(7);
   doc.setTextColor(...color);
   const kindLabel = kind === "N" ? "N, Н" : kind === "Qy" ? "Q, Н" : "M, Н·м";
@@ -324,6 +386,7 @@ function drawDiagram(
       const dist = (vals[maxIdx] / globalMaxAbs) * offsetMM;
       const lx = toX(wx) + nx * dist;
       const ly = toY(wy) - ny * dist;
+      doc.setFont(fontState.name, "normal");
       doc.setFontSize(5.5);
       doc.setTextColor(...color);
       const label = Math.abs(vals[maxIdx]) >= 1000
@@ -335,12 +398,16 @@ function drawDiagram(
 }
 
 // ── Главная функция ────────────────────────────────────────────────────────
-export function generatePdfReport(
+export async function generatePdfReport(
   model: FrameModel,
   result: SolverResponse,
   projectName: string,
 ) {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  const hasCyrillic = await ensureCyrillicFont(doc);
+  const FONT = hasCyrillic ? "Roboto" : "helvetica";
+  doc.setFont(FONT, "normal");
+
   const PW = 297, PH = 210;
   const ML = 10, MR = 10, MT = 10, MB = 10;
   const CW = PW - ML - MR; // content width
@@ -349,9 +416,11 @@ export function generatePdfReport(
   // Штамп сверху
   doc.setFillColor(...C.ink);
   doc.rect(ML, MT, CW, 8, "F");
+  doc.setFont(FONT, "bold");
   doc.setFontSize(9);
   doc.setTextColor(255, 255, 255);
   doc.text(projectName || "Расчёт рамы", ML + 3, MT + 5.5);
+  doc.setFont(FONT, "normal");
   doc.setFontSize(7);
   doc.text(
     `Плоская рама 2D · ${new Date().toLocaleDateString("ru-RU")} · диплом-инж.рф`,
@@ -372,9 +441,11 @@ export function generatePdfReport(
   const rxW = CW - schemeW - 4;
 
   // Подзаголовок «Сводка»
+  doc.setFont(FONT, "bold");
   doc.setFontSize(7.5);
   doc.setTextColor(...C.thin);
   doc.text("РЕЗУЛЬТАТЫ РАСЧЁТА", rxX, y + 4);
+  doc.setFont(FONT, "normal");
   hline(doc, rxX, rxX + rxW, y + 5.5, 0.3);
   doc.setDrawColor(...C.thin);
 
@@ -405,9 +476,11 @@ export function generatePdfReport(
 
   // Реакции опор
   if (result.reactions.length > 0) {
+    doc.setFont(FONT, "bold");
     doc.setFontSize(7.5);
     doc.setTextColor(...C.thin);
     doc.text("РЕАКЦИИ ОПОР", rxX, sy);
+    doc.setFont(FONT, "normal");
     hline(doc, rxX, rxX + rxW, sy + 1.5, 0.3);
     doc.setDrawColor(...C.thin);
     sy += 4;
@@ -443,18 +516,20 @@ export function generatePdfReport(
 
   // Таблица экстремальных усилий по элементам
   if (result.elements.length > 0) {
+    doc.setFont(FONT, "bold");
     doc.setFontSize(7.5);
     doc.setTextColor(...C.thin);
     doc.text("УСИЛИЯ ПО ЭЛЕМЕНТАМ", rxX, sy);
+    doc.setFont(FONT, "normal");
     hline(doc, rxX, rxX + rxW, sy + 1.5, 0.3);
     doc.setDrawColor(...C.thin);
     sy += 4;
 
     const eCols = [
-      { label: "Элем.", x: rxX, w: rxW * 0.18, align: "left" as const },
-      { label: "|N|max, Н", x: rxX + rxW * 0.18, w: rxW * 0.27, align: "right" as const },
-      { label: "|Q|max, Н", x: rxX + rxW * 0.45, w: rxW * 0.27, align: "right" as const },
-      { label: "|M|max, Н·м", x: rxX + rxW * 0.72, w: rxW * 0.28, align: "right" as const },
+      { label: "Элем.", x: rxX, w: rxW * 0.2, align: "left" as const },
+      { label: "N, Н", x: rxX + rxW * 0.2, w: rxW * 0.25, align: "right" as const },
+      { label: "Q, Н", x: rxX + rxW * 0.45, w: rxW * 0.25, align: "right" as const },
+      { label: "M, Н·м", x: rxX + rxW * 0.7, w: rxW * 0.3, align: "right" as const },
     ];
     sy = tableHeader(doc, eCols, sy);
 
@@ -482,9 +557,11 @@ export function generatePdfReport(
   // Штамп
   doc.setFillColor(...C.ink);
   doc.rect(ML, MT, CW, 8, "F");
+  doc.setFont(FONT, "bold");
   doc.setFontSize(9);
   doc.setTextColor(255, 255, 255);
   doc.text(`${projectName || "Расчёт"} · Эпюры`, ML + 3, MT + 5.5);
+  doc.setFont(FONT, "normal");
   doc.setFontSize(7);
   doc.text("диплом-инж.рф", PW - MR - 3, MT + 5.5, { align: "right" });
 
@@ -496,6 +573,7 @@ export function generatePdfReport(
   drawDiagram(doc, model, result, "Mz", ML, MT + 10 + (epyH + 2) * 2, epyW, epyH);
 
   // Нижний колонтитул
+  doc.setFont(FONT, "normal");
   doc.setFontSize(6);
   doc.setTextColor(...C.thin);
   doc.text(

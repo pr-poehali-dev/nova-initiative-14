@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import type { FrameModel, SolverResponse } from "@/lib/cae-model";
@@ -25,7 +26,23 @@ const EditorTopBar = ({
   solving,
   onSave,
   onSolve,
-}: Props) => (
+}: Props) => {
+  const [pdfBusy, setPdfBusy] = useState(false);
+
+  const handlePdf = async () => {
+    if (!result || pdfBusy) return;
+    setPdfBusy(true);
+    try {
+      await generatePdfReport(model, result, projectName);
+    } catch (e) {
+      console.error("Ошибка генерации PDF:", e);
+      alert("Не удалось сформировать PDF. Проверь подключение к интернету.");
+    } finally {
+      setPdfBusy(false);
+    }
+  };
+
+  return (
   <div className="bg-[var(--drawing-bg)] border-b-[2.5px] border-[var(--drawing-line)]">
     <div className="max-w-[1400px] mx-auto px-3 py-2 flex flex-wrap items-center gap-3">
       <Link
@@ -62,17 +79,18 @@ const EditorTopBar = ({
           {solving ? "Считаем…" : "Посчитать"}
         </button>
         <button
-          onClick={() => result && generatePdfReport(model, result, projectName)}
-          disabled={!result}
+          onClick={handlePdf}
+          disabled={!result || pdfBusy}
           className="btn-drawing text-[11px] disabled:opacity-40"
           title="Скачать PDF-отчёт с эпюрами и реакциями опор"
         >
           <Icon name="FileDown" size={12} className="mr-1" />
-          PDF
+          {pdfBusy ? "Готовим…" : "PDF"}
         </button>
       </div>
     </div>
   </div>
-);
+  );
+};
 
 export default EditorTopBar;
