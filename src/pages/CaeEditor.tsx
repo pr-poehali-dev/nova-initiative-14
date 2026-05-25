@@ -186,6 +186,7 @@ const CaeEditor = () => {
 
             <EditorResultsPanel
               result={result}
+              model={model}
               showDiagram={showDiagram}
               setShowDiagram={setShowDiagram}
               diagramScale={diagramScale}
