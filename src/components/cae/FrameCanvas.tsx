@@ -13,10 +13,13 @@ import type {
   FrameModel,
   ModelNode,
   ModelElement,
-  BoundaryCondition,
-  ModelLoad,
   SolverResponse,
 } from "@/lib/cae-model";
+import { NODE_R, BG } from "./canvas/canvas-constants";
+import CanvasGrid from "./canvas/CanvasGrid";
+import CanvasElements from "./canvas/CanvasElements";
+import CanvasDiagrams from "./canvas/CanvasDiagrams";
+import CanvasOverlays from "./canvas/CanvasOverlays";
 
 export type EditorMode =
   | "select"
@@ -49,15 +52,6 @@ interface ViewState {
   cy: number;
   pxPerM: number;
 }
-
-const NODE_R = 6;
-const ELEMENT_W = 2.5;
-const ACCENT = "#c0392b";
-const LINE = "#1a1a2e";
-const THIN = "#3a3a5e";
-const BG = "#faf8f0";
-const GRID = "rgba(26,26,46,0.08)";
-const AXIS = "rgba(26,26,46,0.35)";
 
 function snap(v: number, step: number) {
   return Math.round(v / step) * step;
@@ -170,6 +164,7 @@ const FrameCanvas = ({
   };
 
   // === Поиск узла под курсором (для draw-element / select) ===
+   
   const nodeAt = (worldX: number, worldY: number): ModelNode | null => {
     const r = (NODE_R + 4) / view.pxPerM;
     for (const n of model.nodes) {
@@ -218,176 +213,6 @@ const FrameCanvas = ({
     onSelectNode(null);
   };
 
-  // === Рендер сетки ===
-  const grid: React.ReactElement[] = [];
-  const gridPx = gridStep * view.pxPerM;
-  if (gridPx >= 14) {
-    const w0 = toWorld(0, 0);
-    const w1 = toWorld(size.w, size.h);
-    const xStart = Math.floor(w0.x / gridStep) * gridStep;
-    const xEnd = Math.ceil(w1.x / gridStep) * gridStep;
-    const yStart = Math.floor(w1.y / gridStep) * gridStep;
-    const yEnd = Math.ceil(w0.y / gridStep) * gridStep;
-    for (let x = xStart; x <= xEnd + 1e-9; x += gridStep) {
-      const sx = toScreenX(x);
-      grid.push(
-        <line key={`vx${x.toFixed(3)}`} x1={sx} x2={sx} y1={0} y2={size.h} stroke={GRID} strokeWidth={1} />,
-      );
-    }
-    for (let y = yStart; y <= yEnd + 1e-9; y += gridStep) {
-      const sy = toScreenY(y);
-      grid.push(
-        <line key={`hy${y.toFixed(3)}`} x1={0} x2={size.w} y1={sy} y2={sy} stroke={GRID} strokeWidth={1} />,
-      );
-    }
-  }
-  // оси
-  const x0 = toScreenX(0);
-  const y0 = toScreenY(0);
-  if (x0 >= 0 && x0 <= size.w)
-    grid.push(<line key="axY" x1={x0} x2={x0} y1={0} y2={size.h} stroke={AXIS} strokeWidth={1.2} />);
-  if (y0 >= 0 && y0 <= size.h)
-    grid.push(<line key="axX" x1={0} x2={size.w} y1={y0} y2={y0} stroke={AXIS} strokeWidth={1.2} />);
-
-  // === Деформированная схема ===
-  const dispMap = new Map(
-    (result?.nodal_displacements || []).map((d) => [d.node_id, d]),
-  );
-
-  const renderDeformed = showDiagram === "deformed" && result;
-
-  // === Эпюры по элементам ===
-  const renderDiagramOnEl = (el: ModelElement) => {
-    if (!result) return null;
-    const er = result.elements.find((e) => e.element_id === el.id);
-    if (!er) return null;
-    const a = model.nodes.find((n) => n.id === el.node_start);
-    const b = model.nodes.find((n) => n.id === el.node_end);
-    if (!a || !b) return null;
-    const dx = b.coords[0] - a.coords[0];
-    const dy = b.coords[1] - a.coords[1];
-    const len = Math.sqrt(dx * dx + dy * dy);
-    if (len < 1e-9) return null;
-    const ux = dx / len;
-    const uy = dy / len;
-    // нормаль (поворот на +90°)
-    const nx = -uy;
-    const ny = ux;
-    let vals: number[] = [];
-    let color = ACCENT;
-    if (showDiagram === "N") {
-      vals = er.diagrams.N;
-      color = "#2c3e80";
-    } else if (showDiagram === "Qy") {
-      vals = er.diagrams.Qy;
-      color = "#1a8a5a";
-    } else if (showDiagram === "Mz") {
-      vals = er.diagrams.Mz;
-      color = "#c0392b";
-    } else if (showDiagram === "sigma") {
-      vals = er.diagrams.sigma_vm;
-      color = "#7d3c98";
-    } else {
-      return null;
-    }
-    const xs = er.diagrams.x;
-    const maxAbs = Math.max(1e-12, ...vals.map((v) => Math.abs(v)));
-    const offsetPx = 40 * diagramScale;
-    const points: string[] = [];
-    for (let i = 0; i < xs.length; i++) {
-      const t = xs[i] / len;
-      const wx = a.coords[0] + dx * t;
-      const wy = a.coords[1] + dy * t;
-      const dist = (vals[i] / maxAbs) * offsetPx;
-      const sx = toScreenX(wx) + nx * dist;
-      const sy = toScreenY(wy) - ny * dist;
-      points.push(`${sx},${sy}`);
-    }
-    // подложка (заливка от линии элемента к эпюре)
-    const baseStart = `${toScreenX(a.coords[0])},${toScreenY(a.coords[1])}`;
-    const baseEnd = `${toScreenX(b.coords[0])},${toScreenY(b.coords[1])}`;
-    const fillPoints = [baseStart, ...points, baseEnd].join(" ");
-    return (
-      <g key={`d${el.id}`} pointerEvents="none">
-        <polygon points={fillPoints} fill={color} fillOpacity={0.15} />
-        <polyline points={points.join(" ")} fill="none" stroke={color} strokeWidth={1.5} />
-      </g>
-    );
-  };
-
-  // === Рисуем нагрузки ===
-  const renderLoad = (ld: ModelLoad) => {
-    if (ld.type === "nodal_force" && ld.node_id) {
-      const n = model.nodes.find((x) => x.id === ld.node_id);
-      if (!n) return null;
-      const fx = ld.force?.[0] || 0;
-      const fy = ld.force?.[1] || 0;
-      const sx = toScreenX(n.coords[0]);
-      const sy = toScreenY(n.coords[1]);
-      const mag = Math.sqrt(fx * fx + fy * fy);
-      if (mag < 1e-9) return null;
-      const len = 60;
-      const ex = sx - (fx / mag) * len;
-      const ey = sy + (fy / mag) * len;
-      const angle = Math.atan2(sy - ey, sx - ex);
-      const ah = 8;
-      const a1x = sx - Math.cos(angle - Math.PI / 6) * ah;
-      const a1y = sy - Math.sin(angle - Math.PI / 6) * ah;
-      const a2x = sx - Math.cos(angle + Math.PI / 6) * ah;
-      const a2y = sy - Math.sin(angle + Math.PI / 6) * ah;
-      return (
-        <g key={ld.id} pointerEvents="none">
-          <line x1={ex} y1={ey} x2={sx} y2={sy} stroke={ACCENT} strokeWidth={2} />
-          <polygon points={`${sx},${sy} ${a1x},${a1y} ${a2x},${a2y}`} fill={ACCENT} />
-          <text x={ex} y={ey - 6} fontSize={11} fill={ACCENT} fontFamily="monospace">
-            {Math.round(mag)} Н
-          </text>
-        </g>
-      );
-    }
-    return null;
-  };
-
-  // === КГУ ===
-  const renderBC = (bc: BoundaryCondition) => {
-    const n = model.nodes.find((x) => x.id === bc.node_id);
-    if (!n) return null;
-    const sx = toScreenX(n.coords[0]);
-    const sy = toScreenY(n.coords[1]);
-    const dofs = new Set(bc.constrained_dofs);
-    if (dofs.has("ux") && dofs.has("uy") && dofs.has("rz")) {
-      // защемление: квадрат с штриховкой
-      const s = 14;
-      return (
-        <g key={bc.id} pointerEvents="none">
-          <rect x={sx - s} y={sy - 2} width={s * 2} height={s} fill={LINE} fillOpacity={0.15} stroke={LINE} strokeWidth={1.5} />
-          {[0, 1, 2, 3].map((i) => (
-            <line key={i} x1={sx - s + i * 7} y1={sy + s - 2} x2={sx - s + i * 7 + 6} y2={sy + s + 6} stroke={LINE} strokeWidth={1.2} />
-          ))}
-        </g>
-      );
-    }
-    if (dofs.has("ux") && dofs.has("uy")) {
-      // шарнирная: треугольник + штриховка
-      const s = 10;
-      return (
-        <g key={bc.id} pointerEvents="none">
-          <polygon points={`${sx},${sy + 2} ${sx - s},${sy + s + 2} ${sx + s},${sy + s + 2}`} fill={LINE} fillOpacity={0.15} stroke={LINE} strokeWidth={1.5} />
-          {[0, 1, 2, 3].map((i) => (
-            <line key={i} x1={sx - s + i * 6} y1={sy + s + 2} x2={sx - s + i * 6 + 5} y2={sy + s + 10} stroke={LINE} strokeWidth={1.2} />
-          ))}
-        </g>
-      );
-    }
-    // каток
-    return (
-      <g key={bc.id} pointerEvents="none">
-        <circle cx={sx} cy={sy + 10} r={5} fill={BG} stroke={LINE} strokeWidth={1.5} />
-        <line x1={sx - 10} y1={sy + 16} x2={sx + 10} y2={sy + 16} stroke={LINE} strokeWidth={1.5} />
-      </g>
-    );
-  };
-
   return (
     <svg
       ref={svgRef}
@@ -404,117 +229,49 @@ const FrameCanvas = ({
       onContextMenu={(e) => e.preventDefault()}
       onClick={handleSvgClick}
     >
-      {/* сетка */}
-      {grid}
+      <CanvasGrid
+        size={size}
+        gridStep={gridStep}
+        pxPerM={view.pxPerM}
+        toScreenX={toScreenX}
+        toScreenY={toScreenY}
+        toWorld={toWorld}
+      />
 
-      {/* элементы (исходные) */}
-      {model.elements.map((el) => {
-        const a = model.nodes.find((n) => n.id === el.node_start);
-        const b = model.nodes.find((n) => n.id === el.node_end);
-        if (!a || !b) return null;
-        const isSel = selectedElementId === el.id;
-        return (
-          <line
-            key={el.id}
-            x1={toScreenX(a.coords[0])}
-            y1={toScreenY(a.coords[1])}
-            x2={toScreenX(b.coords[0])}
-            y2={toScreenY(b.coords[1])}
-            stroke={isSel ? ACCENT : LINE}
-            strokeWidth={isSel ? ELEMENT_W + 1.5 : ELEMENT_W}
-            style={{ cursor: "pointer" }}
-            onClick={(e) => handleElementClick(el, e)}
-          />
-        );
-      })}
+      <CanvasElements
+        model={model}
+        selectedElementId={selectedElementId}
+        result={result}
+        showDiagram={showDiagram}
+        diagramScale={diagramScale}
+        mode={mode}
+        pendingFirstNodeId={pendingFirstNodeId}
+        cursorWorld={cursorWorld}
+        toScreenX={toScreenX}
+        toScreenY={toScreenY}
+        handleElementClick={handleElementClick}
+      />
 
-      {/* деформированная форма */}
-      {renderDeformed &&
-        model.elements.map((el) => {
-          const a = model.nodes.find((n) => n.id === el.node_start);
-          const b = model.nodes.find((n) => n.id === el.node_end);
-          if (!a || !b) return null;
-          const da = dispMap.get(a.id);
-          const db = dispMap.get(b.id);
-          if (!da || !db) return null;
-          const k = diagramScale * 200;
-          return (
-            <line
-              key={`def${el.id}`}
-              x1={toScreenX(a.coords[0] + da.ux * k)}
-              y1={toScreenY(a.coords[1] + da.uy * k)}
-              x2={toScreenX(b.coords[0] + db.ux * k)}
-              y2={toScreenY(b.coords[1] + db.uy * k)}
-              stroke={ACCENT}
-              strokeWidth={1.5}
-              strokeDasharray="4 4"
-              pointerEvents="none"
-            />
-          );
-        })}
+      <CanvasDiagrams
+        model={model}
+        result={result}
+        showDiagram={showDiagram}
+        diagramScale={diagramScale}
+        toScreenX={toScreenX}
+        toScreenY={toScreenY}
+      />
 
-      {/* эпюры */}
-      {result && showDiagram !== "none" && showDiagram !== "deformed" &&
-        model.elements.map((el) => renderDiagramOnEl(el))}
-
-      {/* КГУ */}
-      {model.boundary_conditions.map((bc) => renderBC(bc))}
-
-      {/* нагрузки */}
-      {model.loads.map((ld) => renderLoad(ld))}
-
-      {/* preview элемента (draw-element) */}
-      {mode === "draw-element" && pendingFirstNodeId && cursorWorld && (() => {
-        const n = model.nodes.find((x) => x.id === pendingFirstNodeId);
-        if (!n) return null;
-        return (
-          <line
-            x1={toScreenX(n.coords[0])}
-            y1={toScreenY(n.coords[1])}
-            x2={toScreenX(cursorWorld.x)}
-            y2={toScreenY(cursorWorld.y)}
-            stroke={ACCENT}
-            strokeWidth={1.5}
-            strokeDasharray="6 4"
-            pointerEvents="none"
-          />
-        );
-      })()}
-
-      {/* узлы */}
-      {model.nodes.map((n) => {
-        const isSel = selectedNodeId === n.id;
-        const isPending = pendingFirstNodeId === n.id;
-        return (
-          <g key={n.id} style={{ cursor: "pointer" }} onClick={(e) => handleNodeClick(n, e)}>
-            <circle
-              cx={toScreenX(n.coords[0])}
-              cy={toScreenY(n.coords[1])}
-              r={isSel || isPending ? NODE_R + 3 : NODE_R}
-              fill={isSel ? ACCENT : isPending ? ACCENT : BG}
-              stroke={isSel || isPending ? ACCENT : LINE}
-              strokeWidth={2}
-            />
-            <text
-              x={toScreenX(n.coords[0]) + 10}
-              y={toScreenY(n.coords[1]) - 8}
-              fontSize={10}
-              fill={THIN}
-              fontFamily="monospace"
-              pointerEvents="none"
-            >
-              {n.id}
-            </text>
-          </g>
-        );
-      })}
-
-      {/* координаты курсора */}
-      {cursorWorld && (
-        <text x={10} y={size.h - 12} fontSize={11} fill={THIN} fontFamily="monospace" pointerEvents="none">
-          {`x=${cursorWorld.x.toFixed(2)} м,  y=${cursorWorld.y.toFixed(2)} м   ·   масштаб ${view.pxPerM.toFixed(0)} px/м`}
-        </text>
-      )}
+      <CanvasOverlays
+        model={model}
+        selectedNodeId={selectedNodeId}
+        pendingFirstNodeId={pendingFirstNodeId}
+        cursorWorld={cursorWorld}
+        size={size}
+        pxPerM={view.pxPerM}
+        toScreenX={toScreenX}
+        toScreenY={toScreenY}
+        handleNodeClick={handleNodeClick}
+      />
     </svg>
   );
 };
