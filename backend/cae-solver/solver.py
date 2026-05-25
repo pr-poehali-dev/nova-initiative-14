@@ -642,7 +642,19 @@ class FrameSolver:
                 ry_b, rz_b = u_el_local[10], u_el_local[11]
 
             # Эпюры в N точках (линейная интерполяция концевых усилий + интеграл нагрузки)
-            xs = np.linspace(0.0, L, n_sub + 1)
+            # Добавляем точки непосредственно до и после каждой in_span_point нагрузки,
+            # чтобы скачок Q и излом M были точно в месте приложения силы, а не смещены
+            # на шаг равномерной сетки.
+            xs_base = list(np.linspace(0.0, L, n_sub + 1))
+            eps = L * 1e-6  # субпиксельный отступ для двусторонней точки скачка
+            for ld in self.loads:
+                if ld.element_id == el.id and ld.kind == 'in_span_point':
+                    a_pt = ld.position_ratio * L
+                    if eps < a_pt < L - eps:
+                        xs_base.append(a_pt - eps)
+                        xs_base.append(a_pt)
+                        xs_base.append(a_pt + eps)
+            xs = np.array(sorted(set(round(v, 10) for v in xs_base)))
             N_arr, Qy_arr, Qz_arr, My_arr, Mz_arr, T_arr = [], [], [], [], [], []
             # Прогибы в локальной СК (в плоскости xy и xz для 3D)
             uy_arr_local: list[float] = []
