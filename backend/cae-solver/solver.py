@@ -35,20 +35,25 @@ class Material:
     nu: float = 0.3    # коэффициент Пуассона
     rho: float = 7850  # плотность, кг/м³
     sigma_yield: float = 245e6  # предел текучести, Па
+    sigma_ultimate: float = 380e6  # предел прочности, Па
+    name: str = ''     # человекочитаемое имя (для фронта)
 
 
 @dataclass
 class Section:
     id: str
     A: float           # площадь, м²
-    I_y: float         # момент инерции вокруг y, м⁴
-    I_z: float         # момент инерции вокруг z, м⁴
+    I_y: float = 0.0   # момент инерции вокруг y, м⁴
+    I_z: float = 0.0   # момент инерции вокруг z, м⁴
     I_t: float = 0.0   # момент инерции при кручении (Saint-Venant), м⁴
     W_y: float = 0.0   # момент сопротивления, м³
     W_z: float = 0.0   # момент сопротивления, м³
     shear_area_y: float | None = None  # эффективная площадь сдвига по y, м²
     shear_area_z: float | None = None  # эффективная площадь сдвига по z, м²
     h: float = 0.0     # высота сечения, м (для расчёта напряжений)
+    name: str = ''     # человекочитаемое имя (для фронта)
+    type: str = ''     # тип сечения (для UI: i_beam, channel, custom...)
+    geometry: dict | None = None  # геометрические размеры (для UI)
 
 
 @dataclass
@@ -367,7 +372,12 @@ class FrameSolver:
         self._parse()
 
     def _parse(self):
-        self.materials = {m['id']: Material(**m) for m in self.payload.get('materials', [])}
+        # фильтруем неизвестные поля, чтобы фронт мог передавать доп. метаданные
+        mat_fields = {'id', 'E', 'G', 'nu', 'rho', 'sigma_yield', 'sigma_ultimate', 'name'}
+        self.materials = {
+            m['id']: Material(**{k: v for k, v in m.items() if k in mat_fields})
+            for m in self.payload.get('materials', [])
+        }
         self.sections = {}
         for s in self.payload.get('sections', []):
             self.sections[s['id']] = Section(
