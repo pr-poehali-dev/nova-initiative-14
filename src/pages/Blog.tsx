@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Helmet } from "@dr.pogodin/react-helmet";
+import { Helmet } from "@/lib/helmet-shim";
 import { fetchArticles, formatRuDate, type ArticleListItem } from "@/lib/articles";
 import { SITE_URL } from "@/lib/seo";
 

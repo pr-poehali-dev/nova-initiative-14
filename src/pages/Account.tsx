@@ -1,5 +1,5 @@
 import { useNavigate, Link } from "react-router-dom";
-import { Helmet } from "@dr.pogodin/react-helmet";
+import { Helmet } from "@/lib/helmet-shim";
 import Icon from "@/components/ui/icon";
 import { useAuth } from "@/contexts/AuthContext";
 import { SITE_URL } from "@/lib/seo";

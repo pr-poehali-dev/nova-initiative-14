@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { Helmet } from "@dr.pogodin/react-helmet";
+import { Helmet } from "@/lib/helmet-shim";
 import { oauthCallback, saveTokens } from "@/lib/auth";
 import { useAuth } from "@/contexts/AuthContext";
 

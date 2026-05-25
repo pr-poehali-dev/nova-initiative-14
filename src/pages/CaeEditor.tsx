@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Helmet } from "@dr.pogodin/react-helmet";
+import { Helmet } from "@/lib/helmet-shim";
 import Icon from "@/components/ui/icon";
 import { useAuth } from "@/contexts/AuthContext";
 import FrameCanvas, {
