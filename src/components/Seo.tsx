@@ -1,4 +1,4 @@
-import { Helmet } from "react-helmet-async";
+import { Helmet } from "@dr.pogodin/react-helmet";
 import { useLocation } from "react-router-dom";
 import { SITE_URL, SITE_NAME, SITE_OG_IMAGE, getPageSeo } from "@/lib/seo";
 
