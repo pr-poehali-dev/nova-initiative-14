@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Icon from "@/components/ui/icon";
 import type {
   FrameModel,
@@ -7,6 +7,55 @@ import type {
   ModelLoad,
   DofName,
 } from "@/lib/cae-model";
+
+/**
+ * Числовой input с локальным состоянием и commit-ом на blur/Enter.
+ * Решает проблему «пользователь стирает 0 чтобы напечатать -1000, а во время ввода
+ * вызываются onChange с NaN, что сбрасывает нагрузку».
+ */
+function NumericInput({
+  value,
+  onCommit,
+  step = 100,
+  placeholder = "",
+  className = "drawing-input mb-3 font-mono text-[11px]",
+}: {
+  value: number;
+  onCommit: (v: number) => void;
+  step?: number;
+  placeholder?: string;
+  className?: string;
+}) {
+  const [text, setText] = useState(String(value));
+  const [focused, setFocused] = useState(false);
+
+  // Синхронизируем локальный текст с внешним value, когда поле НЕ в фокусе
+  useEffect(() => {
+    if (!focused) setText(String(value));
+  }, [value, focused]);
+
+  return (
+    <input
+      type="number"
+      step={step}
+      value={text}
+      onFocus={() => setFocused(true)}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={() => {
+        setFocused(false);
+        const v = parseFloat(text);
+        onCommit(isFinite(v) ? v : 0);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          (e.target as HTMLInputElement).blur();
+        }
+      }}
+      className={className}
+      placeholder={placeholder}
+    />
+  );
+}
 
 // === Форма точечной силы в пролёте ===
 function InSpanForm({ onAdd }: { onAdd: (pos: number, py: number) => void }) {
@@ -67,6 +116,7 @@ interface Props {
   setSecPickerOpen: (v: boolean) => void;
   setDistributedLoad: (qy: number) => void;
   addInSpanPoint: (pos: number, py: number) => void;
+  removeLoadById: (loadId: string) => void;
   deleteSelected: () => void;
 }
 
@@ -88,6 +138,7 @@ const EditorRightPanel = ({
   setSecPickerOpen,
   setDistributedLoad,
   addInSpanPoint,
+  removeLoadById,
   deleteSelected,
 }: Props) => {
   if (selectedNode) {
@@ -178,32 +229,29 @@ const EditorRightPanel = ({
         <div className="grid grid-cols-2 gap-1.5 mb-1.5">
           <label className="text-[10px] font-gost">
             Fx, Н
-            <input
-              type="number"
-              step={100}
+            <NumericInput
               value={nodeLoad?.force?.[0] ?? 0}
-              onChange={(e) => addNodalLoad(parseFloat(e.target.value) || 0, nodeLoad?.force?.[1] ?? 0)}
+              step={100}
+              onCommit={(v) => addNodalLoad(v, nodeLoad?.force?.[1] ?? 0)}
               className="drawing-input mt-0.5 font-mono text-[11px]"
             />
           </label>
           <label className="text-[10px] font-gost">
             Fy, Н
-            <input
-              type="number"
-              step={100}
+            <NumericInput
               value={nodeLoad?.force?.[1] ?? 0}
-              onChange={(e) => addNodalLoad(nodeLoad?.force?.[0] ?? 0, parseFloat(e.target.value) || 0)}
+              step={100}
+              onCommit={(v) => addNodalLoad(nodeLoad?.force?.[0] ?? 0, v)}
               className="drawing-input mt-0.5 font-mono text-[11px]"
             />
           </label>
         </div>
         <label className="text-[10px] font-gost block mb-2">
           Mz (момент), Н·м
-          <input
-            type="number"
-            step={50}
+          <NumericInput
             value={nodeLoad?.moment?.[2] ?? 0}
-            onChange={(e) => setNodalMoment(parseFloat(e.target.value) || 0)}
+            step={50}
+            onCommit={(v) => setNodalMoment(v)}
             className="drawing-input mt-0.5 font-mono text-[11px]"
           />
         </label>
@@ -237,6 +285,8 @@ const EditorRightPanel = ({
     const distLoad = model.loads.find(
       (l) => l.type === "distributed_uniform" && l.element_id === selectedElementId,
     );
+    // Все нагрузки на текущем элементе (распределённые + точечные в пролёте)
+    const elementLoads = model.loads.filter((l) => l.element_id === selectedElementId);
     const a = model.nodes.find((n) => n.id === el.node_start);
     const b = model.nodes.find((n) => n.id === el.node_end);
     const len = a && b
@@ -277,14 +327,18 @@ const EditorRightPanel = ({
         <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-1">
           Распределённая q (по локальной y), Н/м
         </p>
-        <input
-          type="number"
-          step={100}
+        <NumericInput
           value={distLoad?.load_local_per_length?.[1] ?? 0}
-          onChange={(e) => setDistributedLoad(parseFloat(e.target.value) || 0)}
-          className="drawing-input mb-3 font-mono text-[11px]"
+          step={100}
+          onCommit={(v) => setDistributedLoad(v)}
           placeholder="0 (нет нагрузки)"
+          className="drawing-input mb-3 font-mono text-[11px]"
         />
+        {distLoad && (
+          <p className="font-gost text-[10px] text-[var(--drawing-accent)] -mt-2 mb-3">
+            ✓ q&nbsp;=&nbsp;{(distLoad.load_local_per_length?.[1] ?? 0).toFixed(0)} Н/м применена
+          </p>
+        )}
 
         <details className="mb-3 text-[11px]">
           <summary className="cursor-pointer font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)]">
@@ -292,6 +346,45 @@ const EditorRightPanel = ({
           </summary>
           <InSpanForm onAdd={addInSpanPoint} />
         </details>
+
+        {/* Список существующих нагрузок на элементе */}
+        {elementLoads.length > 0 && (
+          <div className="mb-3 border-t border-[var(--drawing-line-thin)] pt-2">
+            <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-1.5">
+              Нагрузки ({elementLoads.length})
+            </p>
+            <ul className="space-y-1">
+              {elementLoads.map((ld) => {
+                let label = "";
+                if (ld.type === "distributed_uniform") {
+                  const q = ld.load_local_per_length?.[1] ?? 0;
+                  label = `q = ${q.toFixed(0)} Н/м (равномерная)`;
+                } else if (ld.type === "in_span_point") {
+                  const p = ld.force?.[1] ?? 0;
+                  const pos = ld.position_ratio ?? 0;
+                  label = `P = ${p.toFixed(0)} Н в x = ${(pos * len).toFixed(2)} м (${(pos * 100).toFixed(0)}%)`;
+                } else {
+                  label = ld.type;
+                }
+                return (
+                  <li
+                    key={ld.id}
+                    className="flex items-center justify-between gap-2 text-[10px] font-mono bg-[var(--drawing-paper)] border border-[var(--drawing-line-thin)] px-2 py-1"
+                  >
+                    <span className="truncate">{label}</span>
+                    <button
+                      onClick={() => removeLoadById(ld.id)}
+                      className="text-[var(--drawing-accent)] hover:underline shrink-0"
+                      title="Удалить"
+                    >
+                      <Icon name="X" size={11} />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
 
         <button
           onClick={deleteSelected}

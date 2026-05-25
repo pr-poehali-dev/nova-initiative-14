@@ -342,6 +342,14 @@ const CaeEditor = () => {
     updateModel({ ...model, loads });
   };
 
+  // ===== Удалить нагрузку по id =====
+  const removeLoadById = (loadId: string) => {
+    updateModel({
+      ...model,
+      loads: model.loads.filter((l) => l.id !== loadId),
+    });
+  };
+
   // ===== Запуск решателя =====
   const onSolve = async () => {
     setSolverError(null);
@@ -473,6 +481,7 @@ const CaeEditor = () => {
               setSecPickerOpen={setSecPickerOpen}
               setDistributedLoad={setDistributedLoad}
               addInSpanPoint={addInSpanPoint}
+              removeLoadById={removeLoadById}
               deleteSelected={deleteSelected}
             />
 
