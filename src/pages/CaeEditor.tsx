@@ -160,12 +160,12 @@ const CaeEditor = () => {
             className="border-2 border-[var(--drawing-line)] relative"
             style={{ height: "70vh", minHeight: 480 }}
           >
-            {/* Плавающая панель: undo/redo/справка */}
-            <div className="absolute top-2 right-2 z-10 flex gap-1 bg-[var(--drawing-bg)]/90 border border-[var(--drawing-line)]">
+            {/* Плавающая панель инструментов — в левом верхнем углу, не перекрывает легенду */}
+            <div className="absolute top-2 left-2 z-10 flex gap-0 bg-[var(--drawing-bg)]/95 border border-[var(--drawing-line)] shadow-sm">
               <button
                 onClick={undo}
                 disabled={!canUndo}
-                className="p-2 hover:bg-[var(--drawing-paper)] disabled:opacity-30 disabled:cursor-not-allowed"
+                className="p-2 border-r border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)] disabled:opacity-30 disabled:cursor-not-allowed"
                 title="Отменить (Ctrl+Z)"
               >
                 <Icon name="Undo2" size={16} />
@@ -173,7 +173,7 @@ const CaeEditor = () => {
               <button
                 onClick={redo}
                 disabled={!canRedo}
-                className="p-2 hover:bg-[var(--drawing-paper)] disabled:opacity-30 disabled:cursor-not-allowed"
+                className="p-2 border-r border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)] disabled:opacity-30 disabled:cursor-not-allowed"
                 title="Вернуть (Ctrl+Shift+Z)"
               >
                 <Icon name="Redo2" size={16} />
@@ -202,7 +202,7 @@ const CaeEditor = () => {
               diagramScale={diagramScale}
             />
             {displayError && (
-              <div className="absolute top-2 left-2 right-2 bg-[var(--drawing-accent)] text-white text-xs font-gost p-2 flex items-start gap-2">
+              <div className="absolute top-14 left-2 right-2 bg-[var(--drawing-accent)] text-white text-xs font-gost p-2 flex items-start gap-2 z-20 shadow-lg">
                 <Icon name="AlertCircle" size={14} className="mt-0.5 shrink-0" />
                 <span className="flex-1">{displayError}</span>
                 <button onClick={clearError} className="shrink-0">

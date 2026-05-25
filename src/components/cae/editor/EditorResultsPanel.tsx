@@ -285,22 +285,74 @@ const EditorResultsPanel = ({
           )}
 
           <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-1.5">
-            Эпюра
+            Вид схемы
           </p>
-          <div className="grid grid-cols-3 gap-1 mb-2">
+          <div className="grid grid-cols-2 gap-1 mb-3">
             {[
-              { v: "none", label: "Без" },
-              { v: "deformed", label: "Дефор." },
-              { v: "N", label: "N" },
-              { v: "Qy", label: "Q" },
-              { v: "Mz", label: "M" },
-              { v: "sigma", label: "σ" },
-              { v: "uy", label: "v (прогиб)" },
+              {
+                v: "none",
+                label: "Исходная",
+                title: "Недеформированная схема рамы",
+              },
+              {
+                v: "deformed",
+                label: "Деформированная",
+                title:
+                  "Наложение деформированной схемы на канву: узлы смещены, элементы изогнуты по реальным траекториям прогиба",
+              },
             ].map((d) => (
               <button
                 key={d.v}
                 onClick={() => setShowDiagram(d.v as DiagramKind)}
-                className={`border py-1 text-[10px] font-gost uppercase ${
+                title={d.title}
+                className={`border py-1.5 text-[10px] font-gost uppercase ${
+                  showDiagram === d.v
+                    ? "bg-[var(--drawing-accent)] text-white border-[var(--drawing-accent)]"
+                    : "border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)]"
+                }`}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
+
+          <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-1.5">
+            Эпюра вдоль элемента
+          </p>
+          <div className="grid grid-cols-3 gap-1 mb-2">
+            {[
+              {
+                v: "N",
+                label: "N",
+                title: "Эпюра продольной (осевой) силы, Н",
+              },
+              {
+                v: "Qy",
+                label: "Q",
+                title: "Эпюра поперечной силы, Н",
+              },
+              {
+                v: "Mz",
+                label: "M",
+                title: "Эпюра изгибающего момента, Н·м",
+              },
+              {
+                v: "sigma",
+                label: "σ",
+                title: "Эпюра эквивалентных напряжений по Мизесу, МПа",
+              },
+              {
+                v: "uy",
+                label: "v",
+                title:
+                  "Эпюра прогиба v(x) — значение прогиба в каждой точке элемента, мм. Это число, а не графика смещения схемы.",
+              },
+            ].map((d) => (
+              <button
+                key={d.v}
+                onClick={() => setShowDiagram(d.v as DiagramKind)}
+                title={d.title}
+                className={`border py-1.5 text-[10px] font-gost uppercase ${
                   showDiagram === d.v
                     ? "bg-[var(--drawing-accent)] text-white border-[var(--drawing-accent)]"
                     : "border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)]"
