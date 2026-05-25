@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Helmet } from "react-helmet-async";
+import { Helmet } from "@/lib/helmet-shim";
 import { fetchArticle, formatRuDate, type Article } from "@/lib/articles";
 import { SITE_URL } from "@/lib/seo";
 import NotFound from "@/pages/NotFound";
