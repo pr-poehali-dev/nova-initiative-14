@@ -1,10 +1,12 @@
 import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
-import type { FrameModel } from "@/lib/cae-model";
+import type { FrameModel, SolverResponse } from "@/lib/cae-model";
+import { generatePdfReport } from "@/lib/generatePdfReport";
 
 interface Props {
   projectName: string;
   model: FrameModel;
+  result: SolverResponse | null;
   dirty: boolean;
   lastSaved: string | null;
   saving: boolean;
@@ -16,6 +18,7 @@ interface Props {
 const EditorTopBar = ({
   projectName,
   model,
+  result,
   dirty,
   lastSaved,
   saving,
@@ -57,6 +60,15 @@ const EditorTopBar = ({
         >
           <Icon name="Play" size={12} className="mr-1" />
           {solving ? "Считаем…" : "Посчитать"}
+        </button>
+        <button
+          onClick={() => result && generatePdfReport(model, result, projectName)}
+          disabled={!result}
+          className="btn-drawing text-[11px] disabled:opacity-40"
+          title="Скачать PDF-отчёт с эпюрами и реакциями опор"
+        >
+          <Icon name="FileDown" size={12} className="mr-1" />
+          PDF
         </button>
       </div>
     </div>

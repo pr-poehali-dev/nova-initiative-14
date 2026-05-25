@@ -110,6 +110,7 @@ const CaeEditor = () => {
         <EditorTopBar
           projectName={projectName}
           model={model}
+          result={result}
           dirty={dirty}
           lastSaved={lastSaved}
           saving={saving}
