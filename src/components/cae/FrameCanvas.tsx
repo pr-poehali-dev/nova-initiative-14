@@ -38,11 +38,12 @@ interface Props {
   setModel: (m: FrameModel) => void;
   mode: EditorMode;
   gridStep: number; // м
-  selectedNodeId: string | null;
-  selectedElementId: string | null;
-  onSelectNode: (id: string | null) => void;
-  onSelectElement: (id: string | null) => void;
+  selectedNodeIds: string[];
+  selectedElementIds: string[];
+  onSelectNodes: (ids: string[]) => void;
+  onSelectElements: (ids: string[]) => void;
   onCanvasClick: (worldX: number, worldY: number) => void;
+  onMoveNode?: (nodeId: string, x: number, y: number) => void;
   result: SolverResponse | null;
   showDiagram: DiagramKind;
   diagramScale: number;
@@ -64,11 +65,12 @@ const FrameCanvas = ({
   setModel,
   mode,
   gridStep,
-  selectedNodeId,
-  selectedElementId,
-  onSelectNode,
-  onSelectElement,
+  selectedNodeIds,
+  selectedElementIds,
+  onSelectNodes,
+  onSelectElements,
   onCanvasClick,
+  onMoveNode,
   result,
   showDiagram,
   diagramScale,
@@ -79,6 +81,8 @@ const FrameCanvas = ({
   const [panning, setPanning] = useState<{ x: number; y: number } | null>(null);
   const [pendingFirstNodeId, setPendingFirstNodeId] = useState<string | null>(null);
   const [cursorWorld, setCursorWorld] = useState<{ x: number; y: number } | null>(null);
+  /** Drag узла: {nodeId, сколько пикселей проехали (для отличия от обычного клика)} */
+  const [draggingNode, setDraggingNode] = useState<{ id: string; movedPx: number } | null>(null);
 
   // Resize observer
   useEffect(() => {
@@ -138,6 +142,15 @@ const FrameCanvas = ({
       const dy = (sy - panning.y) / view.pxPerM;
       setView((v) => ({ ...v, cx: v.cx - dx, cy: v.cy + dy }));
       setPanning({ x: sx, y: sy });
+      return;
+    }
+    if (draggingNode && onMoveNode) {
+      const snappedX = snap(w.x, gridStep);
+      const snappedY = snap(w.y, gridStep);
+      onMoveNode(draggingNode.id, snappedX, snappedY);
+      // Считаем сколько проехали — чтобы отличить «случайный сдвиг» от настоящего drag
+      const movedPx = draggingNode.movedPx + Math.abs(e.movementX) + Math.abs(e.movementY);
+      setDraggingNode({ id: draggingNode.id, movedPx });
     }
   };
 
@@ -151,11 +164,44 @@ const FrameCanvas = ({
       }
       return;
     }
+    if (draggingNode) {
+      const wasDrag = draggingNode.movedPx > 3;
+      setDraggingNode(null);
+      try {
+        svgRef.current!.releasePointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+      // если только нажали без движения — оставляем как обычный клик (выбор уже сработал в pointerDown)
+      if (wasDrag) {
+        // подавим следующий клик
+        suppressNextClick.current = true;
+      }
+      return;
+    }
   };
+
+  /** Флаг подавления следующего onClick на SVG (после drag/multiselect, чтобы не создать узел) */
+  const suppressNextClick = useRef(false);
 
   const handleSvgClick = (e: React.MouseEvent<SVGSVGElement>) => {
     if (panning) return;
-    if (e.shiftKey) return;
+    if (suppressNextClick.current) {
+      suppressNextClick.current = false;
+      return;
+    }
+    if (e.shiftKey) {
+      // Shift+клик в пустоту — снимаем выделение всё
+      onSelectNodes([]);
+      onSelectElements([]);
+      return;
+    }
+    // В режиме select клик в пустоту — снять выделение, без создания узла
+    if (mode === "select") {
+      onSelectNodes([]);
+      onSelectElements([]);
+      return;
+    }
     const rect = svgRef.current!.getBoundingClientRect();
     const sx = e.clientX - rect.left;
     const sy = e.clientY - rect.top;
@@ -204,15 +250,52 @@ const FrameCanvas = ({
       }
       return;
     }
-    onSelectNode(n.id);
-    onSelectElement(null);
+    // Multi-select: Shift = добавить/убрать, обычный клик = выбрать только этот
+    if (e.shiftKey) {
+      const already = selectedNodeIds.includes(n.id);
+      const next = already
+        ? selectedNodeIds.filter((x) => x !== n.id)
+        : [...selectedNodeIds, n.id];
+      onSelectNodes(next);
+    } else {
+      onSelectNodes([n.id]);
+      onSelectElements([]);
+    }
+    suppressNextClick.current = true;
+  };
+
+  /** Старт drag узла: pointer-down на узле в режиме select без Shift */
+  const handleNodePointerDown = (n: ModelNode, e: React.PointerEvent) => {
+    if (mode !== "select" || e.shiftKey || e.button !== 0) return;
+    if (!onMoveNode) return;
+    e.stopPropagation();
+    setDraggingNode({ id: n.id, movedPx: 0 });
+    // Выделяем узел при начале drag
+    if (!selectedNodeIds.includes(n.id)) {
+      onSelectNodes([n.id]);
+      onSelectElements([]);
+    }
+    try {
+      svgRef.current!.setPointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
   };
 
   const handleElementClick = (el: ModelElement, e: React.MouseEvent) => {
     e.stopPropagation();
     if (mode === "draw-element") return;
-    onSelectElement(el.id);
-    onSelectNode(null);
+    if (e.shiftKey) {
+      const already = selectedElementIds.includes(el.id);
+      const next = already
+        ? selectedElementIds.filter((x) => x !== el.id)
+        : [...selectedElementIds, el.id];
+      onSelectElements(next);
+    } else {
+      onSelectElements([el.id]);
+      onSelectNodes([]);
+    }
+    suppressNextClick.current = true;
   };
 
   return (
@@ -249,7 +332,7 @@ const FrameCanvas = ({
 
       <CanvasElements
         model={model}
-        selectedElementId={selectedElementId}
+        selectedElementIds={selectedElementIds}
         result={result}
         showDiagram={showDiagram}
         diagramScale={diagramScale}
@@ -272,7 +355,7 @@ const FrameCanvas = ({
 
       <CanvasOverlays
         model={model}
-        selectedNodeId={selectedNodeId}
+        selectedNodeIds={selectedNodeIds}
         pendingFirstNodeId={pendingFirstNodeId}
         cursorWorld={cursorWorld}
         result={result}
@@ -281,6 +364,7 @@ const FrameCanvas = ({
         toScreenX={toScreenX}
         toScreenY={toScreenY}
         handleNodeClick={handleNodeClick}
+        handleNodePointerDown={handleNodePointerDown}
       />
 
       <CanvasDiagramTooltip

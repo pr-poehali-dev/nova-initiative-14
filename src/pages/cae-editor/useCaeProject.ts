@@ -7,12 +7,15 @@ import {
   saveProjectModel,
   type FrameModel,
 } from "@/lib/cae-model";
+import { useCaeHistory } from "./useCaeHistory";
 
 export function useCaeProject(projectId: number) {
   const nav = useNavigate();
   const { user, loading: authLoading } = useAuth();
 
-  const [model, setModel] = useState<FrameModel>(emptyModel("2d"));
+  const history = useCaeHistory(emptyModel("2d"));
+  const { model, pushModel, setModelDirect, resetHistory, undo, redo, canUndo, canRedo } = history;
+
   const [projectName, setProjectName] = useState("");
   const [versionId, setVersionId] = useState<number | null>(null);
   const [loadingModel, setLoadingModel] = useState(true);
@@ -39,20 +42,26 @@ export function useCaeProject(projectId: number) {
         setVersionId(r.data.version_id);
         const m = r.data.model as FrameModel | Record<string, never>;
         if (m && (m as FrameModel).meta) {
-          setModel(m as FrameModel);
+          resetHistory(m as FrameModel);
         } else {
           const dim = r.data.project.project_type === "frame_3d" ? "3d" : "2d";
-          setModel(emptyModel(dim as "2d" | "3d"));
+          resetHistory(emptyModel(dim as "2d" | "3d"));
         }
       })
       .finally(() => setLoadingModel(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, user, authLoading]);
 
-  const updateModel = (next: FrameModel) => {
-    setModel(next);
+  /** Главная точка мутации модели — пишется в историю */
+  const updateModel = useCallback((next: FrameModel) => {
+    pushModel(next);
     setDirty(true);
-  };
+  }, [pushModel]);
+
+  /** Изменить модель без записи в историю (для технических операций) */
+  const setModel = useCallback((next: FrameModel) => {
+    setModelDirect(next);
+  }, [setModelDirect]);
 
   const onSave = useCallback(async () => {
     if (!projectId) return;
@@ -83,5 +92,9 @@ export function useCaeProject(projectId: number) {
     authLoading,
     user,
     onSave,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
   };
 }

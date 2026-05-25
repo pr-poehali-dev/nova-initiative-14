@@ -8,9 +8,11 @@ import EditorTopBar from "@/components/cae/editor/EditorTopBar";
 import EditorLeftPanel from "@/components/cae/editor/EditorLeftPanel";
 import EditorRightPanel from "@/components/cae/editor/EditorRightPanel";
 import EditorResultsPanel from "@/components/cae/editor/EditorResultsPanel";
+import KeyboardHintsDialog from "@/components/cae/editor/KeyboardHintsDialog";
 import { useCaeProject } from "./cae-editor/useCaeProject";
 import { useCaeActions } from "./cae-editor/useCaeActions";
 import { useCaeSolver } from "./cae-editor/useCaeSolver";
+import { useCaeKeyboard } from "./cae-editor/useCaeKeyboard";
 
 const CaeEditor = () => {
   const { id } = useParams<{ id: string }>();
@@ -29,15 +31,24 @@ const CaeEditor = () => {
     setLoadError,
     authLoading,
     onSave,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
   } = useCaeProject(projectId);
 
   const [mode, setMode] = useState<EditorMode>("draw-node");
   const [gridStep, setGridStep] = useState(0.5);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
+  const [selectedElementIds, setSelectedElementIds] = useState<string[]>([]);
   const [matPickerOpen, setMatPickerOpen] = useState(false);
   const [secPickerOpen, setSecPickerOpen] = useState(false);
   const [bcCustomOpen, setBcCustomOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+
+  // Одиночный выбор для правой панели свойств
+  const selectedNodeId = selectedNodeIds.length === 1 ? selectedNodeIds[0] : null;
+  const selectedElementId = selectedElementIds.length === 1 ? selectedElementIds[0] : null;
 
   const {
     result,
@@ -54,6 +65,10 @@ const CaeEditor = () => {
   const {
     onCanvasClick,
     deleteSelected,
+    duplicateSelected,
+    moveNode,
+    selectAll,
+    clearSelection,
     addBC,
     removeBC,
     addNodalLoad,
@@ -68,11 +83,24 @@ const CaeEditor = () => {
   } = useCaeActions(
     model,
     updateModel,
-    selectedNodeId,
-    selectedElementId,
-    setSelectedNodeId,
-    setSelectedElementId,
+    selectedNodeIds,
+    selectedElementIds,
+    setSelectedNodeIds,
+    setSelectedElementIds,
   );
+
+  useCaeKeyboard({
+    setMode,
+    deleteSelected,
+    duplicateSelected,
+    selectAll,
+    clearSelection,
+    undo,
+    redo,
+    onSave,
+    onSolve,
+    onToggleHelp: () => setHelpOpen((v) => !v),
+  });
 
   // Объединяем ошибки загрузки и солвера в одно состояние для отображения
   const displayError = solverError || loadError;
@@ -131,21 +159,44 @@ const CaeEditor = () => {
           <div
             className="border-2 border-[var(--drawing-line)] relative"
             style={{ height: "70vh", minHeight: 480 }}
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === "Delete" || e.key === "Backspace") deleteSelected();
-            }}
           >
+            {/* Плавающая панель: undo/redo/справка */}
+            <div className="absolute top-2 right-2 z-10 flex gap-1 bg-[var(--drawing-bg)]/90 border border-[var(--drawing-line)]">
+              <button
+                onClick={undo}
+                disabled={!canUndo}
+                className="p-2 hover:bg-[var(--drawing-paper)] disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Отменить (Ctrl+Z)"
+              >
+                <Icon name="Undo2" size={16} />
+              </button>
+              <button
+                onClick={redo}
+                disabled={!canRedo}
+                className="p-2 hover:bg-[var(--drawing-paper)] disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Вернуть (Ctrl+Shift+Z)"
+              >
+                <Icon name="Redo2" size={16} />
+              </button>
+              <button
+                onClick={() => setHelpOpen(true)}
+                className="p-2 hover:bg-[var(--drawing-paper)]"
+                title="Горячие клавиши (?)"
+              >
+                <Icon name="Keyboard" size={16} />
+              </button>
+            </div>
             <FrameCanvas
               model={model}
               setModel={updateModel}
               mode={mode}
               gridStep={gridStep}
-              selectedNodeId={selectedNodeId}
-              selectedElementId={selectedElementId}
-              onSelectNode={setSelectedNodeId}
-              onSelectElement={setSelectedElementId}
+              selectedNodeIds={selectedNodeIds}
+              selectedElementIds={selectedElementIds}
+              onSelectNodes={setSelectedNodeIds}
+              onSelectElements={setSelectedElementIds}
               onCanvasClick={onCanvasClick}
+              onMoveNode={moveNode}
               result={result}
               showDiagram={showDiagram}
               diagramScale={diagramScale}
@@ -217,6 +268,8 @@ const CaeEditor = () => {
         }
         onPick={pickSectionForElement}
       />
+
+      <KeyboardHintsDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
     </>
   );
 };

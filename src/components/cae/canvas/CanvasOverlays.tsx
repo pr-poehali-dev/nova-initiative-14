@@ -12,7 +12,7 @@ const REACTION = "#1a8a5a";
 
 interface Props {
   model: FrameModel;
-  selectedNodeId: string | null;
+  selectedNodeIds: string[];
   pendingFirstNodeId: string | null;
   cursorWorld: { x: number; y: number } | null;
   size: { w: number; h: number };
@@ -20,6 +20,7 @@ interface Props {
   toScreenX: (x: number) => number;
   toScreenY: (y: number) => number;
   handleNodeClick: (n: ModelNode, e: React.MouseEvent) => void;
+  handleNodePointerDown?: (n: ModelNode, e: React.PointerEvent) => void;
   result: SolverResponse | null;
   showReactions?: boolean;
 }
@@ -74,7 +75,7 @@ function arrowFromPoint(
 
 const CanvasOverlays = ({
   model,
-  selectedNodeId,
+  selectedNodeIds,
   pendingFirstNodeId,
   cursorWorld,
   size,
@@ -82,9 +83,11 @@ const CanvasOverlays = ({
   toScreenX,
   toScreenY,
   handleNodeClick,
+  handleNodePointerDown,
   result,
   showReactions = true,
 }: Props) => {
+  const selSet = new Set(selectedNodeIds);
   // === Нагрузки ===
   const renderLoad = (ld: ModelLoad) => {
     // Узловая сила
@@ -399,10 +402,15 @@ const CanvasOverlays = ({
 
       {/* узлы */}
       {model.nodes.map((n) => {
-        const isSel = selectedNodeId === n.id;
+        const isSel = selSet.has(n.id);
         const isPending = pendingFirstNodeId === n.id;
         return (
-          <g key={n.id} style={{ cursor: "pointer" }} onClick={(e) => handleNodeClick(n, e)}>
+          <g
+            key={n.id}
+            style={{ cursor: isSel ? "move" : "pointer" }}
+            onClick={(e) => handleNodeClick(n, e)}
+            onPointerDown={handleNodePointerDown ? (e) => handleNodePointerDown(n, e) : undefined}
+          >
             <circle
               cx={toScreenX(n.coords[0])}
               cy={toScreenY(n.coords[1])}

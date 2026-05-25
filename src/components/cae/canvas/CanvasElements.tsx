@@ -3,9 +3,9 @@ import { ACCENT, LINE, ELEMENT_W } from "./canvas-constants";
 
 interface Props {
   model: FrameModel;
-  selectedElementId: string | null;
+  selectedElementIds: string[];
   result: SolverResponse | null;
-  showDiagram: "none" | "deformed" | "N" | "Qy" | "Mz" | "sigma";
+  showDiagram: "none" | "deformed" | "N" | "Qy" | "Mz" | "sigma" | "uy";
   diagramScale: number;
   mode: "select" | "draw-node" | "draw-element" | "bc" | "load-nodal" | "load-distributed";
   pendingFirstNodeId: string | null;
@@ -17,7 +17,7 @@ interface Props {
 
 const CanvasElements = ({
   model,
-  selectedElementId,
+  selectedElementIds,
   result,
   showDiagram,
   diagramScale,
@@ -28,6 +28,7 @@ const CanvasElements = ({
   toScreenY,
   handleElementClick,
 }: Props) => {
+  const selSet = new Set(selectedElementIds);
   // === Деформированная схема ===
   const dispMap = new Map(
     (result?.nodal_displacements || []).map((d) => [d.node_id, d]),
@@ -41,7 +42,7 @@ const CanvasElements = ({
         const a = model.nodes.find((n) => n.id === el.node_start);
         const b = model.nodes.find((n) => n.id === el.node_end);
         if (!a || !b) return null;
-        const isSel = selectedElementId === el.id;
+        const isSel = selSet.has(el.id);
         return (
           <line
             key={el.id}

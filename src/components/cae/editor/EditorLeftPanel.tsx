@@ -16,28 +16,36 @@ const EditorLeftPanel = ({ mode, setMode, gridStep, setGridStep }: Props) => (
       </p>
       <div className="grid grid-cols-2 gap-1.5 text-[11px]">
         {[
-          { v: "draw-node", label: "Узел", icon: "Circle" },
-          { v: "draw-element", label: "Балка", icon: "Minus" },
-          { v: "select", label: "Выбор", icon: "MousePointer" },
+          { v: "draw-node", label: "Узел", icon: "Circle", key: "N" },
+          { v: "draw-element", label: "Балка", icon: "Minus", key: "E" },
+          { v: "select", label: "Выбор", icon: "MousePointer", key: "S" },
         ].map((t) => (
           <button
             key={t.v}
             onClick={() => setMode(t.v as EditorMode)}
-            className={`border py-2 px-2 font-gost uppercase tracking-wider flex items-center gap-1.5 transition ${
+            className={`border py-2 px-2 font-gost uppercase tracking-wider flex items-center gap-1.5 transition relative ${
               mode === t.v
                 ? "bg-[var(--drawing-accent)] text-white border-[var(--drawing-accent)]"
                 : "border-[var(--drawing-line)] hover:border-[var(--drawing-accent)]"
             }`}
+            title={`Горячая клавиша: ${t.key}`}
           >
             <Icon name={t.icon} size={12} />
             {t.label}
+            <span
+              className={`absolute top-0.5 right-1 text-[8px] font-mono ${
+                mode === t.v ? "text-white/70" : "text-[var(--drawing-line-thin)]"
+              }`}
+            >
+              {t.key}
+            </span>
           </button>
         ))}
       </div>
       <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] mt-2 leading-relaxed">
         {mode === "draw-node" && "Клик по холсту — добавить узел"}
         {mode === "draw-element" && "Клик на 2 узла подряд — провести балку"}
-        {mode === "select" && "Клик на узел или балку — выбрать"}
+        {mode === "select" && "Клик — выбрать. Shift+клик — добавить к выбору. Drag — переместить узел."}
       </p>
     </div>
 
@@ -66,15 +74,9 @@ const EditorLeftPanel = ({ mode, setMode, gridStep, setGridStep }: Props) => (
       <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-2">
         Подсказки
       </p>
-      <p>
-        • <b>Колесо</b> — зум
-      </p>
-      <p>
-        • <b>Shift+ЛКМ</b> — пан
-      </p>
-      <p>
-        • <b>Delete</b> — удалить выбранное
-      </p>
+      <p>• <b>Колесо</b> — зум, <b>Shift+ЛКМ</b> — пан</p>
+      <p>• <b>Ctrl+Z</b> — отменить, <b>Ctrl+D</b> — дублировать</p>
+      <p>• <b>F5</b> — расчёт, <b>?</b> — все клавиши</p>
     </div>
   </aside>
 );
