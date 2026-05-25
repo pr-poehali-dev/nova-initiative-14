@@ -230,67 +230,211 @@ function drawScheme(
     doc.line(x - 3, y + 1.8, x + 3, y + 1.8);
   }
 
-  // Нагрузки — стрелки
-  doc.setDrawColor(...C.accent);
-  doc.setLineWidth(0.4);
+  // Подписи узлов
+  doc.setFont(fontState.name, "normal");
+  doc.setFontSize(5.5);
+  doc.setTextColor(...C.thin);
+  for (const nd of model.nodes) {
+    const x = toX(nd.coords[0]);
+    const y = toY(nd.coords[1]);
+    doc.text(nd.id, x + 1.2, y - 1.2);
+  }
+
+  // Размерная линия пролёта (для горизонтальной балки)
+  if (spanX > 0 && model.elements.length > 0) {
+    const yDim = oy + boxH - 6;
+    const xL = toX(minX), xR = toX(maxX);
+    doc.setDrawColor(...C.thin);
+    doc.setLineWidth(0.2);
+    doc.line(xL, yDim, xR, yDim);
+    doc.line(xL, yDim - 1, xL, yDim + 1);
+    doc.line(xR, yDim - 1, xR, yDim + 1);
+    doc.setFontSize(6);
+    doc.setTextColor(...C.thin);
+    doc.text(`L = ${spanX.toFixed(2)} м`, (xL + xR) / 2, yDim - 1, { align: "center" });
+  }
+
+  // Нагрузки — узловые силы, распределённые и моменты
   for (const ld of model.loads) {
+    // ── Узловая сила ──
     if (ld.type === "nodal_force" && ld.node_id) {
       const nd = model.nodes.find((n) => n.id === ld.node_id);
       if (!nd) continue;
       const fx = ld.force?.[0] ?? 0;
       const fy = ld.force?.[1] ?? 0;
-      const mag = Math.sqrt(fx * fx + fy * fy) || 1;
-      const arrowLen = 5;
-      const nx = (fx / mag) * arrowLen;
-      const ny = -(fy / mag) * arrowLen;
-      const sx = toX(nd.coords[0]);
-      const sy = toY(nd.coords[1]);
-      doc.line(sx - nx, sy - ny, sx, sy);
-      // Наконечник
-      const hx = 1.2, hy = 0.6;
-      const ux = nx / arrowLen, uy = ny / arrowLen;
-      doc.line(sx, sy, sx - ux * hx - uy * hy, sy - uy * hx + ux * hy);
-      doc.line(sx, sy, sx - ux * hx + uy * hy, sy - uy * hx - ux * hy);
+      const mz = ld.moment?.[2] ?? 0;
+      const tipX = toX(nd.coords[0]);
+      const tipY = toY(nd.coords[1]);
+
+      if (Math.abs(fx) > 1e-9 || Math.abs(fy) > 1e-9) {
+        const mag = Math.sqrt(fx * fx + fy * fy);
+        const arrowLen = 8;
+        // Направление: куда указывает сила (стрелка прилетает в узел)
+        const dirX = fx / mag;
+        const dirY = -fy / mag; // экран Y вниз
+        const tailX = tipX - dirX * arrowLen;
+        const tailY = tipY - dirY * arrowLen;
+        doc.setDrawColor(...C.accent);
+        doc.setLineWidth(0.6);
+        doc.line(tailX, tailY, tipX, tipY);
+        // Наконечник
+        const hL = 1.8, hW = 1.0;
+        const perpX = -dirY, perpY = dirX;
+        doc.line(tipX, tipY, tipX - dirX * hL + perpX * hW, tipY - dirY * hL + perpY * hW);
+        doc.line(tipX, tipY, tipX - dirX * hL - perpX * hW, tipY - dirY * hL - perpY * hW);
+        // Подпись
+        doc.setFont(fontState.name, "normal");
+        doc.setFontSize(5.5);
+        doc.setTextColor(...C.accent);
+        const lbl = formatForce(mag);
+        doc.text(lbl, tailX - dirX * 1.5, tailY - dirY * 1.5, {
+          align: dirX > 0.3 ? "right" : dirX < -0.3 ? "left" : "center",
+        });
+      }
+
+      // Момент в узле — дуга со стрелкой
+      if (Math.abs(mz) > 1e-9) {
+        const r = 3.2;
+        doc.setDrawColor(...C.accent);
+        doc.setLineWidth(0.5);
+        // Рисуем дугу как ломаную (jsPDF.circle не умеет частичные дуги)
+        const segs = 16;
+        const startA = -Math.PI * 0.25;
+        const endA = Math.PI * 1.25;
+        const sign = mz > 0 ? 1 : -1;
+        for (let i = 0; i < segs; i++) {
+          const a1 = startA + sign * (i / segs) * (endA - startA);
+          const a2 = startA + sign * ((i + 1) / segs) * (endA - startA);
+          doc.line(tipX + r * Math.cos(a1), tipY + r * Math.sin(a1), tipX + r * Math.cos(a2), tipY + r * Math.sin(a2));
+        }
+        doc.setFont(fontState.name, "normal");
+        doc.setFontSize(5.5);
+        doc.setTextColor(...C.accent);
+        doc.text(formatMoment(mz), tipX + r + 0.5, tipY - r + 0.5);
+      }
     }
+
+    // ── Распределённая нагрузка ──
     if (ld.type === "distributed_uniform" && ld.element_id) {
       const el = model.elements.find((e) => e.id === ld.element_id);
       if (!el) continue;
       const a = model.nodes.find((n) => n.id === el.node_start);
       const b = model.nodes.find((n) => n.id === el.node_end);
       if (!a || !b) continue;
-      const steps = 5;
+
+      const qx = ld.load_local_per_length?.[0] ?? 0;
+      const qy = ld.load_local_per_length?.[1] ?? 0;
+      const qMag = Math.sqrt(qx * qx + qy * qy);
+      if (qMag < 1e-9) continue;
+
+      // Локальная ось элемента в мировых координатах
+      const dx = b.coords[0] - a.coords[0];
+      const dy = b.coords[1] - a.coords[1];
+      const len = Math.sqrt(dx * dx + dy * dy);
+      if (len < 1e-9) continue;
+      const ex = dx / len, ey = dy / len;       // ось x локальная
+      const nx = -ey, ny = ex;                  // ось y локальная (нормаль)
+
+      // Высота стрелок нагрузки (фикс. размер на странице)
+      const arrowH = 5;
+      // Знак: если qy>0 — стрелки идут с положительной нормали В балку
+      const sign = qy >= 0 ? 1 : -1;
+
+      doc.setDrawColor(...C.accent);
+      doc.setLineWidth(0.4);
+
+      // Верхняя линия эпюры распределёнки
+      const aX = toX(a.coords[0]), aY = toY(a.coords[1]);
+      const bX = toX(b.coords[0]), bY = toY(b.coords[1]);
+      const offX2 = nx * arrowH * sign;
+      const offY2 = -ny * arrowH * sign; // экран Y инвертирован
+      doc.line(aX + offX2, aY + offY2, bX + offX2, bY + offY2);
+
+      // Стрелки вниз к балке
+      const steps = Math.max(4, Math.min(12, Math.round(len * scale / 6)));
+      const hL = 1.4, hW = 0.7;
       for (let i = 0; i <= steps; i++) {
         const t = i / steps;
-        const wx = a.coords[0] + (b.coords[0] - a.coords[0]) * t;
-        const wy = a.coords[1] + (b.coords[1] - a.coords[1]) * t;
-        const qy = ld.load_start?.[1] ?? 0;
-        const arrowLen = 3;
+        const wx = a.coords[0] + dx * t;
+        const wy = a.coords[1] + dy * t;
         const sx = toX(wx), sy = toY(wy);
-        const dir = qy > 0 ? -1 : 1;
-        doc.line(sx, sy + dir * arrowLen, sx, sy);
+        const tx = sx + offX2, ty = sy + offY2;
+        doc.line(tx, ty, sx, sy);
+        // Наконечник к балке
+        const adx = -offX2 / arrowH;
+        const ady = -offY2 / arrowH;
+        const px = -ady, py = adx;
+        doc.line(sx, sy, sx - adx * hL + px * hW, sy - ady * hL + py * hW);
+        doc.line(sx, sy, sx - adx * hL - px * hW, sy - ady * hL - py * hW);
       }
+
+      // Подпись q
+      const midX = (aX + bX) / 2 + offX2;
+      const midY = (aY + bY) / 2 + offY2;
+      doc.setFont(fontState.name, "normal");
+      doc.setFontSize(5.5);
+      doc.setTextColor(...C.accent);
+      doc.text(`q = ${formatDistLoad(qMag)}`, midX, midY - 1.5, { align: "center" });
     }
   }
 
-  // Реакции опор (из результата)
+  // Реакции опор (из результата) — синими стрелками вверх
   if (result) {
     doc.setFont(fontState.name, "normal");
-    doc.setTextColor(...C.Q);
     doc.setFontSize(5.5);
     for (const r of result.reactions) {
       const nd = model.nodes.find((n) => n.id === r.node_id);
       if (!nd) continue;
       const x = toX(nd.coords[0]);
       const y = toY(nd.coords[1]);
+      // Вертикальная реакция
       if (Math.abs(r.fy) > 1) {
-        const dir = r.fy > 0 ? -1 : 1;
+        const arrowLen = 6;
+        const dir = r.fy > 0 ? 1 : -1; // вверх если положительная
         doc.setDrawColor(...C.Q);
-        doc.setLineWidth(0.4);
-        doc.line(x, y - 4, x, y);
-        doc.text(`R=${Math.round(r.fy)}Н`, x + 0.5, y + dir * 5);
+        doc.setLineWidth(0.5);
+        // стрелка снаружи опоры — снизу вверх к узлу
+        const tailY = y + arrowLen * dir;
+        doc.line(x, tailY, x, y);
+        // наконечник
+        doc.line(x, y, x - 1, y + 1.5 * dir);
+        doc.line(x, y, x + 1, y + 1.5 * dir);
+        doc.setTextColor(...C.Q);
+        doc.text(`R=${formatForce(Math.abs(r.fy))}`, x + 1, tailY + (dir > 0 ? 2 : -1));
+      }
+      // Горизонтальная реакция
+      if (Math.abs(r.fx) > 1) {
+        const arrowLen = 6;
+        const dir = r.fx > 0 ? -1 : 1;
+        doc.setDrawColor(...C.Q);
+        doc.setLineWidth(0.5);
+        const tailX = x + arrowLen * dir;
+        doc.line(tailX, y, x, y);
+        doc.line(x, y, x + 1.5 * dir, y - 1);
+        doc.line(x, y, x + 1.5 * dir, y + 1);
+        doc.setTextColor(...C.Q);
+        doc.text(`H=${formatForce(Math.abs(r.fx))}`, tailX, y + (dir > 0 ? -1.5 : 3));
       }
     }
   }
+}
+
+// Форматирование сил и моментов с автомасштабом
+function formatForce(N: number): string {
+  const a = Math.abs(N);
+  if (a >= 1e6) return `${(N / 1e6).toFixed(2)} МН`;
+  if (a >= 1e3) return `${(N / 1e3).toFixed(1)} кН`;
+  return `${N.toFixed(0)} Н`;
+}
+function formatMoment(Nm: number): string {
+  const a = Math.abs(Nm);
+  if (a >= 1e3) return `${(Nm / 1e3).toFixed(1)} кН·м`;
+  return `${Nm.toFixed(0)} Н·м`;
+}
+function formatDistLoad(qNperM: number): string {
+  const a = Math.abs(qNperM);
+  if (a >= 1e3) return `${(qNperM / 1e3).toFixed(1)} кН/м`;
+  return `${qNperM.toFixed(0)} Н/м`;
 }
 
 // ── Эпюры на PDF ───────────────────────────────────────────────────────────
@@ -310,12 +454,14 @@ function drawDiagram(
   const spanX = maxX - minX || 1;
   const spanY = maxY - minY || 1;
 
-  const pad = 10;
+  const pad = 14;
+  const effectiveSpanY = Math.max(spanY, spanX * 0.05);
   const scaleX = (boxW - pad * 2) / spanX;
-  const scaleY = (boxH - pad * 2) / spanY;
+  const scaleY = (boxH - pad * 2) / effectiveSpanY;
   const scale = Math.min(scaleX, scaleY);
   const offX = ox + pad + (boxW - pad * 2 - spanX * scale) / 2;
-  const offY = oy + pad + (boxH - pad * 2 - spanY * scale) / 2;
+  const offY = oy + pad + (boxH - pad * 2 - effectiveSpanY * scale) / 2 +
+    (spanY === 0 ? effectiveSpanY * scale / 2 : 0);
 
   const toX = (x: number) => offX + (x - minX) * scale;
   const toY = (y: number) => offY + (maxY - y) * scale;
@@ -331,17 +477,29 @@ function drawDiagram(
   doc.setFont(fontState.name, "bold");
   doc.setFontSize(7);
   doc.setTextColor(...color);
-  const kindLabel = kind === "N" ? "N, Н" : kind === "Qy" ? "Q, Н" : "M, Н·м";
+  const kindLabel = kind === "N" ? "N — продольная сила, Н" : kind === "Qy" ? "Q — поперечная сила, Н" : "M — изгибающий момент, Н·м";
   doc.text(kindLabel, ox + 2, oy + 4);
 
-  // Ось элементов (тонкая серая)
-  doc.setDrawColor(...C.grid);
-  doc.setLineWidth(0.4);
+  // Ось элементов (балка) — чёрная тонкая
+  doc.setDrawColor(...C.ink);
+  doc.setLineWidth(0.5);
   for (const el of model.elements) {
     const a = model.nodes.find((n) => n.id === el.node_start);
     const b = model.nodes.find((n) => n.id === el.node_end);
     if (!a || !b) continue;
     doc.line(toX(a.coords[0]), toY(a.coords[1]), toX(b.coords[0]), toY(b.coords[1]));
+  }
+
+  // Метки узлов на балке
+  doc.setFont(fontState.name, "normal");
+  doc.setFontSize(5.5);
+  doc.setTextColor(...C.thin);
+  for (const nd of model.nodes) {
+    const x = toX(nd.coords[0]);
+    const y = toY(nd.coords[1]);
+    doc.setFillColor(...C.ink);
+    doc.circle(x, y, 0.6, "F");
+    doc.text(nd.id, x, y + 4, { align: "center" });
   }
 
   // Глобальный максимум для нормировки
@@ -351,7 +509,25 @@ function drawDiagram(
     for (const v of vals) globalMaxAbs = Math.max(globalMaxAbs, Math.abs(v));
   }
 
-  const offsetMM = 10; // макс высота эпюры в мм
+  // Если эпюра практически нулевая — рисуем подпись и выходим
+  if (globalMaxAbs < 1e-6) {
+    doc.setFont(fontState.name, "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...C.thin);
+    const cx = (toX(minX) + toX(maxX)) / 2;
+    const cy = toY((minY + maxY) / 2);
+    doc.text("эпюра нулевая", cx, cy - 4, { align: "center" });
+    return;
+  }
+
+  const offsetMM = 14; // макс высота эпюры в мм
+
+  const fmtVal = (v: number): string => {
+    const a = Math.abs(v);
+    if (a >= 1e6) return `${(v / 1e6).toFixed(2)}М`;
+    if (a >= 1e3) return `${(v / 1e3).toFixed(1)}к`;
+    return v.toFixed(0);
+  };
 
   for (const el of model.elements) {
     const er = result.elements.find((e) => e.element_id === el.id);
@@ -370,56 +546,75 @@ function drawDiagram(
     const vals = kind === "N" ? er.diagrams.N : kind === "Qy" ? er.diagrams.Qy : er.diagrams.Mz;
     const dxArr = er.diagrams.x;
 
-    // Полигон заливки
-    const pts: number[][] = [];
-    pts.push([toX(a.coords[0]), toY(a.coords[1])]);
+    // Точки эпюры в координатах страницы
+    const epPts: [number, number][] = [];
     for (let i = 0; i < dxArr.length; i++) {
       const t = dxArr[i] / len;
       const wx = a.coords[0] + dx * t;
       const wy = a.coords[1] + dy * t;
       const dist = (vals[i] / globalMaxAbs) * offsetMM;
-      // PDF: Y вниз, мировой Y инвертирован
-      pts.push([toX(wx) + nx * dist, toY(wy) - ny * dist]);
+      epPts.push([toX(wx) + nx * dist, toY(wy) - ny * dist]);
     }
-    pts.push([toX(b.coords[0]), toY(b.coords[1])]);
+    const baseA: [number, number] = [toX(a.coords[0]), toY(a.coords[1])];
+    const baseB: [number, number] = [toX(b.coords[0]), toY(b.coords[1])];
 
-    // Залить полигон
-    if (pts.length >= 3) {
+    // Заливка полигона (балка → эпюра → балка) через path API
+    // Используем lines() — встроенный полигон в jsPDF
+    if (epPts.length >= 2) {
+      const linesArr: number[][] = [];
+      // Стартуем в baseA — двигаемся в первую точку эпюры
+      linesArr.push([epPts[0][0] - baseA[0], epPts[0][1] - baseA[1]]);
+      // Затем по точкам эпюры
+      for (let i = 1; i < epPts.length; i++) {
+        linesArr.push([epPts[i][0] - epPts[i - 1][0], epPts[i][1] - epPts[i - 1][1]]);
+      }
+      // Замыкание к baseB
+      linesArr.push([baseB[0] - epPts[epPts.length - 1][0], baseB[1] - epPts[epPts.length - 1][1]]);
+
       doc.setFillColor(color[0], color[1], color[2]);
       doc.setDrawColor(...color);
-      doc.setLineWidth(0.5);
-      // Нарисуем как набор линий (jsPDF не имеет polygon API в старом стиле)
-      doc.setGState(doc.GState({ opacity: 0.15 }));
-      // Обводка эпюры
+      doc.setLineWidth(0.4);
+      // Полупрозрачная заливка
+      doc.setGState(doc.GState({ opacity: 0.18 }));
+      doc.lines(linesArr, baseA[0], baseA[1], [1, 1], "F", true);
       doc.setGState(doc.GState({ opacity: 1 }));
-      for (let i = 1; i < pts.length - 1; i++) {
-        doc.line(pts[i][0], pts[i][1], pts[i + 1 < pts.length - 1 ? i + 1 : pts.length - 2][0], pts[i + 1 < pts.length - 1 ? i + 1 : pts.length - 2][1]);
+      // Контурная линия эпюры (без заливки)
+      doc.setLineWidth(0.7);
+      for (let i = 1; i < epPts.length; i++) {
+        doc.line(epPts[i - 1][0], epPts[i - 1][1], epPts[i][0], epPts[i][1]);
       }
-      // Контурная линия эпюры
-      doc.setLineWidth(0.6);
-      for (let i = 1; i < pts.length - 1; i++) {
-        const next = i + 1 < pts.length - 1 ? i + 1 : pts.length - 2;
-        doc.line(pts[i][0], pts[i][1], pts[next][0], pts[next][1]);
-      }
+      // Перпендикуляры — крайние ординаты от балки к эпюре
+      doc.setLineWidth(0.4);
+      doc.line(baseA[0], baseA[1], epPts[0][0], epPts[0][1]);
+      doc.line(baseB[0], baseB[1], epPts[epPts.length - 1][0], epPts[epPts.length - 1][1]);
     }
 
-    // Подпись макс значения
-    let maxAbsEl = 0, maxIdx = 0;
-    vals.forEach((v, i) => { if (Math.abs(v) > maxAbsEl) { maxAbsEl = Math.abs(v); maxIdx = i; } });
-    if (maxAbsEl > 1e-9) {
-      const t = dxArr[maxIdx] / len;
+    // Подписи значений: на концах и в точке макс/мин
+    doc.setFont(fontState.name, "normal");
+    doc.setFontSize(5.5);
+    doc.setTextColor(...color);
+
+    const annotate = (idx: number, alignCenter = true) => {
+      const t = dxArr[idx] / len;
       const wx = a.coords[0] + dx * t;
       const wy = a.coords[1] + dy * t;
-      const dist = (vals[maxIdx] / globalMaxAbs) * offsetMM;
+      const dist = (vals[idx] / globalMaxAbs) * offsetMM;
       const lx = toX(wx) + nx * dist;
       const ly = toY(wy) - ny * dist;
-      doc.setFont(fontState.name, "normal");
-      doc.setFontSize(5.5);
-      doc.setTextColor(...color);
-      const label = Math.abs(vals[maxIdx]) >= 1000
-        ? `${(vals[maxIdx] / 1000).toFixed(1)}к`
-        : vals[maxIdx].toFixed(0);
-      doc.text(label, lx, ly - 0.5, { align: "center" });
+      // Смещаем подпись от балки
+      const sgn = dist >= 0 ? -1 : 1;
+      doc.text(fmtVal(vals[idx]), lx, ly + sgn * 1.2, { align: alignCenter ? "center" : "left" });
+    };
+
+    // Левый конец
+    annotate(0);
+    // Правый конец
+    annotate(dxArr.length - 1);
+    // Глобальный максимум по модулю
+    let maxAbsEl = 0, maxIdx = 0;
+    vals.forEach((v, i) => { if (Math.abs(v) > maxAbsEl) { maxAbsEl = Math.abs(v); maxIdx = i; } });
+    if (maxIdx !== 0 && maxIdx !== dxArr.length - 1 && maxAbsEl > 1e-9) {
+      annotate(maxIdx);
     }
   }
 }
@@ -562,13 +757,14 @@ export async function generatePdfReport(
 
     result.elements.forEach((er, i) => {
       const mv = er.max_values;
+      const absQmax = er.diagrams.Qy.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
       sy = tableRow(
         doc,
         [
           { value: er.element_id, ...eCols[0] },
           { value: fmt(mv.abs_N_max, 0), ...eCols[1] },
-          { value: fmt(mv.abs_Mz_max ?? 0, 0), ...eCols[2] },
-          { value: fmt(mv.abs_My_max ?? mv.abs_Mz_max ?? 0, 0), ...eCols[3] },
+          { value: fmt(absQmax, 0), ...eCols[2] },
+          { value: fmt(mv.abs_Mz_max ?? 0, 0), ...eCols[3] },
         ],
         sy,
         4.5,
@@ -576,6 +772,81 @@ export async function generatePdfReport(
       );
       if (sy > PH - MB - 6) return; // не выходить за поле
     });
+
+    sy += 4;
+    hline(doc, rxX, rxX + rxW, sy, 0.3);
+    doc.setDrawColor(...C.thin);
+    sy += 4;
+  }
+
+  // ── Блок «Исходные данные» (материал, сечение, нагрузки, опоры) ──────
+  if (sy < PH - MB - 30) {
+    doc.setFont(FONT, "bold");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...C.thin);
+    doc.text("ИСХОДНЫЕ ДАННЫЕ", rxX, sy);
+    doc.setFont(FONT, "normal");
+    hline(doc, rxX, rxX + rxW, sy + 1.5, 0.3);
+    doc.setDrawColor(...C.thin);
+    sy += 4;
+
+    const mat = model.materials[0];
+    const sec = model.sections[0];
+    const dataRows: [string, string][] = [];
+    if (mat) {
+      dataRows.push(["Материал", mat.name]);
+      dataRows.push(["Модуль E", `${(mat.E / 1e9).toFixed(0)} ГПа`]);
+      if (mat.sigma_yield) {
+        dataRows.push(["Предел текучести σ_т", `${(mat.sigma_yield / 1e6).toFixed(0)} МПа`]);
+      }
+    }
+    if (sec) {
+      dataRows.push(["Сечение", sec.name]);
+      dataRows.push(["Площадь A", `${(sec.A * 1e4).toFixed(2)} см²`]);
+      dataRows.push(["Момент инерции I_z", `${(sec.I_z * 1e8).toFixed(0)} см⁴`]);
+    }
+    doc.setFont(FONT, "normal");
+    doc.setFontSize(7);
+    for (const [label, value] of dataRows) {
+      if (sy > PH - MB - 6) break;
+      doc.setTextColor(...C.thin);
+      doc.text(label, rxX, sy);
+      doc.setTextColor(...C.ink);
+      doc.text(value, rxX + rxW, sy, { align: "right" });
+      sy += 4;
+    }
+
+    // Нагрузки
+    if (model.loads.length > 0 && sy < PH - MB - 12) {
+      sy += 2;
+      doc.setTextColor(...C.thin);
+      doc.setFontSize(6.5);
+      doc.text("Приложенные нагрузки:", rxX, sy);
+      sy += 3.5;
+      doc.setFontSize(7);
+      for (const ld of model.loads) {
+        if (sy > PH - MB - 4) break;
+        let desc = "";
+        if (ld.type === "nodal_force" && ld.node_id) {
+          const fx = ld.force?.[0] ?? 0;
+          const fy = ld.force?.[1] ?? 0;
+          const mz = ld.moment?.[2] ?? 0;
+          const parts: string[] = [];
+          if (Math.abs(fx) > 1e-9) parts.push(`Fx=${formatForce(fx)}`);
+          if (Math.abs(fy) > 1e-9) parts.push(`Fy=${formatForce(fy)}`);
+          if (Math.abs(mz) > 1e-9) parts.push(`Mz=${formatMoment(mz)}`);
+          desc = `Узел ${ld.node_id}: ${parts.join(", ")}`;
+        } else if (ld.type === "distributed_uniform" && ld.element_id) {
+          const qy = ld.load_local_per_length?.[1] ?? 0;
+          desc = `Элемент ${ld.element_id}: q=${formatDistLoad(qy)}`;
+        }
+        if (desc) {
+          doc.setTextColor(...C.ink);
+          doc.text(desc, rxX, sy);
+          sy += 3.5;
+        }
+      }
+    }
   }
 
   // ── Страница 2: Эпюры N, Q, M ──────────────────────────────────────────
