@@ -2,7 +2,7 @@
  * Универсальная slide-in панель справа: каталог материалов / сечений / шаблонов.
  * Открывается при выборе в правой панели редактора.
  */
-import { useState, type ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import Icon from "@/components/ui/icon";
 
 interface Props {
@@ -50,6 +50,16 @@ import {
   type MaterialCatalogEntry,
 } from "@/lib/cae-catalog";
 import type { Material } from "@/lib/cae-model";
+import {
+  loadUserMaterials as _loadUserMaterials,
+  saveUserMaterial as _saveUserMaterial,
+  removeUserMaterial as _removeUserMaterial,
+} from "@/lib/cae-user-library";
+
+// Реэкспорт под локальными именами (чтобы не конфликтовало с импортом ниже)
+const loadUserMaterials = _loadUserMaterials;
+const saveUserMaterial = _saveUserMaterial;
+const removeUserMaterial = _removeUserMaterial;
 
 interface MaterialPickerProps {
   open: boolean;
@@ -69,6 +79,25 @@ export const MaterialPicker = ({ open, onClose, currentId, onPick }: MaterialPic
   const [nu, setNu] = useState(0.3);
   const [rho, setRho] = useState(7850);
   const [yld, setYld] = useState(245e6);
+
+  // Пользовательские материалы из localStorage
+  const [userMaterials, setUserMaterials] = useState<MaterialCatalogEntry[]>([]);
+  useEffect(() => {
+    if (open) setUserMaterials(loadUserMaterials());
+  }, [open]);
+
+  const applyAndSaveMat = (m: MaterialCatalogEntry) => {
+    saveUserMaterial(m);
+    setUserMaterials(loadUserMaterials());
+    onPick(m as Material);
+    onClose();
+  };
+
+  const removeMatFromLibrary = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    removeUserMaterial(id);
+    setUserMaterials(loadUserMaterials());
+  };
 
   const ql = q.trim().toLowerCase();
   const filteredGroups = MATERIAL_GROUPS.map((g) => ({
@@ -116,6 +145,67 @@ export const MaterialPicker = ({ open, onClose, currentId, onPick }: MaterialPic
             onChange={(e) => setQ(e.target.value)}
             className="drawing-input mb-4"
           />
+
+          {/* Пользовательские материалы */}
+          {userMaterials.length > 0 && (() => {
+            const filtered = userMaterials.filter(
+              (m) =>
+                !ql ||
+                (m.name || "").toLowerCase().includes(ql) ||
+                m.id.toLowerCase().includes(ql),
+            );
+            if (filtered.length === 0) return null;
+            return (
+              <section className="mb-5">
+                <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-accent)] mb-2">
+                  Мои материалы · {filtered.length}
+                </p>
+                <div className="space-y-1.5">
+                  {filtered.map((m) => {
+                    const active = currentId === m.id;
+                    return (
+                      <div key={m.id} className="relative">
+                        <button
+                          onClick={() => {
+                            onPick(m as Material);
+                            onClose();
+                          }}
+                          className={`w-full text-left p-2.5 border ${
+                            active
+                              ? "border-[var(--drawing-accent)] bg-[var(--drawing-accent)] text-white"
+                              : "border-[var(--drawing-accent)] border-dashed hover:bg-[var(--drawing-paper)]"
+                          }`}
+                        >
+                          <span className="font-gost-upright font-bold text-sm leading-tight pr-6 block">
+                            {m.name || m.id}
+                          </span>
+                          <p
+                            className={`text-[10px] font-mono mt-1 ${
+                              active ? "text-white/80" : "text-[var(--drawing-line-thin)]"
+                            }`}
+                          >
+                            E = {(m.E / 1e9).toFixed(1)} ГПа · σт = {((m.sigma_yield ?? 0) / 1e6).toFixed(0)} МПа · ρ = {m.rho} кг/м³
+                          </p>
+                        </button>
+                        <button
+                          onClick={(e) => removeMatFromLibrary(m.id, e)}
+                          title="Удалить из библиотеки"
+                          className={`absolute top-1.5 right-1.5 p-0.5 ${
+                            active
+                              ? "text-white hover:text-white/70"
+                              : "text-[var(--drawing-line-thin)] hover:text-[var(--drawing-accent)]"
+                          }`}
+                        >
+                          <Icon name="X" size={12} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })()}
+
           {filteredGroups.map((g) => (
             <section key={g.id} className="mb-5">
               <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-2">
@@ -195,18 +285,18 @@ export const MaterialPicker = ({ open, onClose, currentId, onPick }: MaterialPic
           </div>
           <button
             onClick={() => {
-              const m: Material = {
+              const m: MaterialCatalogEntry = {
                 id: `custom_mat_${Date.now()}`,
                 name,
                 E, G, nu, rho,
                 sigma_yield: yld,
+                category: "custom",
               };
-              onPick(m);
-              onClose();
+              applyAndSaveMat(m);
             }}
             className="btn-drawing btn-drawing-accent w-full text-xs justify-center"
           >
-            Создать материал
+            Создать и&nbsp;сохранить в&nbsp;«Мои материалы»
           </button>
         </div>
       )}
@@ -223,8 +313,14 @@ import {
   makeRectSection,
   makeCircleSection,
   makeRectPipeSection,
+  type SectionCatalogEntry,
 } from "@/lib/cae-catalog";
 import type { Section } from "@/lib/cae-model";
+import {
+  loadUserSections,
+  saveUserSection,
+  removeUserSection,
+} from "@/lib/cae-user-library";
 
 interface SectionPickerProps {
   open: boolean;
@@ -243,6 +339,26 @@ export const SectionPicker = ({ open, onClose, currentId, onPick }: SectionPicke
   const [rpB, setRpB] = useState(0.08);
   const [rpH, setRpH] = useState(0.12);
   const [rpT, setRpT] = useState(0.005);
+
+  // Пользовательские сечения из localStorage
+  const [userSections, setUserSections] = useState<SectionCatalogEntry[]>([]);
+  useEffect(() => {
+    if (open) setUserSections(loadUserSections());
+  }, [open]);
+
+  // Хелпер: применить сечение, сохранить в библиотеку, закрыть
+  const applyAndSave = (s: SectionCatalogEntry) => {
+    saveUserSection(s);
+    setUserSections(loadUserSections());
+    onPick(s as Section);
+    onClose();
+  };
+
+  const removeFromLibrary = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    removeUserSection(id);
+    setUserSections(loadUserSections());
+  };
 
   const ql = q.trim().toLowerCase();
   const filteredGroups = SECTION_GROUPS.map((g) => ({
@@ -286,6 +402,69 @@ export const SectionPicker = ({ open, onClose, currentId, onPick }: SectionPicke
             onChange={(e) => setQ(e.target.value)}
             className="drawing-input mb-4"
           />
+
+          {/* Пользовательские сечения */}
+          {userSections.length > 0 && (() => {
+            const filtered = userSections.filter(
+              (s) =>
+                !ql ||
+                s.name.toLowerCase().includes(ql) ||
+                s.id.toLowerCase().includes(ql),
+            );
+            if (filtered.length === 0) return null;
+            return (
+              <section className="mb-5">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-accent)]">
+                    Мои сечения · {filtered.length}
+                  </p>
+                </div>
+                <div className="grid gap-1.5 sm:grid-cols-2">
+                  {filtered.map((s) => {
+                    const active = currentId === s.id;
+                    return (
+                      <div key={s.id} className="relative">
+                        <button
+                          onClick={() => {
+                            onPick(s as Section);
+                            onClose();
+                          }}
+                          className={`w-full text-left p-2 border ${
+                            active
+                              ? "border-[var(--drawing-accent)] bg-[var(--drawing-accent)] text-white"
+                              : "border-[var(--drawing-accent)] border-dashed hover:bg-[var(--drawing-paper)]"
+                          }`}
+                        >
+                          <p className="font-gost-upright font-bold text-[12px] leading-tight pr-6">
+                            {s.name || s.id}
+                          </p>
+                          <p
+                            className={`text-[10px] font-mono mt-0.5 ${
+                              active ? "text-white/85" : "text-[var(--drawing-line-thin)]"
+                            }`}
+                          >
+                            A={(s.A * 1e4).toFixed(2)} см² · Iz={((s.I_z ?? 0) * 1e8).toFixed(0)} см⁴
+                          </p>
+                        </button>
+                        <button
+                          onClick={(e) => removeFromLibrary(s.id, e)}
+                          title="Удалить из библиотеки"
+                          className={`absolute top-1 right-1 p-0.5 ${
+                            active
+                              ? "text-white hover:text-white/70"
+                              : "text-[var(--drawing-line-thin)] hover:text-[var(--drawing-accent)]"
+                          }`}
+                        >
+                          <Icon name="X" size={12} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })()}
+
           {filteredGroups.map((g) => (
             <section key={g.id} className="mb-5">
               <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-2">
@@ -339,13 +518,10 @@ export const SectionPicker = ({ open, onClose, currentId, onPick }: SectionPicke
           </div>
           <SectionPreview s={makeRectSection(rectB, rectH)} />
           <button
-            onClick={() => {
-              onPick(makeRectSection(rectB, rectH) as Section);
-              onClose();
-            }}
+            onClick={() => applyAndSave(makeRectSection(rectB, rectH))}
             className="btn-drawing btn-drawing-accent w-full text-xs justify-center"
           >
-            Создать сечение
+            Создать и сохранить в&nbsp;«Мои сечения»
           </button>
         </div>
       )}
@@ -359,13 +535,10 @@ export const SectionPicker = ({ open, onClose, currentId, onPick }: SectionPicke
           </div>
           <SectionPreview s={makeCircleSection(circD)} />
           <button
-            onClick={() => {
-              onPick(makeCircleSection(circD) as Section);
-              onClose();
-            }}
+            onClick={() => applyAndSave(makeCircleSection(circD))}
             className="btn-drawing btn-drawing-accent w-full text-xs justify-center"
           >
-            Создать сечение
+            Создать и сохранить в&nbsp;«Мои сечения»
           </button>
         </div>
       )}
@@ -389,13 +562,10 @@ export const SectionPicker = ({ open, onClose, currentId, onPick }: SectionPicke
           </div>
           <SectionPreview s={makeRectPipeSection(rpB, rpH, rpT)} />
           <button
-            onClick={() => {
-              onPick(makeRectPipeSection(rpB, rpH, rpT) as Section);
-              onClose();
-            }}
+            onClick={() => applyAndSave(makeRectPipeSection(rpB, rpH, rpT))}
             className="btn-drawing btn-drawing-accent w-full text-xs justify-center"
           >
-            Создать сечение
+            Создать и сохранить в&nbsp;«Мои сечения»
           </button>
         </div>
       )}
