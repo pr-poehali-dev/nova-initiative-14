@@ -8,7 +8,7 @@
  *  - визуализацию узлов, элементов, КГУ, нагрузок
  *  - наложение деформированной схемы и эпюр после расчёта
  */
-import { useEffect, useRef, useState, type PointerEvent, type WheelEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import type {
   FrameModel,
   ModelNode,
@@ -105,19 +105,30 @@ const FrameCanvas = ({
     y: view.cy - (sy - size.h / 2) / view.pxPerM,
   });
 
-  const onWheel = (e: WheelEvent<SVGSVGElement>) => {
-    e.preventDefault();
-    const rect = svgRef.current!.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-    const worldBefore = toWorld(mx, my);
-    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
-    const newPx = Math.max(20, Math.min(500, view.pxPerM * factor));
-    // сохраняем позицию мира под курсором
-    const newCx = worldBefore.x - (mx - size.w / 2) / newPx;
-    const newCy = worldBefore.y + (my - size.h / 2) / newPx;
-    setView({ cx: newCx, cy: newCy, pxPerM: newPx });
-  };
+  // Нативный wheel-listener с { passive: false } — иначе браузер игнорирует preventDefault
+  // и страница продолжает скроллиться при зуме канвы.
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const handler = (e: globalThis.WheelEvent) => {
+      e.preventDefault();
+      const rect = svg.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      // Считаем worldBefore по актуальному view через функциональный setState
+      setView((v) => {
+        const worldBeforeX = v.cx + (mx - size.w / 2) / v.pxPerM;
+        const worldBeforeY = v.cy - (my - size.h / 2) / v.pxPerM;
+        const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+        const newPx = Math.max(20, Math.min(500, v.pxPerM * factor));
+        const newCx = worldBeforeX - (mx - size.w / 2) / newPx;
+        const newCy = worldBeforeY + (my - size.h / 2) / newPx;
+        return { cx: newCx, cy: newCy, pxPerM: newPx };
+      });
+    };
+    svg.addEventListener("wheel", handler, { passive: false });
+    return () => svg.removeEventListener("wheel", handler);
+  }, [size.w, size.h]);
 
   const onPointerDown = (e: PointerEvent<SVGSVGElement>) => {
     const rect = svgRef.current!.getBoundingClientRect();
@@ -307,7 +318,6 @@ const FrameCanvas = ({
         cursor: panning ? "grabbing" : mode === "draw-node" ? "crosshair" : "default",
         touchAction: "none",
       }}
-      onWheel={onWheel}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
