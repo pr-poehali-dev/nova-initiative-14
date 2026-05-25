@@ -20,6 +20,7 @@ import CanvasGrid from "./canvas/CanvasGrid";
 import CanvasElements from "./canvas/CanvasElements";
 import CanvasDiagrams from "./canvas/CanvasDiagrams";
 import CanvasOverlays from "./canvas/CanvasOverlays";
+import CanvasDiagramTooltip from "./canvas/CanvasDiagramTooltip";
 
 export type EditorMode =
   | "select"
@@ -266,11 +267,21 @@ const FrameCanvas = ({
         selectedNodeId={selectedNodeId}
         pendingFirstNodeId={pendingFirstNodeId}
         cursorWorld={cursorWorld}
+        result={result}
         size={size}
         pxPerM={view.pxPerM}
         toScreenX={toScreenX}
         toScreenY={toScreenY}
         handleNodeClick={handleNodeClick}
+      />
+
+      <CanvasDiagramTooltip
+        model={model}
+        result={result}
+        showDiagram={showDiagram}
+        cursorWorld={cursorWorld}
+        toScreenX={toScreenX}
+        toScreenY={toScreenY}
       />
     </svg>
   );

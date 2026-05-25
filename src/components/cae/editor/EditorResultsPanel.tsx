@@ -52,12 +52,41 @@ const EditorResultsPanel = ({
           <dd>{result.duration_ms} мс</dd>
         </dl>
 
+        {/* Таблица реакций опор */}
+        {result.reactions.length > 0 && (
+          <div className="mb-3">
+            <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-1.5">
+              Реакции опор
+            </p>
+            <table className="w-full text-[10px] font-mono border-collapse">
+              <thead>
+                <tr className="border-b border-[var(--drawing-line-thin)]">
+                  <th className="text-left py-0.5 text-[var(--drawing-line-thin)] font-normal">Узел</th>
+                  <th className="text-right py-0.5 text-[var(--drawing-line-thin)] font-normal">Fx, Н</th>
+                  <th className="text-right py-0.5 text-[var(--drawing-line-thin)] font-normal">Fy, Н</th>
+                  <th className="text-right py-0.5 text-[var(--drawing-line-thin)] font-normal">Mz, Н·м</th>
+                </tr>
+              </thead>
+              <tbody>
+                {result.reactions.map((r) => (
+                  <tr key={r.node_id} className="border-b border-[var(--drawing-line-thin)]/30">
+                    <td className="py-0.5">{r.node_id}</td>
+                    <td className="text-right py-0.5">{Math.round(r.fx)}</td>
+                    <td className="text-right py-0.5">{Math.round(r.fy)}</td>
+                    <td className="text-right py-0.5">{Math.round(r.mz)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
         <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-1.5">
           Эпюра
         </p>
         <div className="grid grid-cols-3 gap-1 mb-2">
           {[
-            { v: "none", label: "Скр." },
+            { v: "none", label: "Без" },
             { v: "deformed", label: "Дефор." },
             { v: "N", label: "N" },
             { v: "Qy", label: "Q" },
