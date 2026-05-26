@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import useTariffs, { formatPrice } from "@/hooks/useTariffs";
 import Seo from "@/components/Seo";
+import CaeCrossSell from "@/components/cae/CaeCrossSell";
 
 const scenarios = [
   { situation: "Тема утверждена, работа не начата, 3+ мес. до защиты", tariff: "Сопровождение 3 месяца" },
@@ -407,6 +408,8 @@ const Pricing = () => {
           </div>
         </div>
       </section>
+
+      <CaeCrossSell />
 
       <section className="py-20 px-4 md:px-8">
         <div className="max-w-[1200px] mx-auto">
