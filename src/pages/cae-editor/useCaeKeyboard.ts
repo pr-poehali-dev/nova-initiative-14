@@ -6,6 +6,7 @@
  *  S       — режим выбора
  *  N       — режим создания узлов
  *  E       — режим создания балок
+ *  F       — подогнать масштаб под содержимое (fit-to-content)
  *  Esc     — отмена режима, снять выделение
  *  Delete/
  *  Backspace — удалить выделенное
@@ -31,6 +32,7 @@ interface KeyboardOptions {
   onSave: () => void;
   onSolve: () => void;
   onToggleHelp: () => void;
+  onFit: () => void;
 }
 
 function isEditableTarget(t: EventTarget | null): boolean {
@@ -104,6 +106,13 @@ export function useCaeKeyboard(opts: KeyboardOptions) {
         case "у":
         case "У":
           opts.setMode("draw-element");
+          break;
+        case "f":
+        case "F":
+        case "а":
+        case "А":
+          // Подогнать масштаб под содержимое (как кнопка ⛶ на канве)
+          opts.onFit();
           break;
         case "Escape":
           opts.clearSelection();

@@ -133,6 +133,7 @@ const CaeEditor = () => {
     onSave,
     onSolve,
     onToggleHelp: () => setHelpOpen((v) => !v),
+    onFit: () => setFitRequestId((x) => x + 1),
   });
 
   if (authLoading || loadingModel) {
