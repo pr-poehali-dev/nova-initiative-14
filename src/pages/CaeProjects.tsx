@@ -5,6 +5,7 @@ import Icon from "@/components/ui/icon";
 import { useAuth } from "@/contexts/AuthContext";
 import { SITE_URL } from "@/lib/seo";
 import { listProjects, archiveProject, type CaeProject } from "@/lib/cae";
+import Notify3DForm from "@/components/cae/Notify3DForm";
 
 const formatDate = (iso: string | null) => {
   if (!iso) return "";
@@ -115,28 +116,23 @@ const CaeProjects = () => {
         </div>
 
         {/* Тизер 3D-редактора */}
-        <div className="border-2 border-dashed border-amber-700/40 bg-amber-50/30 p-5 mb-8 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          <div className="shrink-0 w-10 h-10 border-2 border-amber-700/50 flex items-center justify-center">
-            <Icon name="Box" size={20} className="text-amber-700" />
+        <div className="border-2 border-dashed border-amber-700/40 bg-amber-50/30 p-5 mb-8">
+          <div className="flex items-start gap-3 mb-4">
+            <div className="shrink-0 w-9 h-9 border-2 border-amber-700/50 flex items-center justify-center mt-0.5">
+              <Icon name="Box" size={18} className="text-amber-700" />
+            </div>
+            <div>
+              <p className="font-gost-upright font-bold text-sm mb-1">
+                3D-редактор пространственных рам — в разработке
+              </p>
+              <p className="text-xs text-[var(--drawing-line-thin)] leading-relaxed">
+                МКЭ-расчёт пространственных рам с эпюрами N, Qy, Qz, Mz, My, Mx и проверками
+                по&nbsp;СП&nbsp;16. Сейчас проходим верификацию на эталонных задачах.
+                Оставьте email — напишем первыми, когда откроем доступ.
+              </p>
+            </div>
           </div>
-          <div className="flex-1">
-            <p className="font-gost-upright font-bold text-sm mb-1">
-              3D-редактор пространственных рам — в разработке
-            </p>
-            <p className="text-xs text-[var(--drawing-line-thin)] leading-relaxed">
-              МКЭ-расчёт пространственных рам с эпюрами N, Qy, Qz, Mz, My, Mx и проверками
-              по&nbsp;СП&nbsp;16. Сейчас проходим верификацию на эталонных задачах.
-            </p>
-          </div>
-          <a
-            href="https://t.me/+QgiLIa1gFRY4Y2Iy"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-drawing text-[10px] shrink-0 inline-flex border-amber-700/60 hover:border-amber-700"
-          >
-            <Icon name="Bell" size={12} className="mr-1.5 text-amber-700" />
-            Уведомить о выходе
-          </a>
+          <Notify3DForm variant="compact" />
         </div>
 
         {loading ? (

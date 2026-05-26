@@ -5,6 +5,7 @@ import Icon from "@/components/ui/icon";
 import { SITE_URL } from "@/lib/seo";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchCaeTariffs, joinWaitlist, type CaeTariff } from "@/lib/cae";
+import Notify3DForm from "@/components/cae/Notify3DForm";
 
 const formatPrice = (kopecks: number) => {
   if (kopecks <= 0) return "0 ₽";
@@ -223,6 +224,49 @@ const CaeLanding = () => {
                 <p className="text-sm text-[var(--drawing-line-thin)] leading-relaxed">{f.text}</p>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* 3D-анонс */}
+        <section className="mb-20" id="3d-notify">
+          <div className="border-2 border-dashed border-amber-700/50 bg-amber-50/20 p-6 md:p-10 grid md:grid-cols-2 gap-8 items-start">
+            <div>
+              <p className="font-gost text-[10px] uppercase tracking-[0.3em] text-amber-700 mb-2">
+                На подходе · Раздел 02.5
+              </p>
+              <h2 className="font-gost-upright text-2xl md:text-3xl font-black uppercase tracking-wide mb-4">
+                3D-редактор
+                <br />
+                пространственных рам
+              </h2>
+              <ul className="space-y-2 text-sm text-[var(--drawing-line-thin)]">
+                {[
+                  "6 степеней свободы в узле: N, Qy, Qz, Mz, My, Mx",
+                  "Проверки элементов по СП 16.13330 (сталь)",
+                  "Пространственные эпюры и цветовые карты напряжений",
+                  "PDF-отчёт с 3D-схемой и таблицами усилий",
+                  "Импорт схемы из DXF (в планах)",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <Icon name="Box" size={13} className="text-amber-700 shrink-0 mt-0.5" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-4 text-xs text-[var(--drawing-line-thin)] border-l-2 border-amber-700/40 pl-3">
+                Сейчас проходим верификацию на&nbsp;эталонных задачах из&nbsp;учебника Пособие к&nbsp;СП&nbsp;16.
+                Релиз — по&nbsp;готовности верификации, не&nbsp;раньше.
+              </p>
+            </div>
+            <div className="drawing-frame p-6 bg-[var(--drawing-bg)]">
+              <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-1 text-center">
+                Уведомить о запуске
+              </p>
+              <h3 className="font-gost-upright text-lg font-bold uppercase tracking-wide text-center mb-5">
+                Быть первым
+              </h3>
+              <Notify3DForm variant="full" />
+            </div>
           </div>
         </section>
 
