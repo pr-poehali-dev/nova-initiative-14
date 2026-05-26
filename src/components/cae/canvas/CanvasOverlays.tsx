@@ -356,17 +356,10 @@ const CanvasOverlays = ({
 
     const mag = Math.sqrt(fx * fx + fy * fy);
     if (mag > 1e-3) {
-      // Стрелка реакции рисуется ОТ опоры (не из центра узла):
-      // начало смещаем против направления реакции на глубину символа опоры (~24px),
-      // наконечник направлен ПО реакции — стрелка уходит от опоры.
-      const ux = fx / mag;
-      const uy = -fy / mag; // экранная Y инвертирована
-      const supportDepth = 24; // px — примерная высота символа опоры
-      const startX = sx - ux * supportDepth;
-      const startY = sy - uy * supportDepth;
+      // Реакция направлена от опоры в сторону действия (НЕ "в узел", а "из узла наружу")
       const arr = arrowFromPoint(
-        startX,
-        startY,
+        sx,
+        sy,
         fx,
         fy,
         50,

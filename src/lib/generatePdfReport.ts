@@ -587,41 +587,36 @@ function drawScheme(
       if (!nd) continue;
       const x = toX(nd.coords[0]);
       const y = toY(nd.coords[1]);
-      // Вертикальная реакция — стрелка ОТ опоры наружу (наконечник дальше от узла).
-      // Стандарт строительной механики: реакция рисуется от опоры, а не к ней.
+      // Вертикальная реакция — стрелка снаружи опоры под балкой, указывает к узлу
       if (Math.abs(r.fy) > 1) {
         const arrowLen = 8;
-        // dir: направление реакции в экранных координатах (Y экрана инвертирован).
-        // fy > 0 (вверх в мире) → на экране вверх → dir = -1 (y уменьшается)
-        const dir = r.fy > 0 ? -1 : 1;
+        const dir = r.fy > 0 ? 1 : -1; // если реакция положительная — стрелка снизу-вверх
         doc.setDrawColor(...C.Q);
         doc.setLineWidth(0.7);
-        // Начало стрелки — у символа опоры (~4 мм ниже узла для шарнира)
-        const supportOff = 4;
-        const startY = y + supportOff; // у основания символа опоры
-        const endY = startY + arrowLen * dir; // наконечник — ОТ опоры наружу
-        doc.line(x, startY, x, endY);
-        // наконечник в конце стрелки (в сторону dir)
-        doc.line(x, endY, x - 1.3, endY - 1.8 * dir);
-        doc.line(x, endY, x + 1.3, endY - 1.8 * dir);
+        // Опора уже занимает 3 мм снизу от узла, поэтому стрелку рисуем ниже опоры
+        const supportOff = 3;
+        const tailY = y + supportOff + arrowLen * dir;
+        const tipY = y + supportOff * dir;
+        doc.line(x, tailY, x, tipY);
+        // наконечник
+        doc.line(x, tipY, x - 1.3, tipY + 1.8 * dir);
+        doc.line(x, tipY, x + 1.3, tipY + 1.8 * dir);
         doc.setTextColor(...C.Q);
-        doc.text(`R = ${formatForce(Math.abs(r.fy))}`, x + 1.5, endY + (dir < 0 ? -1 : 2.5));
+        doc.text(`R = ${formatForce(Math.abs(r.fy))}`, x + 1.5, tailY + (dir > 0 ? 2.5 : -1));
       }
-      // Горизонтальная реакция — аналогично ОТ опоры наружу
+      // Горизонтальная реакция
       if (Math.abs(r.fx) > 1) {
         const arrowLen = 8;
-        // fx > 0 (вправо в мире) → на экране вправо → наконечник вправо
-        const dir = r.fx > 0 ? 1 : -1;
+        const dir = r.fx > 0 ? -1 : 1;
         doc.setDrawColor(...C.Q);
         doc.setLineWidth(0.7);
-        const startX = x; // у узла
-        const endX = startX + arrowLen * dir; // наконечник снаружи
-        doc.line(startX, y, endX, y);
-        doc.line(endX, y, endX - 1.8 * dir, y - 1.3);
-        doc.line(endX, y, endX - 1.8 * dir, y + 1.3);
+        const tailX = x + arrowLen * dir;
+        doc.line(tailX, y, x, y);
+        doc.line(x, y, x + 1.8 * dir, y - 1.3);
+        doc.line(x, y, x + 1.8 * dir, y + 1.3);
         doc.setTextColor(...C.Q);
-        doc.text(`H = ${formatForce(Math.abs(r.fx))}`, endX + dir * 1.5, y + (dir > 0 ? -2 : 3.5),
-          { align: dir > 0 ? "left" : "right" });
+        doc.text(`H = ${formatForce(Math.abs(r.fx))}`, tailX, y + (dir > 0 ? -2 : 3.5),
+          { align: dir > 0 ? "right" : "left" });
       }
     }
   }
