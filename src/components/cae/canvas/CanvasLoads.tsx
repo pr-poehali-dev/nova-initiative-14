@@ -9,6 +9,7 @@
  * масштабы, ключи и обёртки draggable-подписей сохранены без изменений.
  */
 import type { FrameModel, ModelLoad } from "@/lib/cae-model";
+import { formatDistLoad, formatForce, formatMoment } from "@/lib/formatForce";
 import { ACCENT } from "./canvas-constants";
 import type { DraggableTextFactory } from "./canvas-overlays-helpers";
 
@@ -63,7 +64,7 @@ const CanvasLoads = ({
             <polygon points={`${sx},${sy} ${a1x},${a1y} ${a2x},${a2y}`} fill={ACCENT} pointerEvents="none" />
             {makeDraggableText(`load:${ld.id}`, startX, startY - 6, (x, y) => (
               <text x={x} y={y} fontSize={fs} fill={ACCENT} fontFamily="monospace">
-                {Math.round(mag)} Н
+                {formatForce(mag)}
               </text>
             ))}
           </g>,
@@ -97,7 +98,7 @@ const CanvasLoads = ({
             <polygon points={`${endX},${endY} ${a1x},${a1y} ${a2x},${a2y}`} fill={ACCENT} pointerEvents="none" />
             {makeDraggableText(`loadM:${ld.id}`, sx + r + 6, sy - r, (x, y) => (
               <text x={x} y={y} fontSize={fs} fill={ACCENT} fontFamily="monospace">
-                {Math.round(mz)} Н·м
+                {formatMoment(mz)}
               </text>
             ))}
           </g>,
@@ -141,7 +142,7 @@ const CanvasLoads = ({
           <circle cx={sx} cy={sy} r={3} fill={ACCENT} pointerEvents="none" />
           {makeDraggableText(`load:${ld.id}`, startX, startY - 4, (x, y) => (
             <text x={x} y={y} fontSize={fs} fill={ACCENT} fontFamily="monospace">
-              P={Math.round(mag)} Н
+              P = {formatForce(mag)}
             </text>
           ))}
         </g>
@@ -246,7 +247,7 @@ const CanvasLoads = ({
               fontFamily="monospace"
               textAnchor="middle"
             >
-              q = {Math.round(Math.abs(qy || qx))} Н/м
+              q = {formatDistLoad(Math.abs(qy || qx))}
             </text>
           ))}
         </g>

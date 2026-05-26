@@ -212,18 +212,18 @@ export function useCanvasPointer({
       return;
     }
     if (draggingNode) {
-      const wasDrag = draggingNode.movedPx > 3;
       setDraggingNode(null);
       try {
         svgRef.current!.releasePointerCapture(e.pointerId);
       } catch {
         /* ignore */
       }
-      // если только нажали без движения — оставляем как обычный клик (выбор уже сработал в pointerDown)
-      if (wasDrag) {
-        // подавим следующий клик
-        suppressNextClick.current = true;
-      }
+      // Pointer был захвачен на SVG при pointerDown на узле — поэтому браузер
+      // отправит следующий click на SVG, а не на узел. Если не подавить, то
+      // handleSvgClick в режиме select сбросит только что сделанный выбор узла.
+      // Подавляем click ВСЕГДА: и при настоящем drag, и при «чистом» клике без
+      // смещения (выбор узла уже произошёл в handleNodePointerDown).
+      suppressNextClick.current = true;
       return;
     }
   };

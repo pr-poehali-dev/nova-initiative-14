@@ -9,6 +9,7 @@
  * Логика 1:1 перенесена.
  */
 import type { FrameModel, ModelNode, SolverResponse } from "@/lib/cae-model";
+import { formatForce, formatMoment } from "@/lib/formatForce";
 import { ACCENT, LINE, THIN, BG, NODE_R } from "./canvas-constants";
 import { REACTION, type DraggableTextFactory } from "./canvas-overlays-helpers";
 
@@ -87,7 +88,7 @@ const CanvasReactionsAndNodes = ({
               fontFamily="monospace"
               textAnchor={ux > 0.5 ? "start" : ux < -0.5 ? "end" : "middle"}
             >
-              R={Math.round(mag)} Н
+              R = {formatForce(mag)}
             </text>
           ))}
         </g>,
@@ -100,7 +101,7 @@ const CanvasReactionsAndNodes = ({
         <g key={`${rxn.node_id}_RM`}>
           {makeDraggableText(`rxnM:${rxn.node_id}`, sx + 12, sy + 22, (x, y) => (
             <text x={x} y={y} fontSize={fs} fill={REACTION} fontFamily="monospace">
-              M={Math.round(mz)} Н·м
+              M = {formatMoment(mz)}
             </text>
           ))}
         </g>,

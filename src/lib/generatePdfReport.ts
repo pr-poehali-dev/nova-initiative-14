@@ -16,6 +16,7 @@ import type { FrameModel, SolverResponse } from "./cae-model";
 import { runChecks, type ElementCheck } from "./cae-checks";
 import { getIndustrySpec } from "./cae-industry";
 import { DEFAULT_ANALYSIS_SETTINGS } from "./cae-model";
+import { formatDistLoad, formatForce, formatMoment } from "./formatForce";
 
 // ── Загрузка шрифта с кириллицей ──────────────────────────────────────────
 // Стандартные шрифты jsPDF (Helvetica/Times/Courier) не поддерживают кириллицу.
@@ -659,23 +660,11 @@ function drawScheme(
   }
 }
 
-// Форматирование сил и моментов с автомасштабом
-function formatForce(N: number): string {
-  const a = Math.abs(N);
-  if (a >= 1e6) return `${(N / 1e6).toFixed(2)} МН`;
-  if (a >= 1e3) return `${(N / 1e3).toFixed(1)} кН`;
-  return `${N.toFixed(0)} Н`;
-}
-function formatMoment(Nm: number): string {
-  const a = Math.abs(Nm);
-  if (a >= 1e3) return `${(Nm / 1e3).toFixed(1)} кН·м`;
-  return `${Nm.toFixed(0)} Н·м`;
-}
-function formatDistLoad(qNperM: number): string {
-  const a = Math.abs(qNperM);
-  if (a >= 1e3) return `${(qNperM / 1e3).toFixed(1)} кН/м`;
-  return `${qNperM.toFixed(0)} Н/м`;
-}
+// Форматирование сил и моментов — единый источник правды для всего приложения.
+// Правила (см. src/lib/formatForce.ts):
+//   |F| < 1000 Н   → "X Н"
+//   |F| ≥ 1000 Н   → "X.X кН"
+//   |F| ≥ 1 000 000 Н → "X.XX МН"
 
 // ── Эпюры на PDF ───────────────────────────────────────────────────────────
 type DiagramKind = "N" | "Qy" | "Mz" | "uy";
@@ -1696,9 +1685,9 @@ export async function generatePdfReport(
 
     const cols = [
       { label: "Узел", x: rxX, w: rxW * 0.22, align: "left" as const },
-      { label: "Fx, Н", x: rxX + rxW * 0.22, w: rxW * 0.26, align: "right" as const },
-      { label: "Fy, Н", x: rxX + rxW * 0.48, w: rxW * 0.26, align: "right" as const },
-      { label: "Mz, Н·м", x: rxX + rxW * 0.74, w: rxW * 0.26, align: "right" as const },
+      { label: "Fx", x: rxX + rxW * 0.22, w: rxW * 0.26, align: "right" as const },
+      { label: "Fy", x: rxX + rxW * 0.48, w: rxW * 0.26, align: "right" as const },
+      { label: "Mz", x: rxX + rxW * 0.74, w: rxW * 0.26, align: "right" as const },
     ];
     sy = tableHeader(doc, cols, sy);
 
@@ -1707,9 +1696,9 @@ export async function generatePdfReport(
         doc,
         [
           { value: r.node_id, ...cols[0] },
-          { value: fmt(r.fx, 0), ...cols[1] },
-          { value: fmt(r.fy, 0), ...cols[2] },
-          { value: fmt(r.mz, 0), ...cols[3] },
+          { value: formatForce(r.fx), ...cols[1] },
+          { value: formatForce(r.fy), ...cols[2] },
+          { value: formatMoment(r.mz), ...cols[3] },
         ],
         sy,
         4.5,
@@ -1736,9 +1725,9 @@ export async function generatePdfReport(
 
     const eCols = [
       { label: "Элем.", x: rxX, w: rxW * 0.2, align: "left" as const },
-      { label: "N, Н", x: rxX + rxW * 0.2, w: rxW * 0.25, align: "right" as const },
-      { label: "Q, Н", x: rxX + rxW * 0.45, w: rxW * 0.25, align: "right" as const },
-      { label: "M, Н·м", x: rxX + rxW * 0.7, w: rxW * 0.3, align: "right" as const },
+      { label: "N", x: rxX + rxW * 0.2, w: rxW * 0.25, align: "right" as const },
+      { label: "Q", x: rxX + rxW * 0.45, w: rxW * 0.25, align: "right" as const },
+      { label: "M", x: rxX + rxW * 0.7, w: rxW * 0.3, align: "right" as const },
     ];
     sy = tableHeader(doc, eCols, sy);
 
@@ -1749,9 +1738,9 @@ export async function generatePdfReport(
         doc,
         [
           { value: er.element_id, ...eCols[0] },
-          { value: fmt(mv.abs_N_max, 0), ...eCols[1] },
-          { value: fmt(absQmax, 0), ...eCols[2] },
-          { value: fmt(mv.abs_Mz_max ?? 0, 0), ...eCols[3] },
+          { value: formatForce(mv.abs_N_max), ...eCols[1] },
+          { value: formatForce(absQmax), ...eCols[2] },
+          { value: formatMoment(mv.abs_Mz_max ?? 0), ...eCols[3] },
         ],
         sy,
         4.5,

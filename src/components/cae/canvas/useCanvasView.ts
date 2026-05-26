@@ -65,24 +65,11 @@ export function useCanvasView(
     const fingerprint = `${model.nodes.length}|${model.nodes[0]?.id}|${model.nodes[model.nodes.length - 1]?.id}`;
     if (autoFittedRef.current === fingerprint) return;
 
-    const xs = model.nodes.map((n) => n.coords[0]);
-    const ys = model.nodes.map((n) => n.coords[1]);
-    const minX = Math.min(...xs);
-    const maxX = Math.max(...xs);
-    const minY = Math.min(...ys);
-    const maxY = Math.max(...ys);
-    const spanX = Math.max(maxX - minX, 0.5);
-    const spanY = Math.max(maxY - minY, 0.5);
-    // Запас 12% с каждой стороны
-    const pad = 0.12;
-    const fitX = (size.w * (1 - 2 * pad)) / spanX;
-    const fitY = (size.h * (1 - 2 * pad)) / spanY;
-    const pxPerM = Math.max(30, Math.min(300, Math.min(fitX, fitY)));
-    const cx = (minX + maxX) / 2;
-    const cy = (minY + maxY) / 2;
-    setView({ cx, cy, pxPerM });
+    const fit = computeFit(model, size);
+    if (!fit) return;
+    setView(fit);
     autoFittedRef.current = fingerprint;
-  }, [model.nodes, size.w, size.h]);
+  }, [model, size.w, size.h]);
 
   /**
    * Ручной запрос «Подогнать» — сбрасываем флаг автозума, эффект выше
@@ -91,20 +78,9 @@ export function useCanvasView(
   useEffect(() => {
     if (fitRequestId === undefined) return;
     autoFittedRef.current = null;
-    if (model.nodes.length === 0 || size.w < 50) return;
-    const xs = model.nodes.map((n) => n.coords[0]);
-    const ys = model.nodes.map((n) => n.coords[1]);
-    const minX = Math.min(...xs), maxX = Math.max(...xs);
-    const minY = Math.min(...ys), maxY = Math.max(...ys);
-    const spanX = Math.max(maxX - minX, 0.5);
-    const spanY = Math.max(maxY - minY, 0.5);
-    const pad = 0.12;
-    const fitX = (size.w * (1 - 2 * pad)) / spanX;
-    const fitY = (size.h * (1 - 2 * pad)) / spanY;
-    const pxPerM = Math.max(30, Math.min(300, Math.min(fitX, fitY)));
-    const cx = (minX + maxX) / 2;
-    const cy = (minY + maxY) / 2;
-    setView({ cx, cy, pxPerM });
+    const fit = computeFit(model, size);
+    if (!fit) return;
+    setView(fit);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fitRequestId]);
 
@@ -142,4 +118,51 @@ export function useCanvasView(
   });
 
   return { svgRef, size, view, setView, toScreenX, toScreenY, toWorld };
+}
+
+/**
+ * Считает «оптимальный» вид (центр + масштаб) для модели в текущем окне канвы.
+ *
+ * Учитывает:
+ *  • габариты по узлам;
+ *  • узлы с нагрузками и опорами — у них есть стрелки длиной ~50 px и подпись
+ *    над стрелкой ещё ~14 px. Без запаса нагрузки/реакции вылезают за границу
+ *    канвы при «Подогнать масштаб».
+ *
+ * Возвращает null, если рассчитать вид невозможно (нет узлов или канва ещё не
+ * измерена).
+ */
+function computeFit(
+  model: FrameModel,
+  size: { w: number; h: number },
+): ViewState | null {
+  if (size.w < 50 || size.h < 50) return null;
+  if (model.nodes.length === 0) return null;
+
+  const xs = model.nodes.map((n) => n.coords[0]);
+  const ys = model.nodes.map((n) => n.coords[1]);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const spanX = Math.max(maxX - minX, 0.5);
+  const spanY = Math.max(maxY - minY, 0.5);
+
+  // Запас под стрелки нагрузок/реакций и их подписи — фиксированный в пикселях,
+  // потому что размер стрелок не масштабируется с зумом. Берём с запасом, чтобы
+  // в подавляющем большинстве случаев стрелки помещались в канву.
+  // 70 px ≈ стрелка 50 px + подпись 14 px + воздух.
+  const arrowPadPx = 70;
+  const availW = Math.max(50, size.w - 2 * arrowPadPx);
+  const availH = Math.max(50, size.h - 2 * arrowPadPx);
+
+  // Дополнительные 8% «дыхания» по краям, чтобы конструкция не упиралась в рамки.
+  const pad = 0.08;
+  const fitX = (availW * (1 - 2 * pad)) / spanX;
+  const fitY = (availH * (1 - 2 * pad)) / spanY;
+  const pxPerM = Math.max(30, Math.min(300, Math.min(fitX, fitY)));
+
+  const cx = (minX + maxX) / 2;
+  const cy = (minY + maxY) / 2;
+  return { cx, cy, pxPerM };
 }
