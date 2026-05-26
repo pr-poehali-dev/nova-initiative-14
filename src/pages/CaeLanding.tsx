@@ -111,9 +111,24 @@ const CaeLanding = () => {
           <p className="text-base md:text-lg text-[var(--drawing-line-thin)] max-w-2xl mx-auto leading-relaxed mb-3">
             Облачный CAE-инструмент для машиностроителей: 2D и&nbsp;3D балочные рамы, библиотека ГОСТ-профилей, эпюры, пояснительная записка по&nbsp;ЕСКД. Лёгкая альтернатива APM&nbsp;WinMachine и&nbsp;ANSYS прямо в&nbsp;браузере.
           </p>
-          <p className="font-gost text-sm uppercase tracking-wider text-[var(--drawing-accent)]">
+          <p className="font-gost text-sm uppercase tracking-wider text-[var(--drawing-accent)] mb-6">
             Запуск весной 2027&nbsp;·&nbsp;Сейчас собираем ранний доступ
           </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link
+              to="/cae/demo"
+              className="btn-drawing btn-drawing-accent text-sm inline-flex"
+            >
+              <Icon name="Play" size={15} className="mr-2" />
+              Попробовать без регистрации
+            </Link>
+            <a
+              href="#waitlist"
+              className="btn-drawing text-sm inline-flex"
+            >
+              Записаться в ранний доступ
+            </a>
+          </div>
         </section>
 
         {/* Waitlist form */}

@@ -33,6 +33,16 @@ const EditorTopBar = ({
 }: Props) => {
   const [pdfBusy, setPdfBusy] = useState(false);
 
+  const handleExportJson = () => {
+    const blob = new Blob([JSON.stringify(model, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${projectName || "model"}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handlePdf = async () => {
     if (!result || pdfBusy) return;
     setPdfBusy(true);
@@ -117,6 +127,14 @@ const EditorTopBar = ({
         >
           <Icon name="FileDown" size={12} className="mr-1" />
           {pdfBusy ? "Готовим…" : "PDF"}
+        </button>
+        <button
+          onClick={handleExportJson}
+          className="btn-drawing text-[11px]"
+          title="Экспорт модели в JSON — для импорта в другой проект или резервной копии"
+        >
+          <Icon name="Braces" size={12} className="mr-1" />
+          JSON
         </button>
       </div>
     </div>

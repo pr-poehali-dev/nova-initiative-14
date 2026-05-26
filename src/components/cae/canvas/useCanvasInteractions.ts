@@ -22,6 +22,7 @@ interface Params {
   pxPerM: number;
   suppressNextClick: React.MutableRefObject<boolean>;
   setDraggingNode: React.Dispatch<React.SetStateAction<{ id: string; movedPx: number } | null>>;
+  elementLimit?: number;
 }
 
 export interface CanvasInteractionsResult {
@@ -45,6 +46,7 @@ export function useCanvasInteractions({
   pxPerM,
   suppressNextClick,
   setDraggingNode,
+  elementLimit,
 }: Params): CanvasInteractionsResult {
   const [pendingFirstNodeId, setPendingFirstNodeId] = useState<string | null>(null);
 
@@ -71,6 +73,10 @@ export function useCanvasInteractions({
             (el.node_start === n.id && el.node_end === pendingFirstNodeId),
         );
         if (!exists) {
+          if (elementLimit !== undefined && model.elements.length >= elementLimit) {
+            setPendingFirstNodeId(null);
+            return;
+          }
           const newEl: ModelElement = {
             id: `e${model.elements.length + 1}`,
             node_start: pendingFirstNodeId,

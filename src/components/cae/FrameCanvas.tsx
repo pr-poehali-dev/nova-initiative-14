@@ -61,6 +61,8 @@ interface Props {
   fontScale?: number;
   /** API для пользовательских сдвигов подписей (drag-and-drop). */
   labelOffsets?: LabelOffsetsApi;
+  /** Максимальное число элементов (демо-режим). При достижении лимита новые не создаются. */
+  elementLimit?: number;
 }
 
 const FrameCanvas = ({
@@ -81,6 +83,7 @@ const FrameCanvas = ({
   arrowScale = 1,
   fontScale = 1,
   labelOffsets,
+  elementLimit,
 }: Props) => {
   // ── Viewport: размер, view, координатные функции ──
   const { svgRef, size, view, setView, toScreenX, toScreenY, toWorld } =
@@ -127,6 +130,7 @@ const FrameCanvas = ({
       pxPerM: view.pxPerM,
       suppressNextClick,
       setDraggingNode,
+      elementLimit,
     });
 
   return (

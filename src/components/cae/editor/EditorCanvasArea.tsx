@@ -37,6 +37,7 @@ interface Props {
   arrowScale?: number;
   fontScale?: number;
   labelOffsets?: LabelOffsetsApi;
+  elementLimit?: number;
 }
 
 const EditorCanvasArea = ({
@@ -66,6 +67,7 @@ const EditorCanvasArea = ({
   arrowScale,
   fontScale,
   labelOffsets,
+  elementLimit,
 }: Props) => (
   <div
     className="border-2 border-[var(--drawing-line)] relative h-[58vh] min-h-[360px] lg:h-[70vh] lg:min-h-[480px]"
@@ -135,6 +137,7 @@ const EditorCanvasArea = ({
       arrowScale={arrowScale}
       fontScale={fontScale}
       labelOffsets={labelOffsets}
+      elementLimit={elementLimit}
     />
 
     {displayError && (
