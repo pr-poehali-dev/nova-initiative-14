@@ -767,15 +767,17 @@ function drawDiagramOverScheme(
   }
   if (list.length === 0) return;
 
-  // Масштаб эпюры — per-element: каждый стержень занимает offsetPdf в максимуме.
-  // Глобальный globalMaxAbs используется только для подписей (фактические числа).
-  // Аналогично логике в CanvasDiagrams.tsx (per-element масштаб).
-  const offsetPdf = 18; // мм
+  // Масштаб эпюры — ГЛОБАЛЬНЫЙ: самый большой элемент занимает не более offsetPdf мм.
+  // Это предотвращает перекрытие эпюр соседних стержней и выход за границы схемы.
+  // offsetPdf ограничен сверху: не больше 30% от меньшего из размеров схемы.
+  const schemeSize = Math.min(boxW - 36, boxH - 44); // эффективный размер в мм
+  const rawOffset = schemeSize * 0.22; // 22% от размера схемы
+  const offsetPdf = Math.min(rawOffset, 14); // не больше 14 мм
+  const globalMaxAbs = Math.max(1e-12, ...list.flatMap((d) => d.vals.map((v) => Math.abs(v))));
 
   // Рисуем для каждого стержня
   for (const d of list) {
-    const elMaxAbs = Math.max(1e-12, ...d.vals.map((v) => Math.abs(v)));
-    const k = offsetPdf / elMaxAbs;
+    const k = offsetPdf / globalMaxAbs;
     const sx_arr: number[] = [];
     const sy_arr: number[] = [];
     for (let i = 0; i < d.xs.length; i++) {
