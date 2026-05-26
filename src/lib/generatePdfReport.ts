@@ -741,7 +741,6 @@ function drawDiagramOverScheme(
     dx: number; dy: number;
   }
   const list: ElDiag[] = [];
-  let globalMaxAbs = 1e-12;
   let globalMax = -Infinity, globalMin = Infinity;
   let maxRef: { val: number; sxRel: number; syRel: number; elId: string } | null = null;
   let minRef: { val: number; sxRel: number; syRel: number; elId: string } | null = null;
@@ -772,19 +771,21 @@ function drawDiagramOverScheme(
       len, a, dx, dy,
     });
     for (const v of vals) {
-      if (Math.abs(v) > globalMaxAbs) globalMaxAbs = Math.abs(v);
       if (v > globalMax) globalMax = v;
       if (v < globalMin) globalMin = v;
     }
   }
   if (list.length === 0) return;
 
-  // Масштаб эпюры — макс. амплитуда в мм PDF (как offsetPx в приложении)
+  // Масштаб эпюры — per-element: каждый стержень занимает offsetPdf в максимуме.
+  // Глобальный globalMaxAbs используется только для подписей (фактические числа).
+  // Аналогично логике в CanvasDiagrams.tsx (per-element масштаб).
   const offsetPdf = 18; // мм
-  const k = offsetPdf / globalMaxAbs;
 
   // Рисуем для каждого стержня
   for (const d of list) {
+    const elMaxAbs = Math.max(1e-12, ...d.vals.map((v) => Math.abs(v)));
+    const k = offsetPdf / elMaxAbs;
     const sx_arr: number[] = [];
     const sy_arr: number[] = [];
     for (let i = 0; i < d.xs.length; i++) {
@@ -908,7 +909,7 @@ function drawDiagramOverScheme(
   doc.setFontSize(6.5);
   doc.setTextColor(...C.thin);
   doc.text(
-    `Эпюра построена в нормалях стержней · масштаб подобран автоматически · ед. ${unit}`,
+    `Эпюра построена в нормалях стержней · масштаб per-element (каждый стержень = 18 мм) · ед. ${unit}`,
     ox + boxW - 3,
     oy + boxH - 2,
     { align: "right" },
