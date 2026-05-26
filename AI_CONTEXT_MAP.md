@@ -193,13 +193,27 @@
 
 ---
 
-## 9. Backend (НЕ рефакторился в этом заходе)
+## 9. Backend — cae-api
 
-Эти файлы остаются монолитами — рефакторинг отложен из-за высокой чувствительности (JWT, OAuth, расчётный движок МКЭ):
+`backend/cae-api/index.py` — тонкий router (~95 строк), маршрутизирует
+запросы по `?action=` и httpMethod. Открывает/закрывает соединение с БД.
+
+| Файл | Ответственность |
+|---|---|
+| `backend/cae-api/auth.py` | JWT (HS256, секрет `SSO_JWT_SECRET`), CORS-заголовки, `auth_user(event)`, `json_response(status, body)` |
+| `backend/cae-api/utils.py` | `slugify(name, fallback)` (русская транслитерация в slug), `project_to_dict(row)`, `client_ip(event)`, `user_agent(event)`, `EMAIL_RE` |
+| `backend/cae-api/tariffs.py` | `action_tariffs(conn)` — публичный список тарифов из `cae_tariffs` |
+| `backend/cae-api/waitlist.py` | `action_waitlist(conn, body, user, ua, ip)` — запись в waitlist раннего доступа |
+| `backend/cae-api/projects.py` | CRUD проектов: `action_list_projects`, `action_get_project`, `action_create_project` (с квотой 5 активных), `action_update_project`, `action_archive_project`, `action_get_model`, `action_save_model` (новая версия) |
+
+Тесты `backend/cae-api/tests.json` покрывают 7 кейсов (CORS, отсутствие
+action, публичные эндпоинты, проверка авторизации). Все проходят после декомпозиции.
+
+## 10. Backend (НЕ рефакторился)
+
+Эти файлы остаются монолитами — рефакторинг отложен из-за высокой
+чувствительности (JWT, OAuth, расчётный движок МКЭ):
 
 - `backend/cae-solver/solver.py` (~1065 строк) — FEM-решатель
 - `backend/sso-auth/index.py` (~1052 строки) — OAuth + JWT
 - `backend/cae-verify/index.py` (~973 строки) — тестовые модели
-- `backend/cae-api/index.py` (~477 строк) — CRUD проектов
-
-Кандидаты на следующий заход — `cae-api/index.py` (низкий риск).
