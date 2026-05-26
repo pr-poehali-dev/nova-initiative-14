@@ -14,6 +14,7 @@
  * перезагрузки её не решают — но и страшное "что-то сломалось" мы не показываем).
  */
 import * as React from "react";
+import funcUrls from "../../backend/func2url.json";
 
 interface State {
   error: Error | null;
@@ -21,6 +22,7 @@ interface State {
 
 const RELOAD_KEY = "__cae_autoreload_count";
 const MAX_AUTO_RELOADS = 2;
+const LOG_URL = (funcUrls as Record<string, string>)["recovery-log"];
 
 function getAttempts(): number {
   try {
@@ -35,8 +37,33 @@ function bumpAttempts() {
   } catch { /* ignore */ }
 }
 
-async function silentReload() {
+// Тихая отправка лога. sendBeacon переживает навигацию (мы тут же перезагружаем).
+function logRecovery(triggerType: string, errorMessage?: string) {
+  if (!LOG_URL) return;
+  try {
+    const payload = JSON.stringify({
+      trigger_type: triggerType,
+      error_message: errorMessage ? String(errorMessage).slice(0, 2000) : null,
+      attempt: getAttempts() + 1,
+      page_url: window.location.href,
+    });
+    if (navigator.sendBeacon) {
+      const blob = new Blob([payload], { type: "application/json" });
+      navigator.sendBeacon(LOG_URL, blob);
+    } else {
+      fetch(LOG_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payload,
+        keepalive: true,
+      }).catch(() => {});
+    }
+  } catch { /* ignore */ }
+}
+
+async function silentReload(triggerType: string, errorMessage?: string) {
   if (getAttempts() >= MAX_AUTO_RELOADS) return; // защита от петли
+  logRecovery(triggerType, errorMessage);
   bumpAttempts();
   try {
     if ("caches" in window) {
@@ -72,7 +99,7 @@ class AppErrorBoundary extends React.Component<
      
     console.error("AppErrorBoundary:", error);
     // Тихо перезагружаемся в фоне — пользователь не видит экрана с ошибкой.
-    silentReload();
+    silentReload("react_error", error?.stack || error?.message || String(error));
   }
 
   componentDidMount() {
@@ -92,13 +119,13 @@ class AppErrorBoundary extends React.Component<
 
   onWindowError = (e: ErrorEvent) => {
     const msg = ((e?.error?.message as string) || e?.message || "") + "";
-    if (CHUNK_RE.test(msg)) silentReload();
+    if (CHUNK_RE.test(msg)) silentReload("window_error", msg);
   };
 
   onUnhandledRejection = (e: PromiseRejectionEvent) => {
     const r = e?.reason as { message?: string } | string | undefined;
     const msg = (typeof r === "string" ? r : r?.message || "") + "";
-    if (CHUNK_RE.test(msg)) silentReload();
+    if (CHUNK_RE.test(msg)) silentReload("unhandled_rejection", msg);
   };
 
   render() {

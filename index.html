@@ -68,6 +68,8 @@
    */
   (function () {
     var KEY = "__cae_autoreload_count";
+    // URL backend-функции логирования. Захардкожен, т.к. index.html — не Vite-модуль.
+    var LOG_URL = "https://functions.poehali.dev/4f0c1ef1-4bdf-4603-8d97-63a31cb6f7a1";
     function attempts() {
       try { return parseInt(sessionStorage.getItem(KEY) || "0", 10) || 0; }
       catch (e) { return 0; }
@@ -76,8 +78,32 @@
       try { sessionStorage.setItem(KEY, String(attempts() + 1)); }
       catch (e) { /* ignore */ }
     }
-    function silentReload() {
+    // Тихая отправка лога. Используем sendBeacon, чтобы запрос пережил
+    // навигацию (мы сразу после этого перезагружаем страницу).
+    function logRecovery(triggerType, errorMessage) {
+      try {
+        var payload = JSON.stringify({
+          trigger_type: triggerType,
+          error_message: errorMessage ? String(errorMessage).slice(0, 2000) : null,
+          attempt: attempts() + 1,
+          page_url: window.location.href
+        });
+        if (navigator.sendBeacon) {
+          var blob = new Blob([payload], { type: "application/json" });
+          navigator.sendBeacon(LOG_URL, blob);
+        } else {
+          fetch(LOG_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: payload,
+            keepalive: true
+          }).catch(function () {});
+        }
+      } catch (e) { /* ignore */ }
+    }
+    function silentReload(triggerType, errorMessage) {
       if (attempts() >= 2) return; // защита от петли
+      logRecovery(triggerType, errorMessage);
       bump();
       var url = new URL(window.location.href);
       url.searchParams.set("_r", String(Date.now()));
@@ -99,12 +125,12 @@
     }
     window.addEventListener("error", function (e) {
       var msg = e && (e.message || (e.error && e.error.message));
-      if (isChunkError(msg)) silentReload();
+      if (isChunkError(msg)) silentReload("chunk_error", msg);
     });
     window.addEventListener("unhandledrejection", function (e) {
       var r = e && e.reason;
       var msg = r && (r.message || r);
-      if (isChunkError(msg)) silentReload();
+      if (isChunkError(msg)) silentReload("chunk_error", msg);
     });
     // Watchdog: если React за 8 секунд ничего не отрисовал — тихо перезагружаем.
     setTimeout(function () {
@@ -115,7 +141,7 @@
         var c = root.children[i];
         if (c.tagName !== "NOSCRIPT") { hasReactContent = true; break; }
       }
-      if (!hasReactContent) silentReload();
+      if (!hasReactContent) silentReload("watchdog", "React did not render within 8s");
     }, 8000);
     // Если пользователь сам уже перезагрузил вручную и страница нормально
     // отрисовалась — сбросим счётчик после успешного запуска React.

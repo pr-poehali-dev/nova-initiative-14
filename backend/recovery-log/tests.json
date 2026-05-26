@@ -1,0 +1,48 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS preflight returns 200",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "GET is not allowed",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 405
+    },
+    {
+      "name": "POST chunk_error logs successfully",
+      "method": "POST",
+      "path": "/",
+      "headers": {"Content-Type": "application/json"},
+      "body": {
+        "trigger_type": "chunk_error",
+        "error_message": "Loading chunk 42 failed",
+        "attempt": 1,
+        "page_url": "https://xn----gtbhgbqhkfi.xn--p1ai/cae/projects/5",
+        "build_id": "1d05cca"
+      },
+      "expectedStatus": 204
+    },
+    {
+      "name": "POST watchdog with minimal payload",
+      "method": "POST",
+      "path": "/",
+      "headers": {"Content-Type": "application/json"},
+      "body": {
+        "trigger_type": "watchdog"
+      },
+      "expectedStatus": 204
+    },
+    {
+      "name": "POST with empty body still returns 204",
+      "method": "POST",
+      "path": "/",
+      "headers": {"Content-Type": "application/json"},
+      "body": {},
+      "expectedStatus": 204
+    }
+  ]
+}
