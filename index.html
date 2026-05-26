@@ -42,7 +42,93 @@
   </head>
 
 <body>
-<div id="root"></div>
+<div id="root">
+  <!--
+    Фолбэк до загрузки React. Если бандл упадёт или зависнет —
+    через 8 секунд покажем кнопку «Сбросить кэш и перезагрузить».
+    Когда React стартует, он перезатрёт содержимое #root своей разметкой.
+  -->
+  <noscript>
+    <div style="font-family:system-ui,sans-serif;padding:24px;text-align:center">
+      Для работы сайта нужно включить JavaScript в браузере.
+    </div>
+  </noscript>
+  <div id="boot-fallback" style="display:none;min-height:100vh;align-items:center;justify-content:center;padding:24px;background:#faf8f0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1a1a2e">
+    <div style="max-width:520px;width:100%;border:2px solid #1a1a2e;background:#fff;padding:24px 22px">
+      <p style="font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:#3a3a5e;margin:0">Диплом-Инж.рф</p>
+      <h1 style="font-size:22px;margin:8px 0 12px;font-weight:700">Не получилось загрузить сайт</h1>
+      <p style="font-size:14px;line-height:1.5;margin:0 0 18px">
+        Скорее всего, в браузере остался старый кэш после обновления.
+        Нажми кнопку ниже — это починит загрузку за секунду.
+      </p>
+      <button id="boot-fallback-btn" type="button"
+        style="width:100%;min-height:48px;padding:12px 18px;background:#c0392b;color:#fff;border:2px solid #c0392b;font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;cursor:pointer">
+        Сбросить кэш и перезагрузить
+      </button>
+    </div>
+  </div>
+</div>
+<script>
+  // Watchdog: если React за 8 секунд не успел отрисовать своё дерево
+  // (т.е. #root всё ещё содержит только наш fallback) — показываем плашку.
+  // Если бандл упал с ошибкой сети/синтаксиса — сразу показываем плашку.
+  (function () {
+    var FLAG = "__cae_cache_busted_at";
+    function hardReload() {
+      var url = new URL(window.location.href);
+      url.searchParams.set("_r", String(Date.now()));
+      try {
+        if ("caches" in window) {
+          caches.keys().then(function (keys) {
+            return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+          }).finally(function () { window.location.replace(url.toString()); });
+          return;
+        }
+      } catch (e) { /* ignore */ }
+      window.location.replace(url.toString());
+    }
+    function showFallback() {
+      var el = document.getElementById("boot-fallback");
+      if (!el) return;
+      el.style.display = "flex";
+      var btn = document.getElementById("boot-fallback-btn");
+      if (btn) btn.onclick = hardReload;
+    }
+    function autoFixChunkError(msg) {
+      if (!msg) return;
+      var s = String(msg);
+      if (!/Loading chunk|Failed to fetch dynamically imported module|Importing a module script failed|ChunkLoadError/i.test(s)) return;
+      try {
+        if (sessionStorage.getItem(FLAG)) return; // уже пробовали
+        sessionStorage.setItem(FLAG, String(Date.now()));
+      } catch (e) { /* ignore */ }
+      hardReload();
+    }
+    // Слушаем ошибки загрузки модулей
+    window.addEventListener("error", function (e) {
+      autoFixChunkError(e && (e.message || (e.error && e.error.message)));
+    });
+    window.addEventListener("unhandledrejection", function (e) {
+      var r = e && e.reason;
+      autoFixChunkError(r && (r.message || r));
+    });
+    // Через 8 секунд проверим, отрисовался ли React
+    setTimeout(function () {
+      var root = document.getElementById("root");
+      // Если React уже работает — он удалил/перезатёр boot-fallback и нарисовал своё.
+      // Проверяем, что внутри #root есть что-то кроме нашего fallback.
+      if (!root) return;
+      var hasReactContent = false;
+      for (var i = 0; i < root.children.length; i++) {
+        var c = root.children[i];
+        if (c.id !== "boot-fallback" && c.tagName !== "NOSCRIPT") {
+          hasReactContent = true; break;
+        }
+      }
+      if (!hasReactContent) showFallback();
+    }, 8000);
+  })();
+</script>
 <script type="module" src="/src/main.tsx"></script>
 </body>
 </html>
