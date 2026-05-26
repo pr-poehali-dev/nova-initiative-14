@@ -1566,6 +1566,48 @@ async function renderSchemeFromSvg(
       if (/^x=\s*-?\d/.test(txt) && /масштаб/.test(txt)) t.remove();
     });
 
+    // Нормализация всех <text> для корректного рендера через svg2pdf:
+    //  1) фиксируем безопасный sans-serif шрифт (Roboto уже встроен в PDF),
+    //  2) сбрасываем унаследованный letter-spacing (иначе символы расходятся
+    //     через пробел, как «R = 5 0 . 7»),
+    //  3) транслитерируем кириллические единицы (кН, Н, МН, м, ·) в латиницу,
+    //     потому что встроенный шрифт svg2pdf по умолчанию НЕ содержит
+    //     кириллических глифов и подменяет их случайными символами.
+    const cyrToLatUnits = (s: string): string =>
+      s
+        .replace(/МН·м/g, "MN*m")
+        .replace(/кН·м/g, "kN*m")
+        .replace(/Н·м/g, "N*m")
+        .replace(/МН\/м/g, "MN/m")
+        .replace(/кН\/м/g, "kN/m")
+        .replace(/Н\/м/g, "N/m")
+        .replace(/МН/g, "MN")
+        .replace(/кН/g, "kN")
+        .replace(/\bН\b/g, "N")
+        .replace(/·/g, "*");
+
+    const fixTextNode = (t: SVGTextElement | SVGTSpanElement) => {
+      t.setAttribute("font-family", "Roboto, Helvetica, Arial, sans-serif");
+      t.setAttribute("letter-spacing", "0");
+      t.style.letterSpacing = "0";
+      t.style.fontFamily = "Roboto, Helvetica, Arial, sans-serif";
+    };
+
+    clone.querySelectorAll("text").forEach((t) => {
+      fixTextNode(t as SVGTextElement);
+      t.querySelectorAll("tspan").forEach((ts) =>
+        fixTextNode(ts as SVGTSpanElement),
+      );
+      // Заменяем текст в самом узле или в его дочерних tspan
+      if (t.children.length === 0) {
+        t.textContent = cyrToLatUnits(t.textContent || "");
+      } else {
+        t.querySelectorAll("tspan").forEach((ts) => {
+          ts.textContent = cyrToLatUnits(ts.textContent || "");
+        });
+      }
+    });
+
     // Подбираем такую область внутри рамки, чтобы сохранить пропорции SVG.
     const innerPad = 6;
     const availW = boxW - innerPad * 2;
