@@ -244,9 +244,16 @@ def beam_local_k_3d(E: float, G: float, A: float, L: float,
 
 
 def beam_local_k_2d(E: float, A: float, G: float, L: float,
-                    I_z: float, A_sy: float | None) -> np.ndarray:
+                    I_z: float, A_sy: float | None,
+                    hinge_a: bool = False, hinge_b: bool = False) -> np.ndarray:
     """Элементная матрица 6×6 для 2D-рамы (в плоскости XY).
     DOF на узле: ux, uy, rz. Узлы a и b: [ux_a, uy_a, rz_a, ux_b, uy_b, rz_b].
+
+    Параметры hinge_a / hinge_b — освобождение момента Mz на конце стержня
+    (статическая конденсация соответствующего поворотного DOF). Применяется
+    для шарнирных соединений в фермах, шатунах, тягах, балках Гербера.
+    Если шарниры на обоих концах — стержень превращается в ферменный
+    (только осевая жёсткость).
     """
     k = np.zeros((6, 6))
     EA_L = E * A / L
@@ -257,13 +264,59 @@ def beam_local_k_2d(E: float, A: float, G: float, L: float,
 
     phi = 12.0 * E * I_z / (G * A_sy * L**2) if (A_sy and A_sy > 0) else 0.0
     EI = E * I_z
+
+    # Оба шарнира: чистый стержневой элемент (без изгибной жёсткости).
+    # Балка превращается в ферменный двухузловой стержень.
+    if hinge_a and hinge_b:
+        return k
+
     L2, L3 = L * L, L * L * L
     denom = 1.0 + phi
+
+    if hinge_a and not hinge_b:
+        # Шарнир в A: момент в правом конце действует, в левом нет.
+        # Изгибная подматрица для балки «шарнир-защемление» (B защемлён).
+        # uy_a, uy_b, rz_b → 3 DOF; rz_a освобождён.
+        # Жёсткость EI/(L³·(1+φ/4)) — упрощённая (φ для коротких балок учтён через denom4).
+        denom4 = 1.0 + phi / 4.0
+        a3 = 3 * EI / (L3 * denom4)
+        b3 = 3 * EI / (L2 * denom4)
+        c3 = 3 * EI / (L * denom4)
+        # uy_a=1, uy_b=4, rz_b=5
+        Kb = np.array([
+            [ a3, -a3,  b3],
+            [-a3,  a3, -b3],
+            [ b3, -b3,  c3],
+        ])
+        idx = [1, 4, 5]
+        for i in range(3):
+            for j in range(3):
+                k[idx[i], idx[j]] += Kb[i, j]
+        return k
+
+    if hinge_b and not hinge_a:
+        # Шарнир в B: момент в левом конце действует, в правом нет.
+        denom4 = 1.0 + phi / 4.0
+        a3 = 3 * EI / (L3 * denom4)
+        b3 = 3 * EI / (L2 * denom4)
+        c3 = 3 * EI / (L * denom4)
+        # uy_a=1, rz_a=2, uy_b=4
+        Kb = np.array([
+            [ a3,  b3, -a3],
+            [ b3,  c3, -b3],
+            [-a3, -b3,  a3],
+        ])
+        idx = [1, 2, 4]
+        for i in range(3):
+            for j in range(3):
+                k[idx[i], idx[j]] += Kb[i, j]
+        return k
+
+    # Жёсткие узлы с обеих сторон — стандартная балка Тимошенко.
     a = 12 * EI / (L3 * denom)
     b = 6 * EI / (L2 * denom)
     c = (4 + phi) * EI / (L * denom)
     d = (2 - phi) * EI / (L * denom)
-    # uy_a=1, rz_a=2, uy_b=4, rz_b=5
     Kb = np.array([
         [ a,  b, -a,  b],
         [ b,  c, -b,  d],
@@ -301,9 +354,32 @@ def fixed_end_forces_3d_uniform(qy: float, qz: float, L: float) -> np.ndarray:
     return f
 
 
-def fixed_end_forces_2d_uniform(qy: float, L: float) -> np.ndarray:
-    """Реакции защемлённой 2D-балки от равномерной qy (локальная y)."""
+def fixed_end_forces_2d_uniform(qy: float, L: float,
+                                 hinge_a: bool = False, hinge_b: bool = False) -> np.ndarray:
+    """Реакции защемлённой 2D-балки от равномерной qy (локальная y).
+    С учётом шарниров на концах — перераспределение моментов.
+    """
     f = np.zeros(6)
+    if hinge_a and hinge_b:
+        # Простая балка на двух шарнирах: только поперечные реакции.
+        Vy = qy * L / 2.0
+        f[1] += Vy
+        f[4] += Vy
+        return f
+    if hinge_a and not hinge_b:
+        # Шарнир в A, защемление в B: реакции по таблицам сопромата.
+        # Va = 3qL/8, Vb = 5qL/8, Mb = qL²/8 (с учётом знака — момент в B)
+        f[1] += 3.0 * qy * L / 8.0
+        f[4] += 5.0 * qy * L / 8.0
+        f[5] += -qy * L * L / 8.0
+        return f
+    if hinge_b and not hinge_a:
+        # Защемление в A, шарнир в B
+        f[1] += 5.0 * qy * L / 8.0
+        f[2] += qy * L * L / 8.0
+        f[4] += 3.0 * qy * L / 8.0
+        return f
+    # Обе стороны защемлены
     Vy = qy * L / 2.0
     Mz = qy * L * L / 12.0
     f[1] += Vy
@@ -336,16 +412,46 @@ def fixed_end_forces_3d_point(Py: float, Pz: float, Px: float, a: float, L: floa
     return f
 
 
-def fixed_end_forces_2d_point(Py: float, Px: float, a: float, L: float) -> np.ndarray:
+def fixed_end_forces_2d_point(Py: float, Px: float, a: float, L: float,
+                               hinge_a: bool = False, hinge_b: bool = False) -> np.ndarray:
+    """Реакции защемлённой 2D-балки от точечной поперечной силы Py и продольной Px
+    в точке на расстоянии a от узла A. С учётом шарниров — перераспределение."""
     f = np.zeros(6)
+    if L <= 0:
+        return f
     b = L - a
+    # Осевая разносится по правилу рычага независимо от шарниров
     f[0] += Px * b / L
     f[3] += Px * a / L
-    if L > 0:
-        f[1] += Py * b**2 * (L + 2*a) / L**3
-        f[2] += Py * a * b**2 / L**2
-        f[4] += Py * a**2 * (L + 2*b) / L**3
-        f[5] += -Py * a**2 * b / L**2
+    if hinge_a and hinge_b:
+        # Простая балка: Ra = Py·b/L, Rb = Py·a/L
+        f[1] += Py * b / L
+        f[4] += Py * a / L
+        return f
+    if hinge_a and not hinge_b:
+        # Шарнир в A, защемление в B (балка по таблицам).
+        # Ma = 0, Mb = -Py·a·b·(L+a) / (2L²) (момент защемления)
+        Mb = -Py * a * b * (L + a) / (2.0 * L * L)
+        Ra = (Py * b - Mb) / L
+        Rb = Py - Ra
+        f[1] += Ra
+        f[4] += Rb
+        f[5] += Mb
+        return f
+    if hinge_b and not hinge_a:
+        # Защемление в A, шарнир в B
+        Ma = Py * a * b * (L + b) / (2.0 * L * L)
+        Rb = (Py * a - Ma) / L
+        Ra = Py - Rb
+        f[1] += Ra
+        f[2] += Ma
+        f[4] += Rb
+        return f
+    # Полное защемление с обеих сторон
+    f[1] += Py * b**2 * (L + 2*a) / L**3
+    f[2] += Py * a * b**2 / L**2
+    f[4] += Py * a**2 * (L + 2*b) / L**3
+    f[5] += -Py * a**2 * b / L**2
     return f
 
 
@@ -402,6 +508,14 @@ class FrameSolver:
 
         self.elements = []
         for e in self.payload.get('elements', []):
+            # Шарниры на концах элемента — освобождение момента Mz.
+            # Используется для ферм, шатунов, тяг, балок Гербера.
+            releases_a = {}
+            releases_b = {}
+            if e.get('hinge_start'):
+                releases_a['rz'] = True
+            if e.get('hinge_end'):
+                releases_b['rz'] = True
             self.elements.append(Element(
                 id=e['id'],
                 node_a=e['node_start'],
@@ -409,6 +523,8 @@ class FrameSolver:
                 material_id=e['material_id'],
                 section_id=e['section_id'],
                 ref_vector=tuple(e.get('ref_vector', (0, 0, 1))),
+                releases_a=releases_a,
+                releases_b=releases_b,
             ))
 
         self.bcs = []
@@ -465,8 +581,11 @@ class FrameSolver:
                 sec.shear_area_y, sec.shear_area_z,
             )
         else:
+            hinge_a = bool(el.releases_a.get('rz'))
+            hinge_b = bool(el.releases_b.get('rz'))
             k_local = beam_local_k_2d(
                 mat.E, sec.A, mat.G, L, sec.I_z, sec.shear_area_y,
+                hinge_a=hinge_a, hinge_b=hinge_b,
             )
 
         # Глобальная матрица: K_g = T^T · k_local · T
@@ -491,7 +610,10 @@ class FrameSolver:
                 for j in range(len(dofs)):
                     K[dofs[i], dofs[j]] += k_global[i, j]
 
-            # Эквивалентные узловые силы от внутрипролётных нагрузок
+            # Эквивалентные узловые силы от внутрипролётных нагрузок.
+            # Для 2D учитываем шарниры на концах элемента — перераспределение моментов.
+            hinge_a = bool(el.releases_a.get('rz'))
+            hinge_b = bool(el.releases_b.get('rz'))
             f_eq_local = np.zeros(self.dof_per_node * 2)
             for ld in self.loads:
                 if ld.element_id != el.id:
@@ -500,15 +622,18 @@ class FrameSolver:
                     if self.dim == '3d':
                         f_eq_local += fixed_end_forces_3d_uniform(ld.load_start[1], ld.load_start[2], L)
                     else:
-                        f_eq_local += fixed_end_forces_2d_uniform(ld.load_start[1], L)
+                        f_eq_local += fixed_end_forces_2d_uniform(
+                            ld.load_start[1], L, hinge_a=hinge_a, hinge_b=hinge_b,
+                        )
                 elif ld.kind == 'distributed_trapezoidal':
-                    # упрощённо: усредняем как равномерную (точная формула — в M5 при необходимости)
                     qy_avg = (ld.load_start[1] + ld.load_end[1]) / 2
                     qz_avg = (ld.load_start[2] + ld.load_end[2]) / 2
                     if self.dim == '3d':
                         f_eq_local += fixed_end_forces_3d_uniform(qy_avg, qz_avg, L)
                     else:
-                        f_eq_local += fixed_end_forces_2d_uniform(qy_avg, L)
+                        f_eq_local += fixed_end_forces_2d_uniform(
+                            qy_avg, L, hinge_a=hinge_a, hinge_b=hinge_b,
+                        )
                 elif ld.kind == 'in_span_point':
                     a = ld.position_ratio * L
                     if self.dim == '3d':
@@ -516,7 +641,10 @@ class FrameSolver:
                             ld.force[1], ld.force[2], ld.force[0], a, L,
                         )
                     else:
-                        f_eq_local += fixed_end_forces_2d_point(ld.force[1], ld.force[0], a, L)
+                        f_eq_local += fixed_end_forces_2d_point(
+                            ld.force[1], ld.force[0], a, L,
+                            hinge_a=hinge_a, hinge_b=hinge_b,
+                        )
             if np.any(f_eq_local):
                 f_eq_global = T.T @ f_eq_local
                 for i, gi in enumerate(dofs):

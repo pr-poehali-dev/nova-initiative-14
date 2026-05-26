@@ -41,6 +41,15 @@ export interface ModelElement {
   node_end: string;
   material_id: string;
   section_id: string;
+  /**
+   * Шарнир на начальном узле элемента: освобождает изгибающий момент Mz
+   * (для 2D рам). Если true — момент в этом конце стержня равен нулю.
+   * Используется для ферм, шатунов, тяг, подкосов, балок Гербера.
+   * По умолчанию false (жёсткое соединение).
+   */
+  hinge_start?: boolean;
+  /** Шарнир на конечном узле элемента (Mz=0 в правом конце). */
+  hinge_end?: boolean;
 }
 
 export type DofName = "ux" | "uy" | "uz" | "rx" | "ry" | "rz";
@@ -101,6 +110,13 @@ export interface AnalysisSettings {
   check_deflection: boolean;
   /** Учитывать ли проверку прочности */
   check_strength: boolean;
+  /**
+   * Учитывать ли проверку устойчивости сжатых стержней (продольный изгиб).
+   * Применяется только к элементам с N < 0 (сжатие). Считается по Эйлеру/Ясинскому
+   * с автоматическим выбором коэффициента приведения длины μ по граничным условиям.
+   * По умолчанию включено.
+   */
+  check_buckling?: boolean;
 }
 
 export interface FrameModel {
@@ -123,6 +139,7 @@ export const DEFAULT_ANALYSIS_SETTINGS: AnalysisSettings = {
   custom_deflection_divisor: null,
   check_deflection: true,
   check_strength: true,
+  check_buckling: true,
 };
 
 // ===== Дефолты =====

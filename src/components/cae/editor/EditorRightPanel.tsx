@@ -117,6 +117,8 @@ interface Props {
   setDistributedLoad: (qy: number) => void;
   addInSpanPoint: (pos: number, py: number) => void;
   removeLoadById: (loadId: string) => void;
+  /** Переключение шарнира на конце элемента (Mz=0). */
+  setElementHinge: (end: "start" | "end", on: boolean) => void;
   deleteSelected: () => void;
 }
 
@@ -139,6 +141,7 @@ const EditorRightPanel = ({
   setDistributedLoad,
   addInSpanPoint,
   removeLoadById,
+  setElementHinge,
   deleteSelected,
 }: Props) => {
   if (selectedNode) {
@@ -323,6 +326,39 @@ const EditorRightPanel = ({
           <span className="truncate">{secName}</span>
           <Icon name="ChevronRight" size={12} className="shrink-0" />
         </button>
+
+        <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-1">
+          Шарниры на концах (Mz = 0)
+        </p>
+        <div className="grid grid-cols-2 gap-1.5 mb-3">
+          {(
+            [
+              { end: "start" as const, label: `Шарнир в ${el.node_start}`, on: !!el.hinge_start },
+              { end: "end" as const, label: `Шарнир в ${el.node_end}`, on: !!el.hinge_end },
+            ]
+          ).map((h) => (
+            <button
+              key={h.end}
+              onClick={() => setElementHinge(h.end, !h.on)}
+              className={`border py-1.5 px-1.5 text-[10px] font-gost uppercase flex items-center justify-center gap-1.5 ${
+                h.on
+                  ? "bg-[var(--drawing-accent)] text-white border-[var(--drawing-accent)]"
+                  : "border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)]"
+              }`}
+              title="Освобождает изгибающий момент на конце стержня (ферма, шатун, тяга, балка Гербера)"
+            >
+              <Icon name={h.on ? "CircleDot" : "Circle"} size={12} />
+              <span className="truncate">{h.label}</span>
+            </button>
+          ))}
+        </div>
+        {(el.hinge_start || el.hinge_end) && (
+          <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] -mt-2 mb-3 leading-tight">
+            {el.hinge_start && el.hinge_end
+              ? "Ферменный стержень — только осевая жёсткость, Mz = 0 на обоих концах."
+              : "Полу-шарнир — момент освобождён на одном конце."}
+          </p>
+        )}
 
         <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-1">
           Распределённая q (по локальной y), Н/м

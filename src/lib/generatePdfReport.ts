@@ -210,6 +210,31 @@ function drawScheme(
     doc.line(toX(a.coords[0]), toY(a.coords[1]), toX(b.coords[0]), toY(b.coords[1]));
   }
 
+  // Шарниры на концах элементов — белый кружок с обводкой
+  for (const el of model.elements) {
+    if (!el.hinge_start && !el.hinge_end) continue;
+    const a = model.nodes.find((n) => n.id === el.node_start);
+    const b = model.nodes.find((n) => n.id === el.node_end);
+    if (!a || !b) continue;
+    const ax = toX(a.coords[0]);
+    const ay = toY(a.coords[1]);
+    const bx = toX(b.coords[0]);
+    const by = toY(b.coords[1]);
+    const dx = bx - ax;
+    const dy = by - ay;
+    const len = Math.hypot(dx, dy);
+    if (len < 0.1) continue;
+    const ux = dx / len;
+    const uy = dy / len;
+    const off = Math.min(2.5, len * 0.2);
+    const r = 0.9;
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(...C.ink);
+    doc.setLineWidth(0.35);
+    if (el.hinge_start) doc.circle(ax + ux * off, ay + uy * off, r, "FD");
+    if (el.hinge_end) doc.circle(bx - ux * off, by - uy * off, r, "FD");
+  }
+
   // Узлы
   doc.setFillColor(...C.ink);
   for (const nd of model.nodes) {

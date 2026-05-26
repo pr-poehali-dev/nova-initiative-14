@@ -338,6 +338,23 @@ export function useCaeActions(
     });
   };
 
+  /**
+   * Переключатель шарнира на одном из концов выбранного элемента.
+   * Освобождает изгибающий момент Mz в указанном узле — нужно для ферм,
+   * шатунов, тяг, балок Гербера.
+   */
+  const setElementHinge = (end: "start" | "end", on: boolean) => {
+    if (!selectedElementId) return;
+    const elements = model.elements.map((e) =>
+      e.id === selectedElementId
+        ? end === "start"
+          ? { ...e, hinge_start: on }
+          : { ...e, hinge_end: on }
+        : e,
+    );
+    updateModel({ ...model, elements });
+  };
+
   return {
     onCanvasClick,
     deleteSelected,
@@ -356,5 +373,6 @@ export function useCaeActions(
     setDistributedLoad,
     addInSpanPoint,
     removeLoadById,
+    setElementHinge,
   };
 }

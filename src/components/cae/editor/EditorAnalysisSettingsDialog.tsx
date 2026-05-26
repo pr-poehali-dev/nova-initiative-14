@@ -216,7 +216,23 @@ const EditorAnalysisSettingsDialog = ({ open, onClose, settings, onChange }: Pro
                 />
                 <span className="font-gost text-[12px]">Проверка прочности σ_экв ≤ [σ]</span>
               </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.check_buckling !== false}
+                  onChange={(e) => update({ check_buckling: e.target.checked })}
+                />
+                <span className="font-gost text-[12px]">
+                  Проверка устойчивости σ ≤ φ·[σ] (сжатые стержни, Эйлер/Ясинский)
+                </span>
+              </label>
             </div>
+            <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] mt-2 leading-snug">
+              Устойчивость считается только для элементов со сжатием (N&nbsp;&lt;&nbsp;0).
+              Коэффициент μ выбирается автоматически по закреплениям узлов и шарнирам стержня:
+              μ&nbsp;=&nbsp;0.5 (защ.–защ.), 0.7 (защ.–шарн.), 1.0 (шарн.–шарн.), 2.0 (консоль).
+              φ&nbsp;— по таблице СП&nbsp;16.13330 для стали Ст3.
+            </p>
           </section>
 
           <div className="flex items-center justify-between pt-2 border-t border-dashed border-[var(--drawing-line)]">

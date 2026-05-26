@@ -109,6 +109,7 @@ const CaeEditor = () => {
     setDistributedLoad,
     addInSpanPoint,
     removeLoadById,
+    setElementHinge,
   } = useCaeActions(
     model,
     updateModel,
@@ -285,6 +286,7 @@ const CaeEditor = () => {
               setDistributedLoad={setDistributedLoad}
               addInSpanPoint={addInSpanPoint}
               removeLoadById={removeLoadById}
+              setElementHinge={setElementHinge}
               deleteSelected={deleteSelected}
             />
             </div>
