@@ -1,8 +1,11 @@
 import type { DiagramKind } from "@/components/cae/FrameCanvas";
 import type { SolverResponse, FrameModel } from "@/lib/cae-model";
 
-const formatNumber = (v: number, digits = 4) => {
-  if (!isFinite(v)) return "—";
+// Принимаем number | null | undefined: бэкенд CAE может пропустить поле
+// (например, max_displacement если расчёт ещё не сошёлся), и прямой
+// `v.toFixed(...)` валит весь компонент в ErrorBoundary → "белый экран".
+const formatNumber = (v: number | null | undefined, digits = 4): string => {
+  if (typeof v !== "number" || !Number.isFinite(v)) return "—";
   if (Math.abs(v) >= 1000) return v.toExponential(2);
   if (Math.abs(v) < 0.001 && v !== 0) return v.toExponential(2);
   return v.toFixed(digits);
@@ -217,12 +220,14 @@ const EditorResultsPanel = ({
             <dd>{formatNumber(result.summary.max_sigma_vm / 1e6, 1)} МПа</dd>
             <dt className="text-[var(--drawing-line-thin)]">Запас:</dt>
             <dd>
-              {result.summary.min_safety_factor && result.summary.min_safety_factor < 1e5
-                ? result.summary.min_safety_factor.toFixed(2)
-                : "∞"}
+              {typeof result.summary.min_safety_factor === "number"
+                && Number.isFinite(result.summary.min_safety_factor)
+                && result.summary.min_safety_factor < 1e5
+                  ? result.summary.min_safety_factor.toFixed(2)
+                  : "∞"}
             </dd>
             <dt className="text-[var(--drawing-line-thin)]">Время:</dt>
-            <dd>{result.duration_ms} мс</dd>
+            <dd>{result.duration_ms ?? 0} мс</dd>
           </dl>
 
           {/* Аналитическая проверка */}

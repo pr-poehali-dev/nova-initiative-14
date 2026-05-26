@@ -151,8 +151,8 @@ const EditorRightPanel = ({
           Узел {selectedNode.id}
         </p>
         <p className="font-mono text-[11px] mb-3">
-          x = {selectedNode.coords[0].toFixed(2)} м<br />
-          y = {selectedNode.coords[1].toFixed(2)} м
+          x = {Number.isFinite(selectedNode.coords?.[0]) ? selectedNode.coords[0].toFixed(2) : "—"} м<br />
+          y = {Number.isFinite(selectedNode.coords?.[1]) ? selectedNode.coords[1].toFixed(2) : "—"} м
         </p>
 
         <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-1.5">

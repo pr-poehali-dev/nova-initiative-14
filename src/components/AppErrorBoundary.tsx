@@ -130,10 +130,65 @@ class AppErrorBoundary extends React.Component<
 
   render() {
     if (!this.state.error) return this.props.children;
-    // Тихий фон чертёжного листа. Никаких сообщений и кнопок — параллельно
-    // в componentDidCatch уже запустился silentReload(). Если лимит петли
-    // исчерпан, останется пустой фон — это лучше, чем технический трейс.
-    return <div style={{ minHeight: "100vh", background: "#faf8f0" }} />;
+    // Не оставляем «белый фон». Если лимит авто-релоадов исчерпан и страница
+    // продолжает падать — показываем тихий понятный экран с кнопкой
+    // «Перезагрузить вручную». Это намного лучше пустоты: пользователь
+    // понимает, что произошло, и может действовать.
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "#faf8f0",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "24px",
+          fontFamily: "system-ui, -apple-system, sans-serif",
+          color: "#1a1a1a",
+        }}
+      >
+        <div style={{ maxWidth: 420, textAlign: "center" }}>
+          <div
+            style={{
+              fontSize: 13,
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              color: "#6b6b6b",
+              marginBottom: 16,
+            }}
+          >
+            Диплом-Инж.рф
+          </div>
+          <h1 style={{ fontSize: 22, fontWeight: 600, margin: "0 0 12px" }}>
+            Страница не отрисовалась
+          </h1>
+          <p style={{ fontSize: 15, lineHeight: 1.5, margin: "0 0 24px", color: "#3a3a3a" }}>
+            Это разовый сбой. Нажмите кнопку ниже — страница откроется заново.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              try { sessionStorage.removeItem(RELOAD_KEY); } catch { /* ignore */ }
+              const url = new URL(window.location.href);
+              url.searchParams.set("_r", String(Date.now()));
+              window.location.href = url.toString();
+            }}
+            style={{
+              padding: "12px 28px",
+              fontSize: 15,
+              fontWeight: 500,
+              background: "#1a1a1a",
+              color: "#faf8f0",
+              border: "none",
+              cursor: "pointer",
+              letterSpacing: "0.05em",
+            }}
+          >
+            Перезагрузить
+          </button>
+        </div>
+      </div>
+    );
   }
 }
 
