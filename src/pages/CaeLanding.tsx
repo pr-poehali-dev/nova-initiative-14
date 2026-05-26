@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { fetchCaeTariffs, joinWaitlist, type CaeTariff } from "@/lib/cae";
 import Notify3DForm from "@/components/cae/Notify3DForm";
 import TariffsSection from "@/components/cae/TariffsSection";
+import MentoringCrossSell from "@/components/cae/MentoringCrossSell";
 
 const formatPrice = (kopecks: number) => {
   if (kopecks <= 0) return "0 ₽";
@@ -291,21 +292,7 @@ const CaeLanding = () => {
           <TariffsSection tariffs={tariffs} />
         )}
 
-        {/* Lead-magnet — наставничество */}
-        <section className="border-t-[2.5px] border-[var(--drawing-line)] pt-10 text-center">
-          <p className="font-gost text-[10px] uppercase tracking-[0.3em] text-[var(--drawing-line-thin)] mb-3">
-            Нужна помощь живого инженера?
-          </p>
-          <h2 className="font-gost-upright text-xl md:text-2xl font-black uppercase tracking-wide mb-3">
-            Наставничество по&nbsp;ВКР
-          </h2>
-          <p className="text-sm text-[var(--drawing-line-thin)] max-w-xl mx-auto mb-5">
-            CAE — инструмент. А&nbsp;если нужен опытный конструктор, который проверит ваш расчёт и&nbsp;поможет защитить диплом — мы&nbsp;здесь.
-          </p>
-          <Link to="/contacts" className="btn-drawing text-xs inline-flex">
-            Записаться на&nbsp;диагностику&nbsp;&rarr;
-          </Link>
-        </section>
+        <MentoringCrossSell />
       </div>
     </>
   );
