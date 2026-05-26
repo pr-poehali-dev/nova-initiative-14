@@ -21,9 +21,6 @@ import CanvasLoads from "./CanvasLoads";
 import CanvasReactionsAndNodes from "./CanvasReactionsAndNodes";
 import { makeMakeDraggableText } from "./canvas-overlays-helpers";
 
-// Реэкспорт хелперов для обратной совместимости с возможными внешними импортами.
-export { REACTION, arrowFromPoint } from "./canvas-overlays-helpers";
-
 interface Props {
   model: FrameModel;
   selectedNodeIds: string[];
