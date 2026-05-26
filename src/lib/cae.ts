@@ -11,6 +11,7 @@ export interface CaeTariff {
   price_one_off: number;
   max_projects: number;
   max_elements: number;
+  max_solves_per_month: number;
   allow_nonlinear: boolean;
   allow_team: boolean;
   max_team_members: number;

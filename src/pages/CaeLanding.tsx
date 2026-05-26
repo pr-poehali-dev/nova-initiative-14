@@ -6,6 +6,7 @@ import { SITE_URL } from "@/lib/seo";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchCaeTariffs, joinWaitlist, type CaeTariff } from "@/lib/cae";
 import Notify3DForm from "@/components/cae/Notify3DForm";
+import TariffsSection from "@/components/cae/TariffsSection";
 
 const formatPrice = (kopecks: number) => {
   if (kopecks <= 0) return "0 ₽";
@@ -285,56 +286,9 @@ const CaeLanding = () => {
           </div>
         </section>
 
-        {/* Tariffs preview */}
+        {/* Tariffs */}
         {tariffs.length > 0 && (
-          <section className="mb-20">
-            <p className="font-gost text-[10px] uppercase tracking-[0.3em] text-[var(--drawing-line-thin)] mb-2 text-center">
-              Тарифы · Раздел 03 · Предварительные
-            </p>
-            <h2 className="font-gost-upright text-2xl md:text-3xl font-black uppercase tracking-wide text-center mb-3">
-              Сколько будет стоить
-            </h2>
-            <p className="text-sm text-center text-[var(--drawing-line-thin)] max-w-2xl mx-auto mb-10">
-              Финальные цены могут отличаться. Участники раннего доступа получат фиксированную скидку на&nbsp;год.
-            </p>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              {tariffs.map((t) => (
-                <div
-                  key={t.slug}
-                  className={`border-2 p-5 bg-[var(--drawing-bg)] ${
-                    t.slug === "basic"
-                      ? "border-[var(--drawing-accent)]"
-                      : "border-[var(--drawing-line)]"
-                  }`}
-                >
-                  <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-1">
-                    Тариф
-                  </p>
-                  <h3 className="font-gost-upright text-lg font-bold uppercase mb-3">{t.name}</h3>
-                  <p className="text-2xl font-black mb-1 text-[var(--drawing-accent)]">
-                    {formatPrice(t.price_monthly)}
-                    {t.price_monthly > 0 && (
-                      <span className="text-sm text-[var(--drawing-line-thin)] font-normal">
-                        {" "}
-                        / мес
-                      </span>
-                    )}
-                  </p>
-                  {t.price_one_off > 0 && (
-                    <p className="text-xs text-[var(--drawing-line-thin)] mb-3">
-                      или {formatPrice(t.price_one_off)} за&nbsp;разовый расчёт
-                    </p>
-                  )}
-                  <ul className="text-xs text-[var(--drawing-line-thin)] space-y-1.5 mt-4">
-                    <li>· до&nbsp;{t.max_projects} проектов</li>
-                    <li>· до&nbsp;{t.max_elements} элементов</li>
-                    {t.allow_nonlinear && <li>· нелинейный solver</li>}
-                    {t.allow_team && <li>· команда до&nbsp;{t.max_team_members} чел.</li>}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </section>
+          <TariffsSection tariffs={tariffs} />
         )}
 
         {/* Lead-magnet — наставничество */}

@@ -113,7 +113,8 @@ def _action_tariffs(conn) -> dict:
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute(
             "SELECT slug, name, price_monthly, price_yearly, price_one_off, "
-            "max_projects, max_elements, allow_nonlinear, allow_team, max_team_members "
+            "max_projects, max_elements, max_solves_per_month, "
+            "allow_nonlinear, allow_team, max_team_members "
             "FROM cae_tariffs WHERE is_public = TRUE ORDER BY sort_order"
         )
         items = [dict(r) for r in cur.fetchall()]
