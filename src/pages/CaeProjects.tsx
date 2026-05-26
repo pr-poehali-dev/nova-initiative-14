@@ -148,11 +148,21 @@ const CaeProjects = () => {
                 <div className="extension-line-h w-full my-3" />
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-gost text-[var(--drawing-line-thin)] uppercase tracking-wider">
-                    {p.project_type === "frame_3d"
-                      ? "Рама 3D"
-                      : p.project_type === "frame_2d"
-                      ? "Рама 2D"
-                      : p.project_type}
+                    {p.project_type === "frame_3d" ? (
+                      <>
+                        Рама 3D{" "}
+                        <span
+                          className="text-amber-700 normal-case"
+                          title="3D-режим в разработке — аналитическая верификация ещё не пройдена. Для дипломных расчётов используйте 2D."
+                        >
+                          (в разработке)
+                        </span>
+                      </>
+                    ) : p.project_type === "frame_2d" ? (
+                      "Рама 2D"
+                    ) : (
+                      p.project_type
+                    )}
                   </span>
                   <span className="font-gost text-[var(--drawing-line-thin)]">
                     {formatDate(p.updated_at)}

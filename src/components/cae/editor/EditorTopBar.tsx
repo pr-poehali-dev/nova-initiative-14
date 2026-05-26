@@ -66,7 +66,19 @@ const EditorTopBar = ({
           {projectName || "Без названия"}
         </p>
         <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)]">
-          {model.meta.dim === "2d" ? "Плоская рама 2D" : "Пространственная 3D"}
+          {model.meta.dim === "2d" ? (
+            "Плоская рама 2D"
+          ) : (
+            <>
+              Пространственная 3D{" "}
+              <span
+                className="text-amber-700"
+                title="3D-режим в разработке: аналитическая верификация результатов на эталонных задачах ещё не пройдена. Для дипломных расчётов используйте 2D-режим."
+              >
+                (в разработке)
+              </span>
+            </>
+          )}
           {dirty && " · несохранено"}
           {lastSaved && !dirty && ` · сохранено в ${lastSaved}`}
         </p>
