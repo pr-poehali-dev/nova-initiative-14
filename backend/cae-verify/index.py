@@ -407,11 +407,11 @@ def build_simply_supported_center_moment(L: float = 4.0, M0: float = 20000.0) ->
         |              L/2             |
 
     Точное решение (Тимошенко):
-        R_A = -M₀/L      (вниз слева)
-        R_B = +M₀/L      (вверх справа)
-        M(x < L/2) = R_A·x = -M₀·x/L
-        M(x > L/2) = R_A·x + M₀ = M₀·(1 - x/L)
-        |M_max|  = M₀/2  (по обеим сторонам от центра — скачок 2·M₀/2)
+        Σ M вокруг n1: M₀ + R_B·L = 0  →  R_B = -M₀/L
+        Σ Fy:          R_A + R_B = 0    →  R_A = +M₀/L
+        M(x < L/2) = R_A·x = M₀·x/L      (растёт от 0 до M₀/2)
+        M(x > L/2) = R_A·x - M₀ = M₀·(x/L - 1) (от -M₀/2 до 0)
+        |M_max|  = M₀/2  (по обеим сторонам от центра — скачок M₀)
 
     На самом деле, в узле приложения M₀ эпюра претерпевает скачок размером M₀,
     значит на двух элементах:
@@ -427,7 +427,7 @@ def build_simply_supported_center_moment(L: float = 4.0, M0: float = 20000.0) ->
         "scheme": "Simply supported + central moment",
         "expected": {
             "max_moment_nm": M0 / 2,
-            "reaction_fy_n": -M0 / L,
+            "reaction_fy_n": M0 / L,  # +M₀/L (см. вывод выше)
         },
         "model": {
             "meta": {"dim": "2d"},
@@ -884,6 +884,7 @@ def evaluate_test(test: dict) -> dict:
                 "abs_Mz_max_nm": round(el.get("max_values", {}).get("abs_Mz_max", 0), 2),
                 # Несколько точек эпюры Mz для отладки: x=0, середина, x=L
                 "mz_diagram_samples": _sample_diagram(el, "Mz"),
+                "qy_diagram_samples": _sample_diagram(el, "Qy"),
             }
             for el in response.get("elements", [])
         ],

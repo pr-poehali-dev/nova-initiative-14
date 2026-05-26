@@ -859,19 +859,24 @@ class FrameSolver:
                 else:
                     Na = -f_end[0]
                     Qya = -f_end[1]
-                    Mza_at_x = -f_end[2] - f_end[1] * x
+                    # Знак при f_end[1]*x был ошибочным (см. cae-verify):
+                    # давал момент, растущий по модулю вместо спадания
+                    # к нулю на свободном конце. Должен быть +, не −.
+                    # Это согласуется со 2D-аналогом 3D-формулы для My
+                    # (solver.py:833), которая всегда работала корректно.
+                    Mza_at_x = -f_end[2] + f_end[1] * x
                     for ld in self.loads:
                         if ld.element_id != el.id:
                             continue
                         if ld.kind == 'distributed_uniform':
                             qy = ld.load_start[1]
                             Qya -= qy * x
-                            Mza_at_x -= qy * x * x / 2
+                            Mza_at_x += qy * x * x / 2
                         elif ld.kind == 'in_span_point':
                             a = ld.position_ratio * L
                             if x > a:
                                 Qya -= ld.force[1]
-                                Mza_at_x -= ld.force[1] * (x - a)
+                                Mza_at_x += ld.force[1] * (x - a)
                                 Na -= ld.force[0]
                     N_arr.append(float(Na))
                     Qy_arr.append(float(Qya))
