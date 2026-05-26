@@ -3,12 +3,11 @@
     {
       "name": "Verify endpoint returns report",
       "method": "GET",
-      "path": "/",
+      "path": "/?test=0",
       "expectedStatus": 200,
       "expectedBody": {
-        "verdict": "string",
-        "passed": "number",
-        "total": "number"
+        "verdict": "PASS",
+        "total": 1
       },
       "bodyMatcher": "partial"
     },

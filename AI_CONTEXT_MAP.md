@@ -209,11 +209,25 @@
 Тесты `backend/cae-api/tests.json` покрывают 7 кейсов (CORS, отсутствие
 action, публичные эндпоинты, проверка авторизации). Все проходят после декомпозиции.
 
-## 10. Backend (НЕ рефакторился)
+## 10. Backend — cae-verify
+
+`backend/cae-verify/index.py` — тонкий handler (~78 строк) для прогона
+10 эталонных задач сопромата против production-солвера. Допуск 5%.
+
+| Файл | Ответственность |
+|---|---|
+| `backend/cae-verify/constants.py` | Сталь Ст3, двутавр I20 (ГОСТ 8239-89), `TOLERANCE=0.05`, `SOLVER_URL` (через ENV `CAE_SOLVER_URL`) |
+| `backend/cae-verify/test_models.py` | 10 build-функций: консоль, шарнирная балка, портал, момент в центре, 4-точечный изгиб, неразрезная балка, треугольная ферма. `all_tests()` — полный набор |
+| `backend/cae-verify/solver_client.py` | `call_solver(model)` — POST `?action=demo`. Парсеры: `find_max_abs_moment/axial`, `find_reaction`, `sum_reactions`, `sample_diagram`, `rel_error` |
+| `backend/cae-verify/evaluator.py` | `evaluate_test(test)` — сравнение солвера с аналитикой по 8 типам метрик + сырой дамп узловых реакций и пиковых усилий для отладки FAIL |
+
+Тесты `backend/cae-verify/tests.json` проходят. На реальных моделях:
+PASS 10/10, погрешность прогибов 1.5–3%, моменты и реакции совпадают точно.
+
+## 11. Backend (НЕ рефакторился)
 
 Эти файлы остаются монолитами — рефакторинг отложен из-за высокой
 чувствительности (JWT, OAuth, расчётный движок МКЭ):
 
 - `backend/cae-solver/solver.py` (~1065 строк) — FEM-решатель
 - `backend/sso-auth/index.py` (~1052 строки) — OAuth + JWT
-- `backend/cae-verify/index.py` (~973 строки) — тестовые модели
