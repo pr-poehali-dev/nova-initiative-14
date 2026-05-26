@@ -1,0 +1,133 @@
+"""
+SMTP-отправка через Яндекс 360 + HTML-шаблон письма подтверждения email.
+
+Особенность: SMTP-аутентификация под основным аккаунтом (YANDEX_SMTP_USER,
+обычно info@), у которого включена роль «Отправитель» для общего ящика.
+Заголовок From ставится от имени общего ящика no-reply@ (SSO_SMTP_FROM) —
+так Яндекс разрешает «Отправить как». Envelope-from = реальный smtp_login.
+
+Кириллические домены (диплом-инж.рф) преобразуются в Punycode через
+кодировку 'idna', иначе SMTP не примет адрес.
+"""
+import os
+import smtplib
+import ssl
+from email.message import EmailMessage
+from email.utils import formataddr, formatdate, make_msgid
+
+from config import SITE_URL, SMTP_HOST, SMTP_PORT
+
+
+def to_punycode_email(addr: str) -> str:
+    """Кириллический домен → ASCII (xn--…). Локальная часть остаётся как есть."""
+    if not addr or '@' not in addr:
+        return addr
+    local, domain = addr.rsplit('@', 1)
+    try:
+        domain_ascii = domain.encode('idna').decode('ascii')
+    except Exception:
+        domain_ascii = domain
+    return f'{local}@{domain_ascii}'
+
+
+def send_email(to: str, subject: str, html_body: str, text_body: str) -> bool:
+    """
+    Отправляет письмо через Яндекс 360 SMTP (SSL 465).
+    Не валит запрос при ошибке — возвращает False, ошибка пишется в stdout.
+    """
+    smtp_login_raw = os.environ.get('YANDEX_SMTP_USER') or os.environ.get('SSO_SMTP_USER')
+    smtp_password = os.environ.get('YANDEX_SMTP_PASSWORD') or os.environ.get('SSO_SMTP_PASSWORD')
+    smtp_from_raw = os.environ.get('SSO_SMTP_FROM') or os.environ.get('SSO_SMTP_USER') or smtp_login_raw
+
+    if not smtp_login_raw or not smtp_password:
+        print('[sso-auth] SMTP secrets not configured, email skipped')
+        return False
+
+    smtp_login = to_punycode_email(smtp_login_raw.strip())
+    smtp_from = to_punycode_email((smtp_from_raw or smtp_login_raw).strip())
+    recipient = to_punycode_email(to.strip())
+
+    msg = EmailMessage()
+    msg.set_charset('utf-8')
+    msg['Subject'] = subject
+    msg['From'] = formataddr(('Диплом-Инж.рф', smtp_from), charset='utf-8')
+    msg['To'] = recipient
+    msg['Reply-To'] = formataddr(('Диплом-Инж.рф · поддержка', smtp_login), charset='utf-8')
+    msg['Date'] = formatdate(localtime=True)
+    msg['Message-ID'] = make_msgid(domain=smtp_from.split('@')[-1])
+    msg.set_content(text_body)
+    msg.add_alternative(html_body, subtype='html')
+
+    try:
+        ctx = ssl.create_default_context()
+        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, context=ctx, timeout=20) as server:
+            server.login(smtp_login, smtp_password)
+            # Envelope-from = smtp_login (для DKIM/SPF Яндекс).
+            # Header From = no-reply@ (для отображения у пользователя).
+            server.send_message(msg, from_addr=smtp_login, to_addrs=[recipient])
+        print(f'[sso-auth] email sent: login={smtp_login} from_header={smtp_from} to={recipient}')
+        return True
+    except Exception as e:
+        print(f'[sso-auth] SMTP error: type={type(e).__name__} msg={e!r}')
+        return False
+
+
+def _verify_email_html(verify_url: str, greet: str) -> str:
+    """HTML-шаблон письма с фирменным дизайном (бордюр, шрифт Georgia, кнопка-CTA)."""
+    return f"""<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#faf8f0;font-family:Georgia,'Times New Roman',serif;color:#1a1a2e;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#faf8f0;padding:40px 20px;">
+<tr><td align="center">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="560" style="max-width:560px;background:#fdfcf6;border:1.5px solid #1a1a2e;">
+<tr><td style="padding:32px 36px;">
+<p style="margin:0 0 18px;font-family:'Courier New',monospace;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#3a3a5e;">
+Диплом-Инж.рф · SSO
+</p>
+<h1 style="margin:0 0 24px;font-size:22px;font-weight:700;color:#1a1a2e;border-bottom:2px solid #1a1a2e;padding-bottom:14px;">
+Подтверждение email
+</h1>
+<p style="font-size:15px;line-height:1.55;margin:0 0 14px;">{greet}</p>
+<p style="font-size:15px;line-height:1.55;margin:0 0 22px;">
+Вы зарегистрировались на сайте <strong>Диплом-Инж.рф</strong>. Чтобы активировать аккаунт, подтвердите ваш email — нажмите на кнопку ниже.
+</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px auto;">
+<tr><td style="background:#c0392b;border:2px solid #c0392b;">
+<a href="{verify_url}" target="_blank" style="display:inline-block;padding:14px 28px;font-family:'Courier New',monospace;font-size:13px;letter-spacing:0.15em;text-transform:uppercase;color:#ffffff;text-decoration:none;font-weight:700;">
+Подтвердить email
+</a>
+</td></tr></table>
+<p style="font-size:13px;line-height:1.55;margin:24px 0 8px;color:#3a3a5e;">
+Если кнопка не открывается, скопируйте ссылку в адресную строку браузера:
+</p>
+<p style="font-size:12px;line-height:1.55;margin:0 0 24px;word-break:break-all;font-family:'Courier New',monospace;color:#2c3e80;">
+{verify_url}
+</p>
+<p style="font-size:12px;line-height:1.55;margin:0 0 6px;color:#3a3a5e;">
+Ссылка действительна <strong>24 часа</strong>. Если вы не регистрировались — просто проигнорируйте это письмо.
+</p>
+<hr style="border:none;border-top:1px solid #d9d4be;margin:28px 0 18px;">
+<p style="font-size:11px;line-height:1.5;margin:0;color:#7a7a8e;font-family:'Courier News',monospace;">
+Это автоматическое письмо. Отвечать на него не нужно.<br>
+По любым вопросам пишите на <a href="mailto:info@xn----gtbhgbqhkfi.xn--p1ai" style="color:#c0392b;">info@диплом-инж.рф</a>
+</p>
+</td></tr></table>
+</td></tr></table>
+</body></html>"""
+
+
+def send_verify_email(to_email: str, full_name: str, raw_token: str) -> bool:
+    """Письмо с одноразовой ссылкой на /verify-email?token=…"""
+    verify_url = f"{SITE_URL}/verify-email?token={raw_token}"
+    greet = f"Здравствуйте, {full_name}!" if full_name else "Здравствуйте!"
+    subject = "Подтверждение email · Диплом-Инж.рф"
+
+    html = _verify_email_html(verify_url, greet)
+    text = (
+        f"{greet}\n\n"
+        f"Подтвердите email на сайте Диплом-Инж.рф, перейдя по ссылке:\n"
+        f"{verify_url}\n\n"
+        f"Ссылка действительна 24 часа. Если вы не регистрировались — проигнорируйте это письмо.\n\n"
+        f"— Диплом-Инж.рф\n"
+    )
+    return send_email(to_email, subject, html, text)

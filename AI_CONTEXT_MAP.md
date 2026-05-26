@@ -224,10 +224,24 @@ action, публичные эндпоинты, проверка авториза
 Тесты `backend/cae-verify/tests.json` проходят. На реальных моделях:
 PASS 10/10, погрешность прогибов 1.5–3%, моменты и реакции совпадают точно.
 
-## 11. Backend (НЕ рефакторился)
+## 11. Backend — sso-auth
 
-Эти файлы остаются монолитами — рефакторинг отложен из-за высокой
-чувствительности (JWT, OAuth, расчётный движок МКЭ):
+`backend/sso-auth/index.py` — тонкий router (~108 строк), маршрутизирует
+паролевую авторизацию и OAuth по `?action=`. Одно соединение с БД на запрос.
+
+| Файл | Ответственность |
+|---|---|
+| `backend/sso-auth/config.py` | TTL токенов (access 1ч, refresh 30д, verify 24ч), ISSUER, SMTP_HOST, OAUTH_REDIRECT_URI, OAUTH_STATE_TTL, реестр OAUTH_PROVIDERS (yandex/vk/google/mailru, у VK PKCE), CORS, EMAIL_RE |
+| `backend/sso-auth/crypto.py` | base64url, JWT HS256 sign/verify (с проверкой exp), PBKDF2-SHA256+pepper (200_000 итераций), refresh-токен (raw+SHA-256), PKCE S256 |
+| `backend/sso-auth/mailer.py` | Яндекс 360 SMTP_SSL:465, Punycode для кириллических доменов, фирменный HTML-шаблон `send_verify_email()` |
+| `backend/sso-auth/db_helpers.py` | `json_response`, `client_ip/user_agent`, `get_user_payload` (user+roles), `issue_tokens` (access+refresh с сохранением в БД), `create_verify_token`, `log_attempt`, `check_rate_limit` (10/IP/10мин) |
+| `backend/sso-auth/actions.py` | Паролевая авторизация: `action_register/login/refresh/userinfo/logout/verify_email/resend_verification`. После verify-email автоматически логин. |
+| `backend/sso-auth/oauth.py` | `http_post_form/get_json`, `oauth_provider_enabled`, `exchange_code`, `fetch_userinfo` (нормализация yandex/google/vk/mailru), `login_or_register_by_identity` (с обработкой конфликта email → 409), `action_oauth_providers/start/callback/vk_sdk` |
+
+Тесты `backend/sso-auth/tests.json` (8 кейсов: CORS, missing-action, invalid email, weak password, missing credentials, non-existent account, no token для userinfo/refresh) — **8/8 PASS** после декомпозиции.
+
+## 12. Backend (НЕ рефакторился)
+
+Остался один монолит — расчётный движок МКЭ, требует особой осторожности:
 
 - `backend/cae-solver/solver.py` (~1065 строк) — FEM-решатель
-- `backend/sso-auth/index.py` (~1052 строки) — OAuth + JWT
