@@ -25,9 +25,31 @@
 
 | Файл | Ответственность |
 |---|---|
-| `src/lib/cae/analytic-deflection.ts` | `computeAnalytic(model)` — формульная проверка прогиба для типовых схем (консоль с P, балка с q, балка с P по центру). Используется в `EditorResultsPanel`. |
-| `src/lib/cae-checks.ts` | `runChecks()` — проверки прочности и устойчивости (не трогалось). |
-| `src/lib/cae-industry.ts` | `getIndustrySpec()` — нормативы прогиба по отраслям (не трогалось). |
+| `src/lib/cae/analytic-deflection.ts` | `computeAnalytic(model)` — формульная проверка прогиба для типовых схем (консоль с P, балка с q, балка с P по центру). |
+| `src/lib/cae-industry.ts` | `getIndustrySpec()` — нормативы прогиба по отраслям. |
+
+### Проверки расчёта (η = actual / allowable)
+
+`@/lib/cae-checks` — barrel + orchestrator `runChecks(model, result)`.
+
+| Файл | Что проверяет |
+|---|---|
+| `src/lib/cae/checks/shared.ts` | Типы `ElementCheck`, `CheckKind`, `CheckStatus`; `classify(util)`, `utilizationColor()`, `recomputeStress()`, `theoryLabel()` |
+| `src/lib/cae/checks/deflection.ts` | Прогиб: f ≤ [f] (отраслевые нормы из cae-industry) |
+| `src/lib/cae/checks/strength.ts` | Прочность: σ_экв ≤ σ_т/n (Мизес / Треска / 1-я теория) |
+| `src/lib/cae/checks/buckling.ts` | Устойчивость сжатых стержней: σ ≤ φ·[σ] (μ, λ, φ по СП 16.13330) |
+
+### Валидация модели до запуска solver
+
+`@/lib/cae-validate` — barrel + orchestrator `validateModel(model)`.
+
+| Файл | Что проверяет |
+|---|---|
+| `src/lib/cae/validate/types.ts` | Типы `ValidationIssue`, `IssueLevel`, `IssueTargetKind`, константа `EPS` |
+| `src/lib/cae/validate/global.ts` | Наличие узлов/элементов/опор/нагрузок, кинематическая изменяемость (≥3 DOF в 2D) |
+| `src/lib/cae/validate/nodes.ts` | Совпадающие координаты, висячие узлы (orphan_node) |
+| `src/lib/cae/validate/elements.ts` | Ссылки на узлы, петли, нулевая длина, отсутствие материала/сечения |
+| `src/lib/cae/validate/bcs-loads.ts` | Опоры без узла, нагрузки без узла/элемента, нулевые нагрузки |
 
 ---
 
@@ -87,6 +109,28 @@
 | `src/components/cae/editor/panels/results/AnalyticCheck.tsx` | Сравнение КЭМ с аналит. формулой + цветовая шкала Δ% |
 | `src/components/cae/editor/panels/results/ReactionsTable.tsx` | Таблица реакций опор Fx, Fy, Mz |
 | `src/components/cae/editor/panels/results/DiagramControls.tsx` | Переключатели «вид схемы / тип эпюры / масштаб» |
+
+### Канва — слой стержней
+
+`src/components/cae/canvas/CanvasElements.tsx` — композитор (~95 строк).
+
+| Файл | Что рисует |
+|---|---|
+| `src/components/cae/canvas/elements/ElementLines.tsx` | Видимая линия + невидимая зона клика (14 px), hover/selection |
+| `src/components/cae/canvas/elements/ElementLabels.tsx` | Подписи e1, e2 … на середине стержня (с белой плашкой, перетаскиваемые) |
+| `src/components/cae/canvas/elements/ElementHinges.tsx` | Маркеры шарниров (Mz=0) — белые кружки у узлов |
+| `src/components/cae/canvas/elements/DeformedShape.tsx` | Пунктирная кривая прогиба (uy_local из эпюры + автомасштаб) |
+| `src/components/cae/canvas/elements/DrawElementPreview.tsx` | Preview-линия от первого узла до курсора в режиме draw-element |
+
+### Канва — слой нагрузок
+
+`src/components/cae/canvas/CanvasLoads.tsx` — диспетчер по типу (~60 строк).
+
+| Файл | Что рисует |
+|---|---|
+| `src/components/cae/canvas/loads/NodalLoad.tsx` | Узловая сила + момент Mz (круговая стрелка) |
+| `src/components/cae/canvas/loads/InSpanLoad.tsx` | Точечная сила в пролёте элемента |
+| `src/components/cae/canvas/loads/DistributedLoad.tsx` | Равномерно-распределённая q (гребёнка стрелок) |
 
 ---
 
