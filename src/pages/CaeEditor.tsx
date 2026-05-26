@@ -12,6 +12,9 @@ import EditorIssuesPanel from "@/components/cae/editor/EditorIssuesPanel";
 import KeyboardHintsDialog from "@/components/cae/editor/KeyboardHintsDialog";
 import EditorTutorial, { isTutorialCompleted } from "@/components/cae/editor/EditorTutorial";
 import EditorWelcomeDialog, { isWelcomeShown } from "@/components/cae/editor/EditorWelcomeDialog";
+import EditorAnalysisSettingsDialog from "@/components/cae/editor/EditorAnalysisSettingsDialog";
+import EditorChecksPanel from "@/components/cae/editor/EditorChecksPanel";
+import { DEFAULT_ANALYSIS_SETTINGS } from "@/lib/cae-model";
 import { useCaeProject } from "./cae-editor/useCaeProject";
 import { useCaeActions } from "./cae-editor/useCaeActions";
 import { useCaeSolver } from "./cae-editor/useCaeSolver";
@@ -50,6 +53,7 @@ const CaeEditor = () => {
   const [helpOpen, setHelpOpen] = useState(false);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [welcomeOpen, setWelcomeOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // При первом визите на пустой проект показываем приветственный экран.
   // Туториал автозапускаем только если приветствие уже было показано (повторный визит)
@@ -209,10 +213,17 @@ const CaeEditor = () => {
               </button>
               <button
                 onClick={() => setHelpOpen(true)}
-                className="p-2 hover:bg-[var(--drawing-paper)]"
+                className="p-2 border-r border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)]"
                 title="Горячие клавиши (?)"
               >
                 <Icon name="Keyboard" size={16} />
+              </button>
+              <button
+                onClick={() => setSettingsOpen(true)}
+                className="p-2 hover:bg-[var(--drawing-paper)]"
+                title="Настройки расчёта: отрасль, теория прочности, коэф. запаса"
+              >
+                <Icon name="Settings" size={16} />
               </button>
             </div>
             <FrameCanvas
@@ -278,6 +289,16 @@ const CaeEditor = () => {
             />
             </div>
 
+            <EditorChecksPanel
+              model={model}
+              result={result}
+              onFocusElement={(id) => {
+                setSelectedElementIds([id]);
+                setSelectedNodeIds([]);
+              }}
+              onOpenSettings={() => setSettingsOpen(true)}
+            />
+
             <div data-tutorial="results">
             <EditorResultsPanel
               result={result}
@@ -320,6 +341,12 @@ const CaeEditor = () => {
         onClose={() => setWelcomeOpen(false)}
         onStartTutorial={() => setTutorialOpen(true)}
         onLoadTemplate={(tpl) => updateModel(tpl)}
+      />
+      <EditorAnalysisSettingsDialog
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        settings={model.analysis_settings ?? DEFAULT_ANALYSIS_SETTINGS}
+        onChange={(s) => updateModel({ ...model, analysis_settings: s })}
       />
     </>
   );

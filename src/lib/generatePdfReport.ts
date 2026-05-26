@@ -12,6 +12,9 @@
  */
 import { jsPDF } from "jspdf";
 import type { FrameModel, SolverResponse } from "./cae-model";
+import { runChecks, type ElementCheck } from "./cae-checks";
+import { getIndustrySpec } from "./cae-industry";
+import { DEFAULT_ANALYSIS_SETTINGS } from "./cae-model";
 
 // ── Загрузка шрифта с кириллицей ──────────────────────────────────────────
 // Стандартные шрифты jsPDF (Helvetica/Times/Courier) не поддерживают кириллицу.
@@ -989,7 +992,10 @@ export async function generatePdfReport(
     }
   }
 
-  // ── Страницы 2 и 3: Эпюры (по 2 на странице — крупно и читаемо) ───────
+  // ── Страница «Проверки конструкции» ───────────────────────────────────
+  drawChecksPage(doc, model, result, projectName, FONT, PW, PH, ML, MR, MT, MB, CW);
+
+  // ── Страницы Эпюр (по 2 на странице — крупно и читаемо) ───────────────
   const epyKinds: DiagramKind[] = ["N", "Qy", "Mz", "uy"];
   const pageTitles = ["Эпюры N, Q", "Эпюра M и прогибы"];
   const epyPerPage = 2;
@@ -1031,4 +1037,219 @@ export async function generatePdfReport(
   // Сохранение
   const safeName = (projectName || "report").replace(/[^a-zа-яё0-9_\- ]/gi, "_").slice(0, 40);
   doc.save(`${safeName}_отчёт.pdf`);
+}
+
+// ── Страница «Проверки конструкции» ───────────────────────────────────────
+function drawChecksPage(
+  doc: jsPDF,
+  model: FrameModel,
+  result: SolverResponse,
+  projectName: string,
+  FONT: string,
+  PW: number,
+  PH: number,
+  ML: number,
+  MR: number,
+  MT: number,
+  MB: number,
+  CW: number,
+) {
+  const settings = model.analysis_settings ?? DEFAULT_ANALYSIS_SETTINGS;
+  const summary = runChecks(model, result);
+  if (summary.checks.length === 0) return;
+
+  doc.addPage();
+  // Штамп
+  doc.setFillColor(...C.ink);
+  doc.rect(ML, MT, CW, 8, "F");
+  doc.setFont(FONT, "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(255, 255, 255);
+  doc.text(`${projectName || "Расчёт"} · Проверки конструкции`, ML + 3, MT + 5.5);
+  doc.setFont(FONT, "normal");
+  doc.setFontSize(7);
+  doc.text("диплом-инж.рф", PW - MR - 3, MT + 5.5, { align: "right" });
+
+  let y = MT + 14;
+
+  // ── Настройки расчёта (что использовалось) ──
+  const industry = getIndustrySpec(settings.industry);
+  doc.setFont(FONT, "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(...C.ink);
+  doc.text("ПАРАМЕТРЫ РАСЧЁТА", ML, y);
+  hline(doc, ML, ML + CW, y + 1.5, 0.3);
+  y += 5;
+
+  doc.setFont(FONT, "normal");
+  doc.setFontSize(7);
+  doc.setTextColor(...C.ink);
+
+  const theoryName =
+    settings.strength_theory === "tresca"
+      ? "3-я теория (Треска): σ_экв = √(σ² + 4τ²)"
+      : settings.strength_theory === "normal"
+        ? "1-я теория (нормальные напряжения)"
+        : "4-я теория (Мизес): σ_экв = √(σ² + 3τ²)";
+
+  const params: [string, string][] = [
+    ["Отрасль применения", industry.label],
+    ["Норматив [f]", industry.deflection_label],
+    ["Источник", industry.source],
+    ["Теория прочности", theoryName],
+    ["Коэффициент запаса n", settings.safety_factor.toFixed(2)],
+  ];
+  for (const [k, v] of params) {
+    doc.setTextColor(...C.thin);
+    doc.text(k, ML, y);
+    doc.setTextColor(...C.ink);
+    doc.text(v, ML + 55, y);
+    y += 4.2;
+  }
+
+  y += 4;
+
+  // ── Сводка по результатам проверок ──
+  doc.setFont(FONT, "bold");
+  doc.setFontSize(8);
+  doc.text("ИТОГ ПРОВЕРОК", ML, y);
+  hline(doc, ML, ML + CW, y + 1.5, 0.3);
+  y += 5;
+
+  doc.setFont(FONT, "normal");
+  doc.setFontSize(7);
+  const overallStatus =
+    summary.failed_count > 0 ? "НЕ ПРОХОДИТ" : summary.warn_count > 0 ? "БЛИЗКО К ПРЕДЕЛУ" : "ПРОХОДИТ";
+  const overallColor: [number, number, number] =
+    summary.failed_count > 0
+      ? [200, 30, 30]
+      : summary.warn_count > 0
+        ? [201, 136, 0]
+        : [26, 138, 90];
+
+  doc.setTextColor(...C.thin);
+  doc.text("Результат", ML, y);
+  doc.setFont(FONT, "bold");
+  doc.setTextColor(...overallColor);
+  doc.text(overallStatus, ML + 55, y);
+  doc.setFont(FONT, "normal");
+  y += 4.2;
+
+  doc.setTextColor(...C.thin);
+  doc.text("Макс. коэф. использования η_max", ML, y);
+  doc.setTextColor(...C.ink);
+  doc.text(summary.max_utilization.toFixed(2), ML + 55, y);
+  y += 4.2;
+
+  doc.setTextColor(...C.thin);
+  doc.text("Проверок выполнено", ML, y);
+  doc.setTextColor(...C.ink);
+  doc.text(
+    `${summary.checks.length} (OK: ${summary.ok_count}, предупр.: ${summary.warn_count}, не прошло: ${summary.failed_count})`,
+    ML + 55,
+    y,
+  );
+  y += 6;
+
+  // ── Таблица проверок ──
+  doc.setFont(FONT, "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(...C.ink);
+  doc.text("ТАБЛИЦА ПРОВЕРОК ПО ЭЛЕМЕНТАМ", ML, y);
+  hline(doc, ML, ML + CW, y + 1.5, 0.3);
+  y += 5;
+
+  // Колонки
+  const cCols = [
+    { label: "Элем.", x: ML, w: CW * 0.08, align: "left" as const },
+    { label: "Проверка", x: ML + CW * 0.08, w: CW * 0.15, align: "left" as const },
+    { label: "Факт", x: ML + CW * 0.23, w: CW * 0.12, align: "right" as const },
+    { label: "Допуск.", x: ML + CW * 0.35, w: CW * 0.12, align: "right" as const },
+    { label: "Ед.", x: ML + CW * 0.47, w: CW * 0.06, align: "left" as const },
+    { label: "η", x: ML + CW * 0.53, w: CW * 0.07, align: "right" as const },
+    { label: "Статус", x: ML + CW * 0.60, w: CW * 0.40, align: "left" as const },
+  ];
+
+  y = tableHeader(doc, cCols, y);
+
+  const formatValue = (c: ElementCheck): string => {
+    if (c.unit === "МПа") return (c.actual / 1e6).toFixed(1);
+    return (c.actual * 1000).toFixed(2);
+  };
+  const formatAllow = (c: ElementCheck): string => {
+    if (c.unit === "МПа") return (c.allowable / 1e6).toFixed(1);
+    return (c.allowable * 1000).toFixed(2);
+  };
+  const unitLabel = (c: ElementCheck): string => (c.unit === "МПа" ? "МПа" : "мм");
+
+  summary.checks.forEach((c, i) => {
+    const statusText =
+      c.status === "fail" ? "Не проходит" : c.status === "warn" ? "На пределе" : "OK";
+    const statusColor: [number, number, number] =
+      c.status === "fail"
+        ? [200, 30, 30]
+        : c.status === "warn"
+          ? [201, 136, 0]
+          : [26, 138, 90];
+
+    if (y > PH - MB - 6) return;
+
+    // Фон полоски
+    if (i % 2 === 0) {
+      doc.setFillColor(248, 245, 240);
+      doc.rect(ML, y - 3, CW, 4.5, "F");
+    }
+
+    doc.setFont(FONT, "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(...C.ink);
+    doc.text(c.element_id, cCols[0].x, y);
+    doc.text(c.title, cCols[1].x, y);
+    doc.text(formatValue(c), cCols[2].x + cCols[2].w, y, { align: "right" });
+    doc.text(formatAllow(c), cCols[3].x + cCols[3].w, y, { align: "right" });
+    doc.text(unitLabel(c), cCols[4].x, y);
+
+    doc.setFont(FONT, "bold");
+    doc.setTextColor(...statusColor);
+    doc.text(c.utilization.toFixed(2), cCols[5].x + cCols[5].w, y, { align: "right" });
+    doc.text(statusText, cCols[6].x, y);
+
+    y += 4.5;
+  });
+
+  y += 4;
+  hline(doc, ML, ML + CW, y, 0.3);
+  y += 4;
+
+  // ── Пояснение по формулам ──
+  doc.setFont(FONT, "bold");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...C.ink);
+  doc.text("РАСЧЁТНЫЕ ФОРМУЛЫ", ML, y);
+  y += 4;
+  doc.setFont(FONT, "normal");
+  doc.setFontSize(6.5);
+  doc.setTextColor(...C.thin);
+  const explanations = [
+    "Прогиб: f_max ≤ [f] = L / k, где k берётся по выбранной отрасли. η_def = f_max / [f].",
+    `Прочность: σ_экв ≤ [σ] = σ_т / n = σ_т / ${settings.safety_factor.toFixed(2)}. η_str = σ_экв / [σ].`,
+    "η ≤ 1 — конструкция проходит проверку. 0,85 < η ≤ 1 — на пределе. η > 1 — не проходит.",
+    "Источник теории прочности: Феодосьев В.И. «Сопротивление материалов»; Биргер «Расчёт деталей машин».",
+  ];
+  for (const line of explanations) {
+    if (y > PH - MB - 4) break;
+    doc.text(line, ML, y);
+    y += 3.2;
+  }
+
+  // Нижний колонтитул страницы
+  doc.setFont(FONT, "normal");
+  doc.setFontSize(6);
+  doc.setTextColor(...C.thin);
+  doc.text(
+    `Сформировано: ${new Date().toLocaleString("ru-RU")} · диплом-инж.рф`,
+    PW / 2,
+    PH - 4,
+    { align: "center" },
+  );
 }

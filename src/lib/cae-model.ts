@@ -68,6 +68,41 @@ export interface ModelLoad {
   load_local_per_length?: [number, number, number];
 }
 
+/**
+ * Тип расчёта прочности — какую теорию использовать для эквивалентных напряжений.
+ *  - tresca:  σ_экв = √(σ² + 4τ²)  — 3-я теория, максимальных касательных
+ *  - mises:   σ_экв = √(σ² + 3τ²)  — 4-я теория, энергетическая (по умолчанию)
+ *  - normal:  σ_экв = |σ|          — для хрупких материалов (1-я теория)
+ */
+export type StrengthTheory = "tresca" | "mises" | "normal";
+
+/**
+ * Отрасль применения конструкции — определяет норматив допускаемого прогиба [f].
+ * Список взят из реальных машиностроительных норм и справочников.
+ */
+export type IndustryKind =
+  | "general"
+  | "lifting"
+  | "machine_tool"
+  | "transport"
+  | "shaft"
+  | "custom";
+
+export interface AnalysisSettings {
+  /** Отрасль — выбирает допускаемый прогиб по умолчанию */
+  industry: IndustryKind;
+  /** Теория прочности для расчёта σ_экв */
+  strength_theory: StrengthTheory;
+  /** Коэффициент запаса прочности n (σ_экв ≤ σ_т / n). По умолчанию 1.5 */
+  safety_factor: number;
+  /** Для industry=custom: знаменатель отношения L/k (250 → [f]=L/250). null если не задано */
+  custom_deflection_divisor: number | null;
+  /** Учитывать ли проверку прогибов */
+  check_deflection: boolean;
+  /** Учитывать ли проверку прочности */
+  check_strength: boolean;
+}
+
 export interface FrameModel {
   meta: { dim: "2d" | "3d" };
   materials: Material[];
@@ -77,7 +112,18 @@ export interface FrameModel {
   boundary_conditions: BoundaryCondition[];
   loads: ModelLoad[];
   analysis_options?: { diagram_subdivisions?: number };
+  analysis_settings?: AnalysisSettings;
 }
+
+/** Дефолтные настройки расчёта — общее машиностроение, Мизес, n=1.5 */
+export const DEFAULT_ANALYSIS_SETTINGS: AnalysisSettings = {
+  industry: "general",
+  strength_theory: "mises",
+  safety_factor: 1.5,
+  custom_deflection_divisor: null,
+  check_deflection: true,
+  check_strength: true,
+};
 
 // ===== Дефолты =====
 
@@ -115,6 +161,7 @@ export function emptyModel(dim: "2d" | "3d" = "2d"): FrameModel {
     boundary_conditions: [],
     loads: [],
     analysis_options: { diagram_subdivisions: 20 },
+    analysis_settings: { ...DEFAULT_ANALYSIS_SETTINGS },
   };
 }
 
