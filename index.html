@@ -109,17 +109,34 @@
           attempt: attempts() + 1,
           page_url: window.location.href
         });
+        // Дублируем И beacon, И fetch — потому что sendBeacon тихо проглатывает
+        // ошибки CORS/сети, а нам критично гарантированно дотащить лог до БД.
         if (navigator.sendBeacon) {
-          var blob = new Blob([payload], { type: "application/json" });
-          navigator.sendBeacon(LOG_URL, blob);
-        } else {
+          try {
+            var blob = new Blob([payload], { type: "application/json" });
+            navigator.sendBeacon(LOG_URL, blob);
+          } catch (e) { /* ignore */ }
+        }
+        // Параллельно fetch с keepalive — самый надёжный вариант.
+        try {
           fetch(LOG_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: payload,
-            keepalive: true
+            keepalive: true,
+            mode: "cors"
           }).catch(function () {});
-        }
+        } catch (e) { /* ignore */ }
+      } catch (e) { /* ignore */ }
+    }
+
+    // Глобальный сборщик ВСЕХ ошибок страницы (не только chunk-error).
+    // Пишем всё в БД, чтобы я мог увидеть, что именно случается у пользователя.
+    function logAnyError(triggerType, msg, extra) {
+      try {
+        var full = String(msg || "");
+        if (extra) full += " | " + JSON.stringify(extra).slice(0, 400);
+        logRecovery(triggerType, full);
       } catch (e) { /* ignore */ }
     }
 
@@ -176,12 +193,16 @@
       return /Loading chunk|Failed to fetch dynamically imported module|Importing a module script failed|ChunkLoadError|error loading dynamically imported module/i.test(s);
     }
     window.addEventListener("error", function (e) {
-      var msg = e && (e.message || (e.error && e.error.message));
+      var msg = (e && (e.message || (e.error && e.error.message))) || "unknown_error";
+      var src = e && (e.filename || (e.target && (e.target.src || e.target.href)));
+      // Логируем КАЖДУЮ window-ошибку — это даст полную картину в БД.
+      logAnyError("window_error_any", msg, { src: src });
       if (isChunkError(msg)) silentReload("chunk_error", msg);
-    });
+    }, true); // capture = true, чтобы ловить и ошибки загрузки ресурсов (<script>, <link>)
     window.addEventListener("unhandledrejection", function (e) {
       var r = e && e.reason;
-      var msg = r && (r.message || r);
+      var msg = (r && (r.message || r)) || "unhandled_rejection_unknown";
+      logAnyError("unhandled_rejection_any", msg);
       if (isChunkError(msg)) silentReload("chunk_error", msg);
     });
 
@@ -252,10 +273,8 @@
             }).catch(function () {});
           }, 2000);
         }
-        // Проверка каждые 60 секунд: появилась ли новая версия?
-        setInterval(function () {
-          // Не дёргаем сеть, если вкладка скрыта — телефоны и так экономят.
-          if (document.hidden) return;
+        // Универсальная функция «сверить версию и при необходимости релоадить».
+        var checkVersion = function (trigger) {
           fetchFreshHead().then(function (current) {
             if (!current) return;
             var prev = sessionStorage.getItem(VERSION_KEY);
@@ -264,12 +283,24 @@
               return;
             }
             if (prev !== current) {
-              // На сервере новая версия — тихо обновляемся.
               try { sessionStorage.setItem(VERSION_KEY, current); } catch (e) { /* ignore */ }
-              silentReload("version_mismatch", "index.html changed: " + prev + " -> " + current);
+              silentReload(trigger, "index.html changed: " + prev + " -> " + current);
             }
           }).catch(function () {});
-        }, 60000);
+        };
+        // 1) Каждые 30 секунд (раньше было 60) — быстрее ловим деплой.
+        setInterval(function () {
+          if (document.hidden) return;
+          checkVersion("version_mismatch");
+        }, 30000);
+        // 2) При возврате во вкладку — твой главный сценарий "после нового билда".
+        document.addEventListener("visibilitychange", function () {
+          if (!document.hidden) checkVersion("version_mismatch_visibility");
+        });
+        // 3) При фокусе окна (Alt-Tab из другого приложения).
+        window.addEventListener("focus", function () {
+          checkVersion("version_mismatch_focus");
+        });
         // И один раз сразу — через 5 сек после старта (поймаем "ты пришёл со
         // старым кэшем", если он есть).
         setTimeout(function () {
