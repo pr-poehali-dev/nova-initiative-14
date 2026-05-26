@@ -187,14 +187,16 @@ const FrameCanvas = ({
         svgRef={svgRef}
       />
 
-      <CanvasDiagrams
-        model={model}
-        result={result}
-        showDiagram={showDiagram}
-        diagramScale={diagramScale}
-        toScreenX={toScreenX}
-        toScreenY={toScreenY}
-      />
+      <g data-pdf-hide="diagrams">
+        <CanvasDiagrams
+          model={model}
+          result={result}
+          showDiagram={showDiagram}
+          diagramScale={diagramScale}
+          toScreenX={toScreenX}
+          toScreenY={toScreenY}
+        />
+      </g>
 
       <CanvasOverlays
         model={model}

@@ -107,7 +107,10 @@ const C = {
 
 const fmt = (v: number, d = 2) => {
   if (!isFinite(v)) return "—";
-  if (Math.abs(v) >= 100000) return v.toExponential(2);
+  const a = Math.abs(v);
+  if (a >= 1e9) return `${(v / 1e9).toFixed(1)} G`;
+  if (a >= 1e6) return `${(v / 1e6).toFixed(2)} M`;
+  if (a >= 1e3) return `${(v / 1e3).toFixed(2)} k`;
   return v.toFixed(d);
 };
 
@@ -1252,11 +1255,15 @@ function drawSingleElementUnfolded(
 function fmtNum(v: number): string {
   const a = Math.abs(v);
   if (a === 0) return "0";
-  if (a >= 1e6) return `${(v / 1e6).toFixed(2)}·10⁶`;
-  if (a >= 1e3) return `${(v / 1e3).toFixed(2)}·10³`;
+  if (a >= 1e6) return `${(v / 1e6).toFixed(2)} M`;
+  if (a >= 1e3) return `${(v / 1e3).toFixed(2)} k`;
   if (a >= 1) return v.toFixed(2);
-  if (a >= 1e-2) return v.toFixed(3);
-  return v.toExponential(2);
+  if (a >= 0.01) return v.toFixed(3);
+  if (a >= 0.001) return v.toFixed(4);
+  // Очень малые числа: записываем как "N.NN x 10^-P" без спецсимволов
+  const exp = Math.floor(Math.log10(a));
+  const mantissa = v / Math.pow(10, exp);
+  return `${mantissa.toFixed(2)}x10^${exp}`;
 }
 
 // Старая функция drawDiagram (графики X–Y по длине балки) удалена.
@@ -1547,9 +1554,13 @@ async function renderSchemeFromSvg(
     clone.setAttribute("width", String(w));
     clone.setAttribute("height", String(h));
 
+    // Скрываем слой эпюр — в первой схеме PDF нужна только расчётная схема
+    // без наложенных диаграмм N/Q/M/uy. Слой помечен data-pdf-hide="diagrams".
+    clone.querySelectorAll("[data-pdf-hide]").forEach((el) => {
+      (el as SVGElement).style.display = "none";
+    });
+
     // Прячем подсказку курсора (текст с координатами курсора снизу) — она не нужна в отчёте.
-    // Удаляем элементы с pointerEvents="none" и текст координат курсора.
-    // В CanvasOverlays курсорный текст помечен координатами 'x=…'. Удаляем простой эвристикой:
     clone.querySelectorAll("text").forEach((t) => {
       const txt = t.textContent || "";
       if (/^x=\s*-?\d/.test(txt) && /масштаб/.test(txt)) t.remove();
