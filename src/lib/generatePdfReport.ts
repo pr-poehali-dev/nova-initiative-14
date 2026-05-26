@@ -1157,32 +1157,42 @@ function drawChecksPage(
   doc.setTextColor(...C.ink);
   doc.text("ТАБЛИЦА ПРОВЕРОК ПО ЭЛЕМЕНТАМ", ML, y);
   hline(doc, ML, ML + CW, y + 1.5, 0.3);
-  y += 5;
+  y += 4;
 
-  // Колонки
+  // Колонки — суммарно 1.00 от CW, без перехлёста, с явными границами и единицами в значениях
   const cCols = [
-    { label: "Элем.", x: ML, w: CW * 0.08, align: "left" as const },
-    { label: "Проверка", x: ML + CW * 0.08, w: CW * 0.15, align: "left" as const },
-    { label: "Факт", x: ML + CW * 0.23, w: CW * 0.12, align: "right" as const },
-    { label: "Допуск.", x: ML + CW * 0.35, w: CW * 0.12, align: "right" as const },
-    { label: "Ед.", x: ML + CW * 0.47, w: CW * 0.06, align: "left" as const },
-    { label: "η", x: ML + CW * 0.53, w: CW * 0.07, align: "right" as const },
-    { label: "Статус", x: ML + CW * 0.60, w: CW * 0.40, align: "left" as const },
+    { label: "Элем.",     x: ML,                w: CW * 0.08, align: "left"  as const },
+    { label: "Проверка",  x: ML + CW * 0.08,    w: CW * 0.17, align: "left"  as const },
+    { label: "Факт",      x: ML + CW * 0.25,    w: CW * 0.17, align: "right" as const },
+    { label: "Допускаемое",x: ML + CW * 0.42,   w: CW * 0.17, align: "right" as const },
+    { label: "η",         x: ML + CW * 0.59,    w: CW * 0.10, align: "right" as const },
+    { label: "Статус",    x: ML + CW * 0.69,    w: CW * 0.31, align: "left"  as const },
   ];
 
-  y = tableHeader(doc, cCols, y);
+  const headerRowH = 6;
+  // Шапка таблицы — фон и текст внутри одного прямоугольника
+  doc.setFillColor(...C.grid);
+  doc.rect(ML, y, CW, headerRowH, "F");
+  doc.setFont(FONT, "bold");
+  doc.setFontSize(7);
+  doc.setTextColor(...C.ink);
+  cCols.forEach((c) => {
+    const tx =
+      c.align === "right" ? c.x + c.w - 1.5 : c.align === "center" ? c.x + c.w / 2 : c.x + 1.5;
+    doc.text(c.label, tx, y + headerRowH - 1.8, { align: c.align });
+  });
+  y += headerRowH;
 
-  const formatValue = (c: ElementCheck): string => {
-    if (c.unit === "МПа") return (c.actual / 1e6).toFixed(1);
-    return (c.actual * 1000).toFixed(2);
+  // Форматтеры значения с единицей в одной строке (например: «26.67 мм», «230.0 МПа»)
+  const formatValueWithUnit = (val: number, unit: string): string => {
+    if (unit === "МПа") return `${(val / 1e6).toFixed(1)} МПа`;
+    return `${(val * 1000).toFixed(2)} мм`;
   };
-  const formatAllow = (c: ElementCheck): string => {
-    if (c.unit === "МПа") return (c.allowable / 1e6).toFixed(1);
-    return (c.allowable * 1000).toFixed(2);
-  };
-  const unitLabel = (c: ElementCheck): string => (c.unit === "МПа" ? "МПа" : "мм");
 
+  const rowH = 5;
   summary.checks.forEach((c, i) => {
+    if (y > PH - MB - 14) return;
+
     const statusText =
       c.status === "fail" ? "Не проходит" : c.status === "warn" ? "На пределе" : "OK";
     const statusColor: [number, number, number] =
@@ -1192,30 +1202,37 @@ function drawChecksPage(
           ? [201, 136, 0]
           : [26, 138, 90];
 
-    if (y > PH - MB - 6) return;
-
-    // Фон полоски
+    // Зебра — фон на всю строку
     if (i % 2 === 0) {
       doc.setFillColor(248, 245, 240);
-      doc.rect(ML, y - 3, CW, 4.5, "F");
+      doc.rect(ML, y, CW, rowH, "F");
     }
+
+    const ty = y + rowH - 1.8;
 
     doc.setFont(FONT, "normal");
     doc.setFontSize(7);
     doc.setTextColor(...C.ink);
-    doc.text(c.element_id, cCols[0].x, y);
-    doc.text(c.title, cCols[1].x, y);
-    doc.text(formatValue(c), cCols[2].x + cCols[2].w, y, { align: "right" });
-    doc.text(formatAllow(c), cCols[3].x + cCols[3].w, y, { align: "right" });
-    doc.text(unitLabel(c), cCols[4].x, y);
+    doc.text(c.element_id, cCols[0].x + 1.5, ty);
+    doc.text(c.title, cCols[1].x + 1.5, ty);
+    doc.text(formatValueWithUnit(c.actual, c.unit), cCols[2].x + cCols[2].w - 1.5, ty, { align: "right" });
+    doc.text(formatValueWithUnit(c.allowable, c.unit), cCols[3].x + cCols[3].w - 1.5, ty, { align: "right" });
 
+    // η — крупно, цветом статуса
     doc.setFont(FONT, "bold");
     doc.setTextColor(...statusColor);
-    doc.text(c.utilization.toFixed(2), cCols[5].x + cCols[5].w, y, { align: "right" });
-    doc.text(statusText, cCols[6].x, y);
+    doc.text(c.utilization.toFixed(2), cCols[4].x + cCols[4].w - 1.5, ty, { align: "right" });
 
-    y += 4.5;
+    // Статус — отдельной колонкой, тоже цветом
+    doc.text(statusText, cCols[5].x + 2, ty);
+
+    y += rowH;
   });
+
+  // Нижняя черта таблицы
+  doc.setDrawColor(...C.thin);
+  doc.setLineWidth(0.3);
+  doc.line(ML, y, ML + CW, y);
 
   y += 4;
   hline(doc, ML, ML + CW, y, 0.3);
