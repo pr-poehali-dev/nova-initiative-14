@@ -13,6 +13,12 @@
     </script>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <!-- Запрещаем браузеру и промежуточным кэшам сохранять index.html.
+         Это критично: если HTML закэшируется, он будет ссылаться на старые
+         JS-чанки, которых уже нет — пользователь увидит "пустой фон". -->
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0"/>
+    <meta http-equiv="Pragma" content="no-cache"/>
+    <meta http-equiv="Expires" content="0"/>
     <title>Диплом-Инж.рф — наставничество по дипломному проекту УрФУ · машиностроение</title>
     <meta name="description" content="Практикующие инженеры-конструкторы Екатеринбурга помогут довести дипломный проект (ВКР) до защиты: разбор замечаний, проверка чертежей в КОМПАС-3D и SolidWorks, расчёты, оформление по ЕСКД."/>
     <meta name="keywords" content="наставничество по диплому, помощь с дипломом УрФУ, дипломный проект машиностроение, ВКР Екатеринбург, КОМПАС-3D, SolidWorks, ЕСКД, защита диплома"/>
@@ -68,8 +74,24 @@
    */
   (function () {
     var KEY = "__cae_autoreload_count";
+    var VERSION_KEY = "__cae_index_version";
     // URL backend-функции логирования. Захардкожен, т.к. index.html — не Vite-модуль.
     var LOG_URL = "https://functions.poehali.dev/4f0c1ef1-4bdf-4603-8d97-63a31cb6f7a1";
+
+    // === ШАГ 0. Сразу убиваем все Service Workers ===
+    // Если когда-то на этот домен ставили SW (расширение, библиотека, прошлая
+    // версия), он может перехватывать запросы и отдавать старый HTML/чанки.
+    // Снимаем их безусловно при каждой загрузке.
+    try {
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
+          for (var i = 0; i < regs.length; i++) {
+            try { regs[i].unregister(); } catch (e) { /* ignore */ }
+          }
+        }).catch(function () {});
+      }
+    } catch (e) { /* ignore */ }
+
     function attempts() {
       try { return parseInt(sessionStorage.getItem(KEY) || "0", 10) || 0; }
       catch (e) { return 0; }
@@ -78,8 +100,7 @@
       try { sessionStorage.setItem(KEY, String(attempts() + 1)); }
       catch (e) { /* ignore */ }
     }
-    // Тихая отправка лога. Используем sendBeacon, чтобы запрос пережил
-    // навигацию (мы сразу после этого перезагружаем страницу).
+
     function logRecovery(triggerType, errorMessage) {
       try {
         var payload = JSON.stringify({
@@ -101,23 +122,54 @@
         }
       } catch (e) { /* ignore */ }
     }
-    function silentReload(triggerType, errorMessage) {
-      if (attempts() >= 2) return; // защита от петли
-      logRecovery(triggerType, errorMessage);
-      bump();
-      var url = new URL(window.location.href);
-      url.searchParams.set("_r", String(Date.now()));
-      var go = function () { window.location.replace(url.toString()); };
+
+    // === Жёсткая очистка всех клиентских кэшей ===
+    function nukeCaches() {
+      var promises = [];
       try {
         if ("caches" in window) {
-          caches.keys().then(function (keys) {
-            return Promise.all(keys.map(function (k) { return caches.delete(k); }));
-          }).then(go, go);
-          return;
+          promises.push(
+            caches.keys().then(function (keys) {
+              return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+            }).catch(function () {})
+          );
         }
       } catch (e) { /* ignore */ }
-      go();
+      try {
+        if ("serviceWorker" in navigator) {
+          promises.push(
+            navigator.serviceWorker.getRegistrations().then(function (regs) {
+              return Promise.all(regs.map(function (r) {
+                try { return r.unregister(); } catch (e) { return null; }
+              }));
+            }).catch(function () {})
+          );
+        }
+      } catch (e) { /* ignore */ }
+      return Promise.all(promises).catch(function () {});
     }
+
+    function silentReload(triggerType, errorMessage) {
+      if (attempts() >= 3) return; // защита от петли — увеличили до 3
+      logRecovery(triggerType, errorMessage);
+      bump();
+      // Прогреваем фоном fresh-загрузку корня — это форсит браузер
+      // переспросить HTML, минуя HTTP-кэш.
+      try { fetch("/?__cb=" + Date.now(), { cache: "reload", credentials: "same-origin" }).catch(function () {}); } catch (e) { /* ignore */ }
+      var url = new URL(window.location.href);
+      url.searchParams.set("_r", String(Date.now()));
+      var go = function () {
+        // location.replace мобильные браузеры иногда обрабатывают как
+        // soft-navigation и берут страницу из bfcache. href + новый
+        // ?_r=... надёжнее — это всегда полная перезагрузка.
+        try { window.location.href = url.toString(); }
+        catch (e) { window.location.reload(); }
+      };
+      nukeCaches().then(go, go);
+      // Страховка: если nuke зависнет — релоадим через 2 сек.
+      setTimeout(go, 2000);
+    }
+
     function isChunkError(msg) {
       if (!msg) return false;
       var s = String(msg);
@@ -132,6 +184,7 @@
       var msg = r && (r.message || r);
       if (isChunkError(msg)) silentReload("chunk_error", msg);
     });
+
     // Watchdog: если React за 8 секунд ничего не отрисовал — тихо перезагружаем.
     setTimeout(function () {
       var root = document.getElementById("root");
@@ -143,9 +196,8 @@
       }
       if (!hasReactContent) silentReload("watchdog", "React did not render within 8s");
     }, 8000);
-    // Если пользователь сам уже перезагрузил вручную и страница нормально
-    // отрисовалась — сбросим счётчик после успешного запуска React.
-    // Дадим React 3 секунды, потом снимаем флаг.
+
+    // Через 3 секунды успешного рендера сбрасываем счётчик попыток.
     setTimeout(function () {
       var root = document.getElementById("root");
       if (!root) return;
@@ -158,6 +210,83 @@
         try { sessionStorage.removeItem(KEY); } catch (e) { /* ignore */ }
       }
     }, 3000);
+
+    // === ВЕРСИОННЫЙ WATCHER ===
+    // Проблема, которая остаётся даже после всех проверок выше: у пользователя
+    // в локальном кэше / у CDN сидит СТАРЫЙ index.html, ссылающийся на
+    // старые JS-чанки. React при этом стартует, ничего не падает, watchdog не
+    // срабатывает — но контракт с бэком уже сломан, и сайт ведёт себя странно.
+    //
+    // Решение: запоминаем идентификатор текущего index.html (ETag или
+    // Last-Modified). Дальше с интервалом тихо опрашиваем сервер с
+    // `cache:'no-store'` и сравниваем — если поменялся, делаем silentReload.
+    var fetchFreshHead = function () {
+      return fetch("/?__v=" + Date.now(), {
+        method: "GET",
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" }
+      }).then(function (r) {
+        // Используем ETag, иначе Last-Modified, иначе length+date — главное
+        // получить строку, которая меняется при изменении index.html.
+        var etag = r.headers.get("ETag") || r.headers.get("Last-Modified") || "";
+        if (!etag) {
+          // Если сервер не отдаёт ETag (CDN иногда не пробрасывает), используем
+          // длину + дата. Чтобы не читать всё тело — берём только Content-Length.
+          etag = (r.headers.get("Content-Length") || "") + "|" + (r.headers.get("Date") || "");
+        }
+        return etag;
+      });
+    };
+
+    function initVersionWatcher() {
+      try {
+        var saved = sessionStorage.getItem(VERSION_KEY);
+        // Запоминаем первую версию через 2 сек после загрузки.
+        if (!saved) {
+          setTimeout(function () {
+            fetchFreshHead().then(function (v) {
+              if (v) {
+                try { sessionStorage.setItem(VERSION_KEY, v); } catch (e) { /* ignore */ }
+              }
+            }).catch(function () {});
+          }, 2000);
+        }
+        // Проверка каждые 60 секунд: появилась ли новая версия?
+        setInterval(function () {
+          // Не дёргаем сеть, если вкладка скрыта — телефоны и так экономят.
+          if (document.hidden) return;
+          fetchFreshHead().then(function (current) {
+            if (!current) return;
+            var prev = sessionStorage.getItem(VERSION_KEY);
+            if (!prev) {
+              try { sessionStorage.setItem(VERSION_KEY, current); } catch (e) { /* ignore */ }
+              return;
+            }
+            if (prev !== current) {
+              // На сервере новая версия — тихо обновляемся.
+              try { sessionStorage.setItem(VERSION_KEY, current); } catch (e) { /* ignore */ }
+              silentReload("version_mismatch", "index.html changed: " + prev + " -> " + current);
+            }
+          }).catch(function () {});
+        }, 60000);
+        // И один раз сразу — через 5 сек после старта (поймаем "ты пришёл со
+        // старым кэшем", если он есть).
+        setTimeout(function () {
+          fetchFreshHead().then(function (current) {
+            var prev = sessionStorage.getItem(VERSION_KEY);
+            if (!current) return;
+            if (prev && prev !== current) {
+              try { sessionStorage.setItem(VERSION_KEY, current); } catch (e) { /* ignore */ }
+              silentReload("version_mismatch_initial", "index.html changed at startup: " + prev + " -> " + current);
+            } else if (!prev) {
+              try { sessionStorage.setItem(VERSION_KEY, current); } catch (e) { /* ignore */ }
+            }
+          }).catch(function () {});
+        }, 5000);
+      } catch (e) { /* ignore */ }
+    }
+    initVersionWatcher();
   })();
 </script>
 <script type="module" src="/src/main.tsx"></script>
