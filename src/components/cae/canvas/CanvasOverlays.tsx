@@ -1,16 +1,28 @@
+/**
+ * CanvasOverlays — сборочный компонент SVG-наложений на канвасе.
+ * Рисует поверх балок: опоры, нагрузки, реакции и узлы.
+ *
+ * Логика разбита на 3 подкомпонента и общий хелпер-модуль:
+ *   - CanvasBoundaryConditions  — опоры по ГОСТ 2.770
+ *   - CanvasLoads               — нагрузки (F, q, M, точечная P)
+ *   - CanvasReactionsAndNodes   — реакции опор, узлы, курсор, легенда
+ *   - canvas-overlays-helpers   — REACTION, arrowFromPoint, makeMakeDraggableText
+ *
+ * Порядок отрисовки сохранён: КГУ → нагрузки → реакции → узлы → курсор → легенда.
+ */
 import type {
   FrameModel,
   ModelNode,
-  BoundaryCondition,
-  ModelLoad,
   SolverResponse,
 } from "@/lib/cae-model";
-import { ACCENT, LINE, THIN, BG, NODE_R } from "./canvas-constants";
-import DraggableLabel from "./DraggableLabel";
 import type { LabelOffsetsApi } from "@/pages/cae-editor/useLabelOffsets";
+import CanvasBoundaryConditions from "./CanvasBoundaryConditions";
+import CanvasLoads from "./CanvasLoads";
+import CanvasReactionsAndNodes from "./CanvasReactionsAndNodes";
+import { makeMakeDraggableText } from "./canvas-overlays-helpers";
 
-// Зелёный — для реакций опор (стандарт в LIRA/SCAD)
-const REACTION = "#1a8a5a";
+// Реэкспорт хелперов для обратной совместимости с возможными внешними импортами.
+export { REACTION, arrowFromPoint } from "./canvas-overlays-helpers";
 
 interface Props {
   model: FrameModel;
@@ -31,54 +43,6 @@ interface Props {
   svgRef?: React.RefObject<SVGSVGElement>;
 }
 
-/**
- * Универсальная функция для рисования стрелки силы.
- * (sx, sy) — точка приложения, направление (fx, fy) в пикселях
- * (в направлении приложения силы). Стрелка начинается из (sx, sy) и направлена
- * по силе (наконечник в конце).
- */
-function arrowFromPoint(
-  sx: number,
-  sy: number,
-  fx: number,
-  fy: number,
-  length: number,
-  color: string,
-  label: string,
-  key: string,
-) {
-  const mag = Math.sqrt(fx * fx + fy * fy);
-  if (mag < 1e-12) return null;
-  // нормаль направления (в SVG ось Y инвертирована, fy положительный вверх в мире)
-  const ux = fx / mag;
-  const uy = -fy / mag; // экранная Y
-  // Стрелка идёт ОТ точки приложения В сторону действия силы:
-  // То есть наконечник — в (sx + ux*length, sy + uy*length).
-  const ex = sx + ux * length;
-  const ey = sy + uy * length;
-  const ah = 8;
-  const a1x = ex - ux * ah - uy * ah * 0.5;
-  const a1y = ey - uy * ah + ux * ah * 0.5;
-  const a2x = ex - ux * ah + uy * ah * 0.5;
-  const a2y = ey - uy * ah - ux * ah * 0.5;
-  return (
-    <g key={key} pointerEvents="none">
-      <line x1={sx} y1={sy} x2={ex} y2={ey} stroke={color} strokeWidth={2} />
-      <polygon points={`${ex},${ey} ${a1x},${a1y} ${a2x},${a2y}`} fill={color} />
-      <text
-        x={ex + ux * 5}
-        y={ey + uy * 5 - 2}
-        fontSize={11}
-        fill={color}
-        fontFamily="monospace"
-        textAnchor={ux > 0.5 ? "start" : ux < -0.5 ? "end" : "middle"}
-      >
-        {label}
-      </text>
-    </g>
-  );
-}
-
 const CanvasOverlays = ({
   model,
   selectedNodeIds,
@@ -97,414 +61,46 @@ const CanvasOverlays = ({
   labelOffsets,
   svgRef,
 }: Props) => {
-  // Хелпер: создать перетаскиваемую текстовую подпись или статичную (если drag отключён).
-  const makeDraggableText = (
-    offsetKey: string,
-    baseX: number,
-    baseY: number,
-    render: (x: number, y: number) => React.ReactElement,
-  ): React.ReactElement => {
-    if (!labelOffsets || !svgRef) {
-      return <g pointerEvents="none">{render(baseX, baseY)}</g>;
-    }
-    return (
-      <DraggableLabel
-        offsetKey={offsetKey}
-        baseX={baseX}
-        baseY={baseY}
-        labelOffsets={labelOffsets}
-        svgRef={svgRef}
-      >
-        {(x, y) => render(x, y)}
-      </DraggableLabel>
-    );
-  };
-  const selSet = new Set(selectedNodeIds);
-  // === Нагрузки ===
-  const renderLoad = (ld: ModelLoad) => {
-    // Узловая сила
-    if (ld.type === "nodal_force" && ld.node_id) {
-      const n = model.nodes.find((x) => x.id === ld.node_id);
-      if (!n) return null;
-      const sx = toScreenX(n.coords[0]);
-      const sy = toScreenY(n.coords[1]);
-      const fx = ld.force?.[0] || 0;
-      const fy = ld.force?.[1] || 0;
-      const mag = Math.sqrt(fx * fx + fy * fy);
-      const items: React.ReactElement[] = [];
-
-      // Стрелка силы: рисуем "входящую" в узел (наконечник в узле)
-      // То есть начало стрелки смещаем ПРОТИВ направления силы
-      if (mag > 1e-9) {
-        const ux = fx / mag;
-        const uy = -fy / mag;
-        const len = 60 * arrowScale;
-        const startX = sx - ux * len;
-        const startY = sy - uy * len;
-        const ah = 8 * arrowScale;
-        const a1x = sx - Math.cos(Math.atan2(sy - startY, sx - startX) - Math.PI / 6) * ah;
-        const a1y = sy - Math.sin(Math.atan2(sy - startY, sx - startX) - Math.PI / 6) * ah;
-        const a2x = sx - Math.cos(Math.atan2(sy - startY, sx - startX) + Math.PI / 6) * ah;
-        const a2y = sy - Math.sin(Math.atan2(sy - startY, sx - startX) + Math.PI / 6) * ah;
-        const fs = 11 * fontScale;
-        items.push(
-          <g key={`${ld.id}_F`}>
-            <line x1={startX} y1={startY} x2={sx} y2={sy} stroke={ACCENT} strokeWidth={2} pointerEvents="none" />
-            <polygon points={`${sx},${sy} ${a1x},${a1y} ${a2x},${a2y}`} fill={ACCENT} pointerEvents="none" />
-            {makeDraggableText(`load:${ld.id}`, startX, startY - 6, (x, y) => (
-              <text x={x} y={y} fontSize={fs} fill={ACCENT} fontFamily="monospace">
-                {Math.round(mag)} Н
-              </text>
-            ))}
-          </g>,
-        );
-      }
-
-      // Узловой момент Mz: круговая стрелка
-      const mz = ld.moment?.[2] || 0;
-      if (Math.abs(mz) > 1e-9) {
-        const r = 16 * arrowScale;
-        const ccw = mz > 0; // против часовой = положительное Mz
-        // Дуга 270°
-        const start = ccw ? -Math.PI / 2 : Math.PI / 2;
-        const end = ccw ? Math.PI : 0;
-        const sweepX = sx + r * Math.cos(start);
-        const sweepY = sy + r * Math.sin(start);
-        const endX = sx + r * Math.cos(end);
-        const endY = sy + r * Math.sin(end);
-        const sweepFlag = ccw ? 1 : 0;
-        const path = `M ${sweepX} ${sweepY} A ${r} ${r} 0 1 ${sweepFlag} ${endX} ${endY}`;
-        const ah = 6 * arrowScale;
-        const tangent = ccw ? end - Math.PI / 2 : end + Math.PI / 2;
-        const a1x = endX + Math.cos(tangent + Math.PI / 8) * ah;
-        const a1y = endY + Math.sin(tangent + Math.PI / 8) * ah;
-        const a2x = endX + Math.cos(tangent - Math.PI / 8) * ah;
-        const a2y = endY + Math.sin(tangent - Math.PI / 8) * ah;
-        const fs = 10 * fontScale;
-        items.push(
-          <g key={`${ld.id}_M`}>
-            <path d={path} fill="none" stroke={ACCENT} strokeWidth={2} pointerEvents="none" />
-            <polygon points={`${endX},${endY} ${a1x},${a1y} ${a2x},${a2y}`} fill={ACCENT} pointerEvents="none" />
-            {makeDraggableText(`loadM:${ld.id}`, sx + r + 6, sy - r, (x, y) => (
-              <text x={x} y={y} fontSize={fs} fill={ACCENT} fontFamily="monospace">
-                {Math.round(mz)} Н·м
-              </text>
-            ))}
-          </g>,
-        );
-      }
-      return items.length > 0 ? <g key={ld.id}>{items}</g> : null;
-    }
-
-    // Точечная сила в пролёте
-    if (ld.type === "in_span_point" && ld.element_id) {
-      const el = model.elements.find((e) => e.id === ld.element_id);
-      if (!el) return null;
-      const a = model.nodes.find((n) => n.id === el.node_start);
-      const b = model.nodes.find((n) => n.id === el.node_end);
-      if (!a || !b) return null;
-      const t = ld.position_ratio ?? 0.5;
-      const wx = a.coords[0] + (b.coords[0] - a.coords[0]) * t;
-      const wy = a.coords[1] + (b.coords[1] - a.coords[1]) * t;
-      const sx = toScreenX(wx);
-      const sy = toScreenY(wy);
-      const fx = ld.force?.[0] || 0;
-      const fy = ld.force?.[1] || 0;
-      const mag = Math.sqrt(fx * fx + fy * fy);
-      if (mag < 1e-9) return null;
-      const ux = fx / mag;
-      const uy = -fy / mag;
-      const len = 50 * arrowScale;
-      const startX = sx - ux * len;
-      const startY = sy - uy * len;
-      const ah = 7 * arrowScale;
-      const angle = Math.atan2(sy - startY, sx - startX);
-      const a1x = sx - Math.cos(angle - Math.PI / 6) * ah;
-      const a1y = sy - Math.sin(angle - Math.PI / 6) * ah;
-      const a2x = sx - Math.cos(angle + Math.PI / 6) * ah;
-      const a2y = sy - Math.sin(angle + Math.PI / 6) * ah;
-      const fs = 10 * fontScale;
-      return (
-        <g key={ld.id}>
-          <line x1={startX} y1={startY} x2={sx} y2={sy} stroke={ACCENT} strokeWidth={2} pointerEvents="none" />
-          <polygon points={`${sx},${sy} ${a1x},${a1y} ${a2x},${a2y}`} fill={ACCENT} pointerEvents="none" />
-          <circle cx={sx} cy={sy} r={3} fill={ACCENT} pointerEvents="none" />
-          {makeDraggableText(`load:${ld.id}`, startX, startY - 4, (x, y) => (
-            <text x={x} y={y} fontSize={fs} fill={ACCENT} fontFamily="monospace">
-              P={Math.round(mag)} Н
-            </text>
-          ))}
-        </g>
-      );
-    }
-
-    // Распределённая равномерная нагрузка q (гребёнка стрелок)
-    if (ld.type === "distributed_uniform" && ld.element_id) {
-      const el = model.elements.find((e) => e.id === ld.element_id);
-      if (!el) return null;
-      const a = model.nodes.find((n) => n.id === el.node_start);
-      const b = model.nodes.find((n) => n.id === el.node_end);
-      if (!a || !b) return null;
-      const dx = b.coords[0] - a.coords[0];
-      const dy = b.coords[1] - a.coords[1];
-      const lenM = Math.sqrt(dx * dx + dy * dy);
-      if (lenM < 1e-9) return null;
-      const qy = ld.load_local_per_length?.[1] || 0;
-      const qx = ld.load_local_per_length?.[0] || 0;
-      if (Math.abs(qy) < 1e-9 && Math.abs(qx) < 1e-9) return null;
-
-      // Направление нагрузки в ЛОКАЛЬНОЙ СК элемента
-      // ось x_local = вдоль (b - a), ось y_local = поворот x_local на +90° (нормаль)
-      const ex_world = dx / lenM;
-      const ey_world = dy / lenM;
-      // нормаль (поворот на +90° против часовой)
-      const nx_world = -ey_world;
-      const ny_world = ex_world;
-      // полное направление нагрузки в мировой СК
-      const fx_world = ex_world * qx + nx_world * qy;
-      const fy_world = ey_world * qx + ny_world * qy;
-      const fmag = Math.sqrt(fx_world * fx_world + fy_world * fy_world);
-      if (fmag < 1e-9) return null;
-      const fnx = fx_world / fmag; // в мире
-      const fny = fy_world / fmag;
-      // в экранных координатах: y инвертирован
-      const sfnx = fnx;
-      const sfny = -fny;
-
-      const arrowLen = 24 * arrowScale; // длина каждой стрелки в пикселях
-      // Количество стрелок зависит от длины элемента на экране
-      const lenPx = lenM * pxPerM;
-      const nArrows = Math.max(2, Math.min(20, Math.round(lenPx / 30)));
-      const items: React.ReactElement[] = [];
-
-      // Линия "сверху" гребёнки — на смещении arrowLen от балки против направления нагрузки
-      const topStartX = toScreenX(a.coords[0]) - sfnx * arrowLen;
-      const topStartY = toScreenY(a.coords[1]) - sfny * arrowLen;
-      const topEndX = toScreenX(b.coords[0]) - sfnx * arrowLen;
-      const topEndY = toScreenY(b.coords[1]) - sfny * arrowLen;
-      items.push(
-        <line
-          key="top"
-          x1={topStartX}
-          y1={topStartY}
-          x2={topEndX}
-          y2={topEndY}
-          stroke={ACCENT}
-          strokeWidth={1.5}
-        />,
-      );
-
-      // Стрелки
-      for (let i = 0; i <= nArrows; i++) {
-        const t = i / nArrows;
-        const wx = a.coords[0] + dx * t;
-        const wy = a.coords[1] + dy * t;
-        const tipX = toScreenX(wx);
-        const tipY = toScreenY(wy);
-        const tailX = tipX - sfnx * arrowLen;
-        const tailY = tipY - sfny * arrowLen;
-        const ah = 5 * arrowScale;
-        const angle = Math.atan2(tipY - tailY, tipX - tailX);
-        const a1x = tipX - Math.cos(angle - Math.PI / 6) * ah;
-        const a1y = tipY - Math.sin(angle - Math.PI / 6) * ah;
-        const a2x = tipX - Math.cos(angle + Math.PI / 6) * ah;
-        const a2y = tipY - Math.sin(angle + Math.PI / 6) * ah;
-        items.push(
-          <g key={`a${i}`}>
-            <line x1={tailX} y1={tailY} x2={tipX} y2={tipY} stroke={ACCENT} strokeWidth={1.3} />
-            <polygon
-              points={`${tipX},${tipY} ${a1x},${a1y} ${a2x},${a2y}`}
-              fill={ACCENT}
-            />
-          </g>,
-        );
-      }
-
-      // Подпись по центру (перетаскиваемая)
-      const midX = (topStartX + topEndX) / 2;
-      const midY = (topStartY + topEndY) / 2;
-      const fs = 11 * fontScale;
-      return (
-        <g key={ld.id}>
-          <g pointerEvents="none">{items}</g>
-          {makeDraggableText(`load:${ld.id}`, midX, midY - 6, (x, y) => (
-            <text
-              x={x}
-              y={y}
-              fontSize={fs}
-              fill={ACCENT}
-              fontFamily="monospace"
-              textAnchor="middle"
-            >
-              q = {Math.round(Math.abs(qy || qx))} Н/м
-            </text>
-          ))}
-        </g>
-      );
-    }
-
-    return null;
-  };
-
-  // === КГУ ===
-  const renderBC = (bc: BoundaryCondition) => {
-    const n = model.nodes.find((x) => x.id === bc.node_id);
-    if (!n) return null;
-    const sx = toScreenX(n.coords[0]);
-    const sy = toScreenY(n.coords[1]);
-    const dofs = new Set(bc.constrained_dofs);
-    if (dofs.has("ux") && dofs.has("uy") && dofs.has("rz")) {
-      const s = 14;
-      return (
-        <g key={bc.id} pointerEvents="none">
-          <rect x={sx - s} y={sy - 2} width={s * 2} height={s} fill={LINE} fillOpacity={0.15} stroke={LINE} strokeWidth={1.5} />
-          {[0, 1, 2, 3].map((i) => (
-            <line key={i} x1={sx - s + i * 7} y1={sy + s - 2} x2={sx - s + i * 7 + 6} y2={sy + s + 6} stroke={LINE} strokeWidth={1.2} />
-          ))}
-        </g>
-      );
-    }
-    if (dofs.has("ux") && dofs.has("uy")) {
-      const s = 10;
-      return (
-        <g key={bc.id} pointerEvents="none">
-          <polygon points={`${sx},${sy + 2} ${sx - s},${sy + s + 2} ${sx + s},${sy + s + 2}`} fill={LINE} fillOpacity={0.15} stroke={LINE} strokeWidth={1.5} />
-          {[0, 1, 2, 3].map((i) => (
-            <line key={i} x1={sx - s + i * 6} y1={sy + s + 2} x2={sx - s + i * 6 + 5} y2={sy + s + 10} stroke={LINE} strokeWidth={1.2} />
-          ))}
-        </g>
-      );
-    }
-    return (
-      <g key={bc.id} pointerEvents="none">
-        <circle cx={sx} cy={sy + 10} r={5} fill={BG} stroke={LINE} strokeWidth={1.5} />
-        <line x1={sx - 10} y1={sy + 16} x2={sx + 10} y2={sy + 16} stroke={LINE} strokeWidth={1.5} />
-      </g>
-    );
-  };
-
-  // === Реакции опор (зелёные стрелки) ===
-  const renderReaction = (rxn: SolverResponse["reactions"][number]) => {
-    const n = model.nodes.find((x) => x.id === rxn.node_id);
-    if (!n) return null;
-    const sx = toScreenX(n.coords[0]);
-    const sy = toScreenY(n.coords[1]);
-    const fx = rxn.fx || 0;
-    const fy = rxn.fy || 0;
-    const mz = rxn.mz || 0;
-    const items: React.ReactElement[] = [];
-
-    const mag = Math.sqrt(fx * fx + fy * fy);
-    if (mag > 1e-3) {
-      // Реакция: стрелка из узла наружу. Длина и наконечник масштабируются arrowScale.
-      const reactionLen = 50 * arrowScale;
-      const ux = fx / mag;
-      const uy = -fy / mag;
-      const ex = sx + ux * reactionLen;
-      const ey = sy + uy * reactionLen;
-      const ah = 8 * arrowScale;
-      const a1x = ex - ux * ah - uy * ah * 0.5;
-      const a1y = ey - uy * ah + ux * ah * 0.5;
-      const a2x = ex - ux * ah + uy * ah * 0.5;
-      const a2y = ey - uy * ah - ux * ah * 0.5;
-      const fs = 11 * fontScale;
-      items.push(
-        <g key={`${rxn.node_id}_RF`}>
-          <line x1={sx} y1={sy} x2={ex} y2={ey} stroke={REACTION} strokeWidth={2} pointerEvents="none" />
-          <polygon points={`${ex},${ey} ${a1x},${a1y} ${a2x},${a2y}`} fill={REACTION} pointerEvents="none" />
-          {makeDraggableText(`rxn:${rxn.node_id}`, ex + ux * 5, ey + uy * 5 - 2, (x, y) => (
-            <text
-              x={x}
-              y={y}
-              fontSize={fs}
-              fill={REACTION}
-              fontFamily="monospace"
-              textAnchor={ux > 0.5 ? "start" : ux < -0.5 ? "end" : "middle"}
-            >
-              R={Math.round(mag)} Н
-            </text>
-          ))}
-        </g>,
-      );
-    }
-
-    if (Math.abs(mz) > 1e-3) {
-      const fs = 10 * fontScale;
-      items.push(
-        <g key={`${rxn.node_id}_RM`}>
-          {makeDraggableText(`rxnM:${rxn.node_id}`, sx + 12, sy + 22, (x, y) => (
-            <text x={x} y={y} fontSize={fs} fill={REACTION} fontFamily="monospace">
-              M={Math.round(mz)} Н·м
-            </text>
-          ))}
-        </g>,
-      );
-    }
-
-    return items.length > 0 ? <g key={`rxn_${rxn.node_id}`}>{items}</g> : null;
-  };
+  const makeDraggableText = makeMakeDraggableText(labelOffsets, svgRef);
 
   return (
     <>
       {/* КГУ */}
-      {model.boundary_conditions.map((bc) => renderBC(bc))}
+      <CanvasBoundaryConditions
+        model={model}
+        toScreenX={toScreenX}
+        toScreenY={toScreenY}
+      />
 
       {/* нагрузки */}
-      {model.loads.map((ld) => renderLoad(ld))}
+      <CanvasLoads
+        model={model}
+        pxPerM={pxPerM}
+        toScreenX={toScreenX}
+        toScreenY={toScreenY}
+        arrowScale={arrowScale}
+        fontScale={fontScale}
+        makeDraggableText={makeDraggableText}
+      />
 
-      {/* реакции опор (после расчёта) */}
-      {showReactions && result?.reactions.map((rxn) => renderReaction(rxn))}
-
-      {/* узлы — кружок (кликабельный) + перетаскиваемая подпись отдельной группой */}
-      {model.nodes.map((n) => {
-        const isSel = selSet.has(n.id);
-        const isPending = pendingFirstNodeId === n.id;
-        const cx = toScreenX(n.coords[0]);
-        const cy = toScreenY(n.coords[1]);
-        const fs = 10 * fontScale;
-        return (
-          <g key={n.id}>
-            <g
-              style={{ cursor: isSel ? "move" : "pointer" }}
-              onClick={(e) => handleNodeClick(n, e)}
-              onPointerDown={handleNodePointerDown ? (e) => handleNodePointerDown(n, e) : undefined}
-            >
-              <circle
-                cx={cx}
-                cy={cy}
-                r={isSel || isPending ? NODE_R + 3 : NODE_R}
-                fill={isSel ? ACCENT : isPending ? ACCENT : BG}
-                stroke={isSel || isPending ? ACCENT : LINE}
-                strokeWidth={2}
-              />
-            </g>
-            {makeDraggableText(`node:${n.id}`, cx + 10, cy - 8, (x, y) => (
-              <text x={x} y={y} fontSize={fs} fill={THIN} fontFamily="monospace">
-                {n.id}
-              </text>
-            ))}
-          </g>
-        );
-      })}
-
-      {/* координаты курсора */}
-      {cursorWorld && (
-        <text x={10} y={size.h - 12} fontSize={11} fill={THIN} fontFamily="monospace" pointerEvents="none">
-          {`x=${cursorWorld.x.toFixed(2)} м,  y=${cursorWorld.y.toFixed(2)} м   ·   масштаб ${pxPerM.toFixed(0)} px/м`}
-        </text>
-      )}
-
-      {/* Легенда: показывается, если есть результат */}
-      {showReactions && result && result.reactions.length > 0 && (
-        <g pointerEvents="none">
-          <rect x={size.w - 130} y={10} width={120} height={32} fill={BG} fillOpacity={0.85} stroke={THIN} strokeWidth={0.5} />
-          <line x1={size.w - 122} y1={22} x2={size.w - 104} y2={22} stroke={REACTION} strokeWidth={2} />
-          <polygon points={`${size.w - 104},${22} ${size.w - 109},${19} ${size.w - 109},${25}`} fill={REACTION} />
-          <text x={size.w - 98} y={26} fontSize={10} fill={REACTION} fontFamily="monospace">
-            реакция опоры
-          </text>
-        </g>
-      )}
+      {/* реакции опор, узлы, курсор и легенда */}
+      <CanvasReactionsAndNodes
+        model={model}
+        selectedNodeIds={selectedNodeIds}
+        pendingFirstNodeId={pendingFirstNodeId}
+        cursorWorld={cursorWorld}
+        size={size}
+        pxPerM={pxPerM}
+        toScreenX={toScreenX}
+        toScreenY={toScreenY}
+        handleNodeClick={handleNodeClick}
+        handleNodePointerDown={handleNodePointerDown}
+        result={result}
+        showReactions={showReactions}
+        arrowScale={arrowScale}
+        fontScale={fontScale}
+        makeDraggableText={makeDraggableText}
+      />
     </>
   );
 };
