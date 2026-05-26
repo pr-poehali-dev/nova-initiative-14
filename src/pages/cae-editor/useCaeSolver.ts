@@ -39,7 +39,25 @@ export function useCaeSolver(
       setResult(r.data);
       setShowDiagram("Mz");
     } else {
-      setSolverError(r.message || r.error || "Ошибка решателя");
+      // Собираем максимально информативное сообщение из всех доступных полей.
+      // Если backend вернул только status='error' без message — даём подсказку
+      // о вероятных причинах (особенно частая — ферма с шарнирными стержнями).
+      const detail =
+        r.message ||
+        r.error ||
+        (r.data as { message?: string; error?: string } | null)?.message ||
+        (r.data as { message?: string; error?: string } | null)?.error;
+      if (detail) {
+        setSolverError(`Ошибка решателя: ${detail}`);
+      } else {
+        setSolverError(
+          "Ошибка решателя. Частые причины: " +
+          "1) ферма с шарнирами на обоих концах всех стержней без жёсткого узла; " +
+          "2) конструкция геометрически изменяема (не хватает связей); " +
+          "3) нагрузка действует на свободный стержень. " +
+          "Проверьте опоры и шарниры.",
+        );
+      }
     }
   };
 
