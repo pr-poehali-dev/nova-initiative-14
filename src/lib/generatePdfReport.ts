@@ -687,12 +687,30 @@ function drawDiagram(
     }
   }
 
-  // Если эпюра практически нулевая
+  // Если эпюра практически нулевая — выводим подпись над нулевой осью с белой плашкой,
+  // чтобы текст не сливался с самой линией балки и подписями узлов.
   if (Math.abs(globalMaxV) < 1e-6 && Math.abs(globalMinV) < 1e-6) {
+    const label = "эпюра нулевая (все значения = 0)";
+    const fontSize = 9;
     doc.setFont(fontState.name, "normal");
-    doc.setFontSize(9);
+    doc.setFontSize(fontSize);
+    // Размер плашки
+    const textW = doc.getTextWidth(label);
+    const padX = 3;
+    const padY = 1.6;
+    const boxW2 = textW + padX * 2;
+    const boxH2 = fontSize * 0.45 + padY * 2;
+    // Размещаем подпись чуть выше середины верхней половины графика — подальше от нулевой оси
+    const cx = plotX + plotW / 2;
+    const cy = plotY + plotH * 0.28;
+    // Белая плашка с тонкой рамкой
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(...C.grid);
+    doc.setLineWidth(0.2);
+    doc.rect(cx - boxW2 / 2, cy - boxH2 / 2, boxW2, boxH2, "FD");
+    // Текст
     doc.setTextColor(...C.thin);
-    doc.text("эпюра нулевая (все значения = 0)", plotX + plotW / 2, plotY + plotH / 2, { align: "center" });
+    doc.text(label, cx, cy + fontSize * 0.18, { align: "center" });
     return;
   }
 
