@@ -54,6 +54,9 @@ const CaeEditor = () => {
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [welcomeOpen, setWelcomeOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Мобильная раскладка: одна активная вкладка снизу под канвасом.
+  // Не показывается на десктопе (lg-брейкпоинт и выше) — там обычные две колонки.
+  const [mobileTab, setMobileTab] = useState<"tools" | "props" | "checks" | "results">("tools");
 
   // При первом визите на пустой проект показываем приветственный экран.
   // Туториал автозапускаем только если приветствие уже было показано (повторный визит)
@@ -180,51 +183,57 @@ const CaeEditor = () => {
         />
 
         <div className="max-w-[1400px] mx-auto px-3 py-3 grid gap-3 lg:grid-cols-[260px_1fr_320px]">
-          <EditorLeftPanel
-            mode={mode}
-            setMode={setMode}
-            gridStep={gridStep}
-            setGridStep={setGridStep}
-            onStartTutorial={() => setTutorialOpen(true)}
-          />
+          {/* Левая панель инструментов — на десктопе сбоку, на мобилке в виде вкладки */}
+          <div className="hidden lg:block">
+            <EditorLeftPanel
+              mode={mode}
+              setMode={setMode}
+              gridStep={gridStep}
+              setGridStep={setGridStep}
+              onStartTutorial={() => setTutorialOpen(true)}
+            />
+          </div>
 
           {/* Канва */}
           <div
-            className="border-2 border-[var(--drawing-line)] relative"
-            style={{ height: "70vh", minHeight: 480 }}
+            className="border-2 border-[var(--drawing-line)] relative h-[58vh] min-h-[360px] lg:h-[70vh] lg:min-h-[480px]"
             data-tutorial="canvas"
           >
-            {/* Плавающая панель инструментов — в левом верхнем углу, не перекрывает легенду */}
+            {/* Плавающая панель инструментов — кнопки 44×44 на мобилке, компактные на десктопе */}
             <div className="absolute top-2 left-2 z-10 flex gap-0 bg-[var(--drawing-bg)]/95 border border-[var(--drawing-line)] shadow-sm">
               <button
                 onClick={undo}
                 disabled={!canUndo}
-                className="p-2 border-r border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)] disabled:opacity-30 disabled:cursor-not-allowed"
+                className="min-w-[44px] min-h-[44px] lg:min-w-0 lg:min-h-0 p-2 border-r border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)] active:bg-[var(--drawing-paper)] disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"
                 title="Отменить (Ctrl+Z)"
+                aria-label="Отменить"
               >
-                <Icon name="Undo2" size={16} />
+                <Icon name="Undo2" size={18} />
               </button>
               <button
                 onClick={redo}
                 disabled={!canRedo}
-                className="p-2 border-r border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)] disabled:opacity-30 disabled:cursor-not-allowed"
+                className="min-w-[44px] min-h-[44px] lg:min-w-0 lg:min-h-0 p-2 border-r border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)] active:bg-[var(--drawing-paper)] disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"
                 title="Вернуть (Ctrl+Shift+Z)"
+                aria-label="Вернуть"
               >
-                <Icon name="Redo2" size={16} />
+                <Icon name="Redo2" size={18} />
               </button>
               <button
                 onClick={() => setHelpOpen(true)}
-                className="p-2 border-r border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)]"
+                className="min-w-[44px] min-h-[44px] lg:min-w-0 lg:min-h-0 p-2 border-r border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)] active:bg-[var(--drawing-paper)] hidden md:flex items-center justify-center"
                 title="Горячие клавиши (?)"
+                aria-label="Горячие клавиши"
               >
-                <Icon name="Keyboard" size={16} />
+                <Icon name="Keyboard" size={18} />
               </button>
               <button
                 onClick={() => setSettingsOpen(true)}
-                className="p-2 hover:bg-[var(--drawing-paper)]"
+                className="min-w-[44px] min-h-[44px] lg:min-w-0 lg:min-h-0 p-2 hover:bg-[var(--drawing-paper)] active:bg-[var(--drawing-paper)] flex items-center justify-center"
                 title="Настройки расчёта: отрасль, теория прочности, коэф. запаса"
+                aria-label="Настройки расчёта"
               >
-                <Icon name="Settings" size={16} />
+                <Icon name="Settings" size={18} />
               </button>
             </div>
             <FrameCanvas
@@ -253,8 +262,9 @@ const CaeEditor = () => {
             )}
           </div>
 
-          {/* Правая колонка: проблемы + свойства + результаты */}
-          <aside className="space-y-3 text-[12px]">
+          {/* Десктоп: правая колонка со всеми панелями сразу.
+              Мобилка: ниже идёт блок с вкладками. */}
+          <aside className="hidden lg:block space-y-3 text-[12px]">
             <EditorIssuesPanel
               issues={issues}
               onFocusNode={(id) => {
@@ -267,28 +277,28 @@ const CaeEditor = () => {
               }}
             />
             <div data-tutorial="props">
-            <EditorRightPanel
-              model={model}
-              selectedNode={selectedNode}
-              selectedElementId={selectedElementId}
-              nodeBC={nodeBC}
-              nodeLoad={nodeLoad}
-              bcCustomOpen={bcCustomOpen}
-              setBcCustomOpen={setBcCustomOpen}
-              addBC={addBC}
-              removeBC={removeBC}
-              toggleCustomDof={toggleCustomDof}
-              addNodalLoad={addNodalLoad}
-              setNodalMoment={setNodalMoment}
-              removeLoadOnNode={removeLoadOnNode}
-              setMatPickerOpen={setMatPickerOpen}
-              setSecPickerOpen={setSecPickerOpen}
-              setDistributedLoad={setDistributedLoad}
-              addInSpanPoint={addInSpanPoint}
-              removeLoadById={removeLoadById}
-              setElementHinge={setElementHinge}
-              deleteSelected={deleteSelected}
-            />
+              <EditorRightPanel
+                model={model}
+                selectedNode={selectedNode}
+                selectedElementId={selectedElementId}
+                nodeBC={nodeBC}
+                nodeLoad={nodeLoad}
+                bcCustomOpen={bcCustomOpen}
+                setBcCustomOpen={setBcCustomOpen}
+                addBC={addBC}
+                removeBC={removeBC}
+                toggleCustomDof={toggleCustomDof}
+                addNodalLoad={addNodalLoad}
+                setNodalMoment={setNodalMoment}
+                removeLoadOnNode={removeLoadOnNode}
+                setMatPickerOpen={setMatPickerOpen}
+                setSecPickerOpen={setSecPickerOpen}
+                setDistributedLoad={setDistributedLoad}
+                addInSpanPoint={addInSpanPoint}
+                removeLoadById={removeLoadById}
+                setElementHinge={setElementHinge}
+                deleteSelected={deleteSelected}
+              />
             </div>
 
             <EditorChecksPanel
@@ -302,17 +312,144 @@ const CaeEditor = () => {
             />
 
             <div data-tutorial="results">
-            <EditorResultsPanel
-              result={result}
-              model={model}
-              showDiagram={showDiagram}
-              setShowDiagram={setShowDiagram}
-              diagramScale={diagramScale}
-              setDiagramScale={setDiagramScale}
-            />
+              <EditorResultsPanel
+                result={result}
+                model={model}
+                showDiagram={showDiagram}
+                setShowDiagram={setShowDiagram}
+                diagramScale={diagramScale}
+                setDiagramScale={setDiagramScale}
+              />
             </div>
           </aside>
+
+          {/* Мобильная раскладка — вкладки с инструментами/свойствами/проверками/результатами */}
+          <div className="lg:hidden col-span-full">
+            <div className="grid grid-cols-4 gap-0 border-2 border-[var(--drawing-line)] border-b-0 bg-[var(--drawing-bg)] sticky top-16 z-20">
+              {([
+                { key: "tools", label: "Чертить", icon: "Pencil" },
+                { key: "props", label: "Свойства", icon: "Sliders" },
+                { key: "checks", label: "Проверки", icon: "ShieldCheck" },
+                { key: "results", label: "Эпюры", icon: "BarChart3" },
+              ] as const).map((t) => {
+                const active = mobileTab === t.key;
+                const hasIssues = t.key === "checks" && (result || errorsCount > 0);
+                return (
+                  <button
+                    key={t.key}
+                    onClick={() => setMobileTab(t.key)}
+                    className={`min-h-[48px] flex flex-col items-center justify-center gap-0.5 border-r border-[var(--drawing-line)] last:border-r-0 font-gost text-[10px] uppercase tracking-wider transition ${
+                      active
+                        ? "bg-[var(--drawing-line)] text-[var(--drawing-bg)]"
+                        : "hover:bg-[var(--drawing-paper)] text-[var(--drawing-ink)]"
+                    }`}
+                    aria-label={t.label}
+                    aria-pressed={active}
+                  >
+                    <Icon name={t.icon} size={18} />
+                    <span className="leading-none">{t.label}</span>
+                    {hasIssues && errorsCount > 0 && !active && (
+                      <span className="absolute mt-[-22px] ml-7 bg-[var(--drawing-accent)] text-white rounded-full text-[9px] w-4 h-4 flex items-center justify-center">
+                        {errorsCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="border-2 border-[var(--drawing-line)] p-3 space-y-3 text-[12px] min-h-[200px] pb-24">
+              {mobileTab === "tools" && (
+                <EditorLeftPanel
+                  mode={mode}
+                  setMode={setMode}
+                  gridStep={gridStep}
+                  setGridStep={setGridStep}
+                  onStartTutorial={() => setTutorialOpen(true)}
+                />
+              )}
+              {mobileTab === "props" && (
+                <>
+                  <EditorIssuesPanel
+                    issues={issues}
+                    onFocusNode={(id) => {
+                      setSelectedNodeIds([id]);
+                      setSelectedElementIds([]);
+                    }}
+                    onFocusElement={(id) => {
+                      setSelectedElementIds([id]);
+                      setSelectedNodeIds([]);
+                    }}
+                  />
+                  <EditorRightPanel
+                    model={model}
+                    selectedNode={selectedNode}
+                    selectedElementId={selectedElementId}
+                    nodeBC={nodeBC}
+                    nodeLoad={nodeLoad}
+                    bcCustomOpen={bcCustomOpen}
+                    setBcCustomOpen={setBcCustomOpen}
+                    addBC={addBC}
+                    removeBC={removeBC}
+                    toggleCustomDof={toggleCustomDof}
+                    addNodalLoad={addNodalLoad}
+                    setNodalMoment={setNodalMoment}
+                    removeLoadOnNode={removeLoadOnNode}
+                    setMatPickerOpen={setMatPickerOpen}
+                    setSecPickerOpen={setSecPickerOpen}
+                    setDistributedLoad={setDistributedLoad}
+                    addInSpanPoint={addInSpanPoint}
+                    removeLoadById={removeLoadById}
+                    setElementHinge={setElementHinge}
+                    deleteSelected={deleteSelected}
+                  />
+                </>
+              )}
+              {mobileTab === "checks" && (
+                <EditorChecksPanel
+                  model={model}
+                  result={result}
+                  onFocusElement={(id) => {
+                    setSelectedElementIds([id]);
+                    setSelectedNodeIds([]);
+                  }}
+                  onOpenSettings={() => setSettingsOpen(true)}
+                />
+              )}
+              {mobileTab === "results" && (
+                <EditorResultsPanel
+                  result={result}
+                  model={model}
+                  showDiagram={showDiagram}
+                  setShowDiagram={setShowDiagram}
+                  diagramScale={diagramScale}
+                  setDiagramScale={setDiagramScale}
+                />
+              )}
+            </div>
+          </div>
         </div>
+
+        {/* Плавающая кнопка «Рассчитать» — только на мобилке.
+            Видна всегда независимо от активной вкладки, фиксирована к низу экрана. */}
+        <button
+          onClick={onSolve}
+          disabled={solving || blocked}
+          className="lg:hidden fixed bottom-4 right-4 z-30 min-w-[64px] min-h-[56px] px-5 py-3 bg-[var(--drawing-accent)] text-white font-gost-upright font-bold text-[14px] uppercase tracking-wider shadow-2xl border-2 border-[var(--drawing-ink)] flex items-center gap-2 active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          aria-label="Запустить расчёт"
+        >
+          {solving ? (
+            <>
+              <Icon name="Loader2" size={20} className="animate-spin" />
+              <span>Счёт…</span>
+            </>
+          ) : (
+            <>
+              <Icon name="Play" size={20} />
+              <span>Расчёт</span>
+            </>
+          )}
+        </button>
       </div>
 
       <MaterialPicker

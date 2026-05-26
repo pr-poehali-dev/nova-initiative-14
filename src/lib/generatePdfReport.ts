@@ -851,190 +851,289 @@ function drawDiagramOverScheme(
 }
 
 /**
- * Развёртка стержней: каждый стержень отрисован горизонтально, под ним эпюры
- * N, Qy, Mz в трёх отдельных мини-графиках с подписями в характерных точках.
- * Удобно для рам, где эпюры в нормалях накладываются друг на друга.
+ * Развёртка одного стержня на одной странице.
+ * Сверху — шапка с подписью узлов, длиной, материалом и сечением.
+ * Далее — горизонтальная ось стержня с маркерами узлов и шарнирами.
+ * Под ней — три крупные эпюры N, Qy, Mz (высота ~50 мм каждая) с:
+ *   • выносными подписями max/min со стрелкой к точке экстремума,
+ *   • размерной сеткой по длине (0, L/4, L/2, 3L/4, L),
+ *   • заливкой области между нулевой осью и кривой эпюры,
+ *   • подписью единиц измерения справа сверху.
  */
-function drawUnfoldedDiagrams(
+function drawSingleElementUnfolded(
   doc: jsPDF,
   model: FrameModel,
   result: SolverResponse,
+  elementId: string,
   ox: number,
   oy: number,
   boxW: number,
   boxH: number,
 ) {
-  const blocks: Array<{
-    el: { id: string; label?: string; node_start: string; node_end: string };
-    length: number;
-    xs: number[];
-    N: number[];
-    Qy: number[];
-    Mz: number[];
-  }> = [];
-  for (const el of model.elements) {
-    const er = result.elements.find((e) => e.element_id === el.id);
-    if (!er) continue;
-    blocks.push({
-      el: { id: el.id, label: el.label, node_start: el.node_start, node_end: el.node_end },
-      length: er.length,
-      xs: er.diagrams.x,
-      N: er.diagrams.N,
-      Qy: er.diagrams.Qy,
-      Mz: er.diagrams.Mz,
-    });
+  const el = model.elements.find((e) => e.id === elementId);
+  const er = result.elements.find((e) => e.element_id === elementId);
+  if (!el || !er) return;
+  const mat = model.materials.find((m) => m.id === el.material_id);
+  const sec = model.sections.find((s) => s.id === el.section_id);
+  const label = el.label || el.id;
+
+  // ── Шапка стержня ──
+  doc.setFont(fontState.name, "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(...C.ink);
+  doc.text(`Стержень ${label} — развёртка с эпюрами`, ox, oy + 5);
+
+  doc.setFont(fontState.name, "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(...C.thin);
+  const headerLines = [
+    `Узлы: ${el.node_start} → ${el.node_end}    Длина L = ${er.length.toFixed(3)} м`,
+    mat ? `Материал: ${mat.name}    E = ${(mat.E / 1e9).toFixed(0)} ГПа` : "",
+    sec ? `Сечение: ${sec.name}    A = ${(sec.A * 1e4).toFixed(2)} см²    Iz = ${(sec.I_z * 1e8).toFixed(1)} см⁴` : "",
+  ].filter(Boolean);
+  let yHead = oy + 10;
+  for (const ln of headerLines) {
+    doc.text(ln, ox, yHead);
+    yHead += 4.5;
   }
-  if (blocks.length === 0) return;
+  yHead += 2;
 
-  // Один блок = шапка стержня + 3 мини-эпюры
-  const blockH = 42; // мм на стержень
-  const cols = boxW > 200 ? 2 : 1;
-  const colW = (boxW - (cols - 1) * 4) / cols;
-  let curX = ox;
-  let curY = oy;
-  let colIdx = 0;
+  // ── Ось стержня с маркерами узлов и шарнирами ──
+  const barY = yHead + 5;
+  const barXL = ox + 12;
+  const barXR = ox + boxW - 12;
+  doc.setDrawColor(...C.ink);
+  doc.setLineWidth(2.0);
+  doc.line(barXL, barY, barXR, barY);
+  // Узлы
+  doc.setFillColor(...C.ink);
+  doc.circle(barXL, barY, 1.4, "F");
+  doc.circle(barXR, barY, 1.4, "F");
+  // Шарниры на концах
+  if (el.hinge_start) {
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(...C.ink);
+    doc.setLineWidth(0.5);
+    doc.circle(barXL + 4, barY, 1.2, "FD");
+  }
+  if (el.hinge_end) {
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(...C.ink);
+    doc.setLineWidth(0.5);
+    doc.circle(barXR - 4, barY, 1.2, "FD");
+  }
+  // Подписи узлов
+  doc.setFont(fontState.name, "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(...C.ink);
+  doc.text(el.node_start, barXL, barY - 3, { align: "center" });
+  doc.text(el.node_end, barXR, barY - 3, { align: "center" });
 
-  const drawMini = (
-    bx: number, by: number, bw: number, bh: number,
-    xs: number[], vals: number[], length: number,
-    color: [number, number, number], title: string, unit: string,
+  // Размерная линия снизу: L = X м
+  doc.setDrawColor(...C.thin);
+  doc.setLineWidth(0.25);
+  const yDim = barY + 6;
+  doc.line(barXL, yDim, barXR, yDim);
+  // Засечки 45°
+  doc.line(barXL - 1.4, yDim + 1.4, barXL + 1.4, yDim - 1.4);
+  doc.line(barXR - 1.4, yDim + 1.4, barXR + 1.4, yDim - 1.4);
+  // Выносные тонкие линии
+  doc.setLineWidth(0.15);
+  doc.line(barXL, barY + 2, barXL, yDim + 1.6);
+  doc.line(barXR, barY + 2, barXR, yDim + 1.6);
+  doc.setFont(fontState.name, "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(...C.ink);
+  const lblL = `L = ${er.length.toFixed(3)} м`;
+  const twL = doc.getTextWidth(lblL) + 2;
+  doc.setFillColor(255, 255, 255);
+  doc.rect((barXL + barXR) / 2 - twL / 2, yDim - 2.6, twL, 2.8, "F");
+  doc.text(lblL, (barXL + barXR) / 2, yDim - 0.5, { align: "center" });
+
+  // ── Три крупные эпюры ──
+  const epyTop = yDim + 6;
+  const epyBottom = oy + boxH - 4;
+  const gap = 4;
+  const epyH = Math.max(35, (epyBottom - epyTop - gap * 2) / 3);
+
+  const drawBigEpy = (
+    by: number, bh: number,
+    vals: number[], xs: number[],
+    color: [number, number, number],
+    title: string, unit: string,
+    fullTitle: string,
   ) => {
-    // Рамка
+    const plotX = barXL;
+    const plotW = barXR - barXL;
+    // Внешняя рамка-плашка
     doc.setDrawColor(...C.grid);
-    doc.setLineWidth(0.2);
-    doc.rect(bx, by, bw, bh);
-    // Заголовок мини-эпюры
+    doc.setLineWidth(0.25);
+    doc.rect(ox, by, boxW, bh);
+    // Заголовок эпюры слева сверху
     doc.setFont(fontState.name, "bold");
-    doc.setFontSize(6.5);
+    doc.setFontSize(10);
     doc.setTextColor(...color);
-    doc.text(title, bx + 1.5, by + 3);
-    // Оси
-    const padInner = 4;
-    const plotX = bx + padInner + 4;
-    const plotY = by + 4;
-    const plotW = bw - padInner - 6;
-    const plotH = bh - padInner - 4;
+    doc.text(title, ox + 2, by + 5.5);
+    doc.setFont(fontState.name, "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...C.thin);
+    doc.text(fullTitle, ox + 2 + doc.getTextWidth(title) + 2, by + 5.5);
+    // Единицы справа сверху
+    doc.setFontSize(8);
+    doc.setTextColor(...C.thin);
+    doc.text(unit, ox + boxW - 2, by + 5.5, { align: "right" });
+
+    // Область графика
+    const plotTop = by + 9;
+    const plotH = bh - 14; // место под подписи x снизу
+    const plotBot = plotTop + plotH;
+
     // Границы по Y
     let vMin = 0, vMax = 0;
-    for (const v of vals) { if (v < vMin) vMin = v; if (v > vMax) vMax = v; }
+    for (const v of vals) {
+      if (v < vMin) vMin = v;
+      if (v > vMax) vMax = v;
+    }
     if (vMin === 0 && vMax === 0) {
-      doc.setFontSize(6);
+      // Нулевая эпюра
+      doc.setDrawColor(...C.ink);
+      doc.setLineWidth(0.5);
+      const yZero = plotTop + plotH / 2;
+      doc.line(plotX, yZero, plotX + plotW, yZero);
+      doc.setFont(fontState.name, "normal");
+      doc.setFontSize(8);
       doc.setTextColor(...C.thin);
-      doc.text("0", bx + bw / 2, by + bh / 2, { align: "center" });
+      const txt = "эпюра нулевая на этом стержне";
+      const tw = doc.getTextWidth(txt) + 4;
+      doc.setFillColor(255, 255, 255);
+      doc.rect(plotX + plotW / 2 - tw / 2, yZero - 2, tw, 4, "F");
+      doc.text(txt, plotX + plotW / 2, yZero + 1, { align: "center" });
       return;
     }
-    const vSpan = (vMax - vMin) || 1;
-    const yZero = plotY + plotH - ((0 - vMin) / vSpan) * plotH;
-    const toPxX = (xw: number) => plotX + (xw / length) * plotW;
-    const toPxY = (val: number) => plotY + plotH - ((val - vMin) / vSpan) * plotH;
-    // Нулевая ось
+    // Симметричное расширение, чтобы график не упирался в края
+    const vSpan = vMax - vMin || 1;
+    const pad = vSpan * 0.18;
+    const vLow = vMin - (vMin < 0 ? pad : 0);
+    const vHigh = vMax + (vMax > 0 ? pad : 0);
+    const vRange = vHigh - vLow || 1;
+    const yZero = plotBot - ((0 - vLow) / vRange) * plotH;
+
+    const toPxX = (xw: number) => plotX + (xw / er.length) * plotW;
+    const toPxY = (v: number) => plotBot - ((v - vLow) / vRange) * plotH;
+
+    // Сетка по длине: 0, L/4, L/2, 3L/4, L
+    doc.setDrawColor(...C.grid);
+    doc.setLineWidth(0.15);
+    doc.setFont(fontState.name, "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(...C.thin);
+    const ticks = [0, 0.25, 0.5, 0.75, 1.0];
+    for (const t of ticks) {
+      const xw = t * er.length;
+      const px = toPxX(xw);
+      // Вертикальная линия сетки
+      doc.line(px, plotTop, px, plotBot);
+      // Подпись под графиком
+      doc.text(`${xw.toFixed(2)} м`, px, plotBot + 4, { align: "center" });
+    }
+
+    // Нулевая ось эпюры — жирная
     doc.setDrawColor(...C.ink);
-    doc.setLineWidth(0.4);
+    doc.setLineWidth(0.7);
     doc.line(plotX, yZero, plotX + plotW, yZero);
+
     // Полигон заливки
     const pts: [number, number][] = xs.map((x, i) => [toPxX(x), toPxY(vals[i])]);
     if (pts.length >= 2) {
       const segs: number[][] = [];
-      const startX = pts[0][0];
-      const startY = yZero;
-      // от стартовой точки оси к первой точке эпюры
-      segs.push([0, pts[0][1] - startY]);
+      segs.push([0, pts[0][1] - yZero]);
       for (let i = 1; i < pts.length; i++) {
         segs.push([pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]]);
       }
       segs.push([0, yZero - pts[pts.length - 1][1]]);
-      segs.push([startX - pts[pts.length - 1][0], 0]);
+      segs.push([plotX - pts[pts.length - 1][0], 0]);
       doc.setFillColor(color[0], color[1], color[2]);
-      doc.setGState(doc.GState({ opacity: 0.18 }));
-      doc.lines(segs, startX, startY, [1, 1], "F", true);
+      doc.setGState(doc.GState({ opacity: 0.22 }));
+      doc.lines(segs, plotX, yZero, [1, 1], "F", true);
       doc.setGState(doc.GState({ opacity: 1 }));
     }
+
     // Линия эпюры
     doc.setDrawColor(...color);
-    doc.setLineWidth(0.6);
+    doc.setLineWidth(1.2);
     for (let i = 1; i < pts.length; i++) {
       doc.line(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]);
     }
-    // Подписи max/min
+
+    // Подписи max/min с выноской
     let iMax = 0, iMin = 0;
     for (let i = 1; i < vals.length; i++) {
       if (vals[i] > vals[iMax]) iMax = i;
       if (vals[i] < vals[iMin]) iMin = i;
     }
-    doc.setFont(fontState.name, "bold");
-    doc.setFontSize(6);
-    doc.setTextColor(...color);
-    if (Math.abs(vals[iMax]) > 1e-9) {
-      const px = toPxX(xs[iMax]);
-      const py = toPxY(vals[iMax]);
+
+    const drawCallout = (i: number, isMax: boolean) => {
+      if (Math.abs(vals[i]) < 1e-9) return;
+      const px = toPxX(xs[i]);
+      const py = toPxY(vals[i]);
+      // Маркер
       doc.setFillColor(...color);
-      doc.circle(px, py, 0.7, "F");
-      const lbl = `${fmtNum(vals[iMax])}`;
-      const tw = doc.getTextWidth(lbl) + 1.4;
+      doc.circle(px, py, 1.2, "F");
+      // Выноска: короткая линия от точки на 6 мм вверх/вниз и подпись на белой плашке
+      const above = vals[i] >= 0;
+      const dirY = above ? -1 : 1;
+      const callY = py + dirY * 6;
+      doc.setDrawColor(...color);
+      doc.setLineWidth(0.35);
+      doc.line(px, py, px, callY);
+      // Текст подписи: значение + координата
+      const valTxt = `${fmtNum(vals[i])} ${unit}`;
+      const coordTxt = `x = ${xs[i].toFixed(2)} м`;
+      doc.setFont(fontState.name, "bold");
+      doc.setFontSize(8);
+      const tw1 = doc.getTextWidth(valTxt);
+      doc.setFont(fontState.name, "normal");
+      doc.setFontSize(6.5);
+      const tw2 = doc.getTextWidth(coordTxt);
+      const tw = Math.max(tw1, tw2) + 3;
+      const th = 7;
+      // Позиция плашки — не вылазит за края
+      let bxLbl = px - tw / 2;
+      if (bxLbl < plotX) bxLbl = plotX;
+      if (bxLbl + tw > plotX + plotW) bxLbl = plotX + plotW - tw;
+      const byLbl = above ? callY - th : callY;
       doc.setFillColor(255, 255, 255);
-      doc.rect(px - tw / 2, py - 3, tw, 2.4, "F");
+      doc.setDrawColor(...color);
+      doc.setLineWidth(0.3);
+      doc.rect(bxLbl, byLbl, tw, th, "FD");
+      doc.setFont(fontState.name, "bold");
+      doc.setFontSize(8);
       doc.setTextColor(...color);
-      doc.text(lbl, px, py - 1.2, { align: "center" });
-    }
-    if (Math.abs(vals[iMin]) > 1e-9 && iMin !== iMax) {
-      const px = toPxX(xs[iMin]);
-      const py = toPxY(vals[iMin]);
-      doc.setFillColor(...color);
-      doc.circle(px, py, 0.7, "F");
-      const lbl = `${fmtNum(vals[iMin])}`;
-      const tw = doc.getTextWidth(lbl) + 1.4;
-      doc.setFillColor(255, 255, 255);
-      doc.rect(px - tw / 2, py + 0.6, tw, 2.4, "F");
-      doc.setTextColor(...color);
-      doc.text(lbl, px, py + 2.4, { align: "center" });
-    }
-    // Единица справа сверху
+      doc.text(valTxt, bxLbl + tw / 2, byLbl + 3.2, { align: "center" });
+      doc.setFont(fontState.name, "normal");
+      doc.setFontSize(6.5);
+      doc.setTextColor(...C.thin);
+      doc.text(coordTxt, bxLbl + tw / 2, byLbl + 6, { align: "center" });
+    };
+
+    drawCallout(iMax, true);
+    if (iMin !== iMax) drawCallout(iMin, false);
+
+    // Подписи vMin/vMax на левой оси
     doc.setFont(fontState.name, "normal");
-    doc.setFontSize(5.5);
+    doc.setFontSize(6.5);
     doc.setTextColor(...C.thin);
-    doc.text(unit, bx + bw - 1.5, by + 3, { align: "right" });
+    if (vMax > 0) doc.text(fmtNum(vMax), plotX - 1, toPxY(vMax) + 1, { align: "right" });
+    if (vMin < 0) doc.text(fmtNum(vMin), plotX - 1, toPxY(vMin) + 1, { align: "right" });
+    doc.text("0", plotX - 1, yZero + 1, { align: "right" });
   };
 
-  for (const b of blocks) {
-    if (curY + blockH > oy + boxH) {
-      // переход на следующий столбец/страницу
-      colIdx++;
-      if (colIdx >= cols) return; // дальше — следующая страница, делается снаружи
-      curX = ox + colIdx * (colW + 4);
-      curY = oy;
-    }
-
-    // Шапка стержня
-    doc.setFont(fontState.name, "bold");
-    doc.setFontSize(8);
-    doc.setTextColor(...C.ink);
-    const label = b.el.label || b.el.id;
-    doc.text(`Стержень ${label}: ${b.el.node_start} → ${b.el.node_end}, L = ${b.length.toFixed(3)} м`,
-      curX, curY + 4);
-
-    // Ось стержня под шапкой (просто горизонтальная толстая линия)
-    doc.setDrawColor(...C.ink);
-    doc.setLineWidth(1.2);
-    doc.line(curX + 2, curY + 7, curX + colW - 2, curY + 7);
-    // Узлы по концам — кружки с подписями
-    doc.setFillColor(...C.ink);
-    doc.circle(curX + 2, curY + 7, 0.9, "F");
-    doc.circle(curX + colW - 2, curY + 7, 0.9, "F");
-    doc.setFont(fontState.name, "normal");
-    doc.setFontSize(6);
-    doc.setTextColor(...C.thin);
-    doc.text(b.el.node_start, curX + 2, curY + 6, { align: "left" });
-    doc.text(b.el.node_end, curX + colW - 2, curY + 6, { align: "right" });
-
-    // 3 мини-эпюры подряд
-    const miniH = (blockH - 12) / 3 - 1;
-    const miniY = curY + 9;
-    drawMini(curX, miniY, colW, miniH, b.xs, b.N, b.length, [44, 62, 128], "N", "Н");
-    drawMini(curX, miniY + miniH + 1, colW, miniH, b.xs, b.Qy, b.length, [26, 138, 90], "Qy", "Н");
-    drawMini(curX, miniY + (miniH + 1) * 2, colW, miniH, b.xs, b.Mz, b.length, [192, 57, 43], "Mz", "Н·м");
-
-    curY += blockH;
-  }
+  drawBigEpy(epyTop, epyH, er.diagrams.N, er.diagrams.x,
+    [44, 62, 128], "N", "Н", "— продольная сила");
+  drawBigEpy(epyTop + epyH + gap, epyH, er.diagrams.Qy, er.diagrams.x,
+    [26, 138, 90], "Qy", "Н", "— поперечная сила");
+  drawBigEpy(epyTop + (epyH + gap) * 2, epyH, er.diagrams.Mz, er.diagrams.x,
+    [192, 57, 43], "Mz", "Н·м", "— изгибающий момент");
 }
 
 function fmtNum(v: number): string {
@@ -1571,34 +1670,28 @@ export async function generatePdfReport(
     drawDiagramOverScheme(doc, model, result, kind, ML, MT + 10, CW, PH - MT - MB - 10);
   }
 
-  // ── Страница «Развёртка стержней»: каждый стержень горизонтально + N, Q, M ──
-  // Один лист на все стержни (если влезают). Если не влезают — добавляем доп. страницы.
-  {
-    const blocksTotal = model.elements.length;
-    const blocksPerPage = 6;
-    const pages = Math.max(1, Math.ceil(blocksTotal / blocksPerPage));
-    for (let p = 0; p < pages; p++) {
-      doc.addPage();
-      doc.setFillColor(...C.ink);
-      doc.rect(ML, MT, CW, 8, "F");
-      doc.setFont(FONT, "bold");
-      doc.setFontSize(9);
-      doc.setTextColor(255, 255, 255);
-      const suffix = pages > 1 ? ` (стр. ${p + 1}/${pages})` : "";
-      doc.text(
-        `${projectName || "Расчёт"} · Развёртка стержней — N, Qy, Mz${suffix}`,
-        ML + 3, MT + 5.5,
-      );
-      doc.setFont(FONT, "normal");
-      doc.setFontSize(7);
-      doc.text("диплом-инж.рф", PW - MR - 3, MT + 5.5, { align: "right" });
+  // ── Развёртка стержней: каждый стержень — отдельная страница ──
+  // Три крупные эпюры N, Qy, Mz во всю ширину листа с выносными подписями
+  // max/min и размерной сеткой по длине стержня (0, L/4, L/2, 3L/4, L).
+  const totalEls = model.elements.length;
+  for (let i = 0; i < totalEls; i++) {
+    const el = model.elements[i];
+    doc.addPage();
+    doc.setFillColor(...C.ink);
+    doc.rect(ML, MT, CW, 8, "F");
+    doc.setFont(FONT, "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(255, 255, 255);
+    const label = el.label || el.id;
+    doc.text(
+      `${projectName || "Расчёт"} · Развёртка стержня ${label} (${i + 1}/${totalEls})`,
+      ML + 3, MT + 5.5,
+    );
+    doc.setFont(FONT, "normal");
+    doc.setFontSize(7);
+    doc.text("диплом-инж.рф", PW - MR - 3, MT + 5.5, { align: "right" });
 
-      // Подготавливаем подмодель только с нужными стержнями для этой страницы
-      const start = p * blocksPerPage;
-      const subElements = model.elements.slice(start, start + blocksPerPage);
-      const subModel: FrameModel = { ...model, elements: subElements };
-      drawUnfoldedDiagrams(doc, subModel, result, ML, MT + 10, CW, PH - MT - MB - 10);
-    }
+    drawSingleElementUnfolded(doc, model, result, el.id, ML, MT + 10, CW, PH - MT - MB - 10);
   }
 
   // Нижний колонтитул

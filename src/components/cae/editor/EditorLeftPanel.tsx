@@ -24,15 +24,16 @@ const EditorLeftPanel = ({ mode, setMode, gridStep, setGridStep, onStartTutorial
           <button
             key={t.v}
             onClick={() => setMode(t.v as EditorMode)}
-            className={`border py-2 px-2 font-gost uppercase tracking-wider flex items-center gap-1.5 transition relative ${
+            className={`border min-h-[44px] py-2 px-2 font-gost uppercase tracking-wider flex items-center justify-center gap-1.5 transition relative ${
               mode === t.v
                 ? "bg-[var(--drawing-accent)] text-white border-[var(--drawing-accent)]"
-                : "border-[var(--drawing-line)] hover:border-[var(--drawing-accent)]"
+                : "border-[var(--drawing-line)] hover:border-[var(--drawing-accent)] active:bg-[var(--drawing-paper)]"
             }`}
             title={`Горячая клавиша: ${t.key}`}
+            aria-pressed={mode === t.v}
           >
-            <Icon name={t.icon} size={12} />
-            {t.label}
+            <Icon name={t.icon} size={14} />
+            <span>{t.label}</span>
             <span
               className={`absolute top-0.5 right-1 text-[8px] font-mono ${
                 mode === t.v ? "text-white/70" : "text-[var(--drawing-line-thin)]"
@@ -59,11 +60,12 @@ const EditorLeftPanel = ({ mode, setMode, gridStep, setGridStep, onStartTutorial
           <button
             key={g}
             onClick={() => setGridStep(g)}
-            className={`flex-1 border py-1 text-[11px] font-mono ${
+            className={`flex-1 border min-h-[44px] py-1 text-[11px] font-mono ${
               gridStep === g
                 ? "bg-[var(--drawing-line)] text-[var(--drawing-bg)] border-[var(--drawing-line)]"
-                : "border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)]"
+                : "border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)] active:bg-[var(--drawing-paper)]"
             }`}
+            aria-pressed={gridStep === g}
           >
             {g} м
           </button>

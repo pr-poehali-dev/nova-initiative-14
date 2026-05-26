@@ -177,11 +177,12 @@ const EditorRightPanel = ({
                   setBcCustomOpen(false);
                 }
               }}
-              className={`border py-1.5 px-1 text-[9px] font-gost uppercase ${
+              className={`border min-h-[40px] py-1.5 px-1 text-[10px] font-gost uppercase active:bg-[var(--drawing-paper)] ${
                 nodeBC?.type === b.v || (b.v === "custom" && bcCustomOpen)
                   ? "bg-[var(--drawing-line)] text-[var(--drawing-bg)] border-[var(--drawing-line)]"
                   : "border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)]"
               }`}
+              aria-pressed={nodeBC?.type === b.v || (b.v === "custom" && bcCustomOpen)}
             >
               {b.label}
             </button>
