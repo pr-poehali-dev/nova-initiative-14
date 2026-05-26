@@ -8,6 +8,7 @@
 import Icon from "@/components/ui/icon";
 import FrameCanvas, { type EditorMode, type DiagramKind } from "@/components/cae/FrameCanvas";
 import type { FrameModel, SolverResponse } from "@/lib/cae-model";
+import type { LabelOffsetsApi } from "@/pages/cae-editor/useLabelOffsets";
 
 interface Props {
   model: FrameModel;
@@ -33,6 +34,9 @@ interface Props {
   clearError: () => void;
   onOpenHelp: () => void;
   onOpenSettings: () => void;
+  arrowScale?: number;
+  fontScale?: number;
+  labelOffsets?: LabelOffsetsApi;
 }
 
 const EditorCanvasArea = ({
@@ -59,6 +63,9 @@ const EditorCanvasArea = ({
   clearError,
   onOpenHelp,
   onOpenSettings,
+  arrowScale,
+  fontScale,
+  labelOffsets,
 }: Props) => (
   <div
     className="border-2 border-[var(--drawing-line)] relative h-[58vh] min-h-[360px] lg:h-[70vh] lg:min-h-[480px]"
@@ -125,6 +132,9 @@ const EditorCanvasArea = ({
       showDiagram={showDiagram}
       diagramScale={diagramScale}
       fitRequestId={fitRequestId}
+      arrowScale={arrowScale}
+      fontScale={fontScale}
+      labelOffsets={labelOffsets}
     />
 
     {displayError && (

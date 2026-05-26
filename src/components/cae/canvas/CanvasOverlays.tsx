@@ -6,6 +6,8 @@ import type {
   SolverResponse,
 } from "@/lib/cae-model";
 import { ACCENT, LINE, THIN, BG, NODE_R } from "./canvas-constants";
+import DraggableLabel from "./DraggableLabel";
+import type { LabelOffsetsApi } from "@/pages/cae-editor/useLabelOffsets";
 
 // Зелёный — для реакций опор (стандарт в LIRA/SCAD)
 const REACTION = "#1a8a5a";
@@ -23,6 +25,10 @@ interface Props {
   handleNodePointerDown?: (n: ModelNode, e: React.PointerEvent) => void;
   result: SolverResponse | null;
   showReactions?: boolean;
+  arrowScale?: number;
+  fontScale?: number;
+  labelOffsets?: LabelOffsetsApi;
+  svgRef?: React.RefObject<SVGSVGElement>;
 }
 
 /**
@@ -86,7 +92,33 @@ const CanvasOverlays = ({
   handleNodePointerDown,
   result,
   showReactions = true,
+  arrowScale = 1,
+  fontScale = 1,
+  labelOffsets,
+  svgRef,
 }: Props) => {
+  // Хелпер: создать перетаскиваемую текстовую подпись или статичную (если drag отключён).
+  const makeDraggableText = (
+    offsetKey: string,
+    baseX: number,
+    baseY: number,
+    render: (x: number, y: number) => React.ReactElement,
+  ): React.ReactElement => {
+    if (!labelOffsets || !svgRef) {
+      return <g pointerEvents="none">{render(baseX, baseY)}</g>;
+    }
+    return (
+      <DraggableLabel
+        offsetKey={offsetKey}
+        baseX={baseX}
+        baseY={baseY}
+        labelOffsets={labelOffsets}
+        svgRef={svgRef}
+      >
+        {(x, y) => render(x, y)}
+      </DraggableLabel>
+    );
+  };
   const selSet = new Set(selectedNodeIds);
   // === Нагрузки ===
   const renderLoad = (ld: ModelLoad) => {
@@ -106,21 +138,24 @@ const CanvasOverlays = ({
       if (mag > 1e-9) {
         const ux = fx / mag;
         const uy = -fy / mag;
-        const len = 60;
+        const len = 60 * arrowScale;
         const startX = sx - ux * len;
         const startY = sy - uy * len;
-        const ah = 8;
+        const ah = 8 * arrowScale;
         const a1x = sx - Math.cos(Math.atan2(sy - startY, sx - startX) - Math.PI / 6) * ah;
         const a1y = sy - Math.sin(Math.atan2(sy - startY, sx - startX) - Math.PI / 6) * ah;
         const a2x = sx - Math.cos(Math.atan2(sy - startY, sx - startX) + Math.PI / 6) * ah;
         const a2y = sy - Math.sin(Math.atan2(sy - startY, sx - startX) + Math.PI / 6) * ah;
+        const fs = 11 * fontScale;
         items.push(
           <g key={`${ld.id}_F`}>
-            <line x1={startX} y1={startY} x2={sx} y2={sy} stroke={ACCENT} strokeWidth={2} />
-            <polygon points={`${sx},${sy} ${a1x},${a1y} ${a2x},${a2y}`} fill={ACCENT} />
-            <text x={startX} y={startY - 6} fontSize={11} fill={ACCENT} fontFamily="monospace">
-              {Math.round(mag)} Н
-            </text>
+            <line x1={startX} y1={startY} x2={sx} y2={sy} stroke={ACCENT} strokeWidth={2} pointerEvents="none" />
+            <polygon points={`${sx},${sy} ${a1x},${a1y} ${a2x},${a2y}`} fill={ACCENT} pointerEvents="none" />
+            {makeDraggableText(`load:${ld.id}`, startX, startY - 6, (x, y) => (
+              <text x={x} y={y} fontSize={fs} fill={ACCENT} fontFamily="monospace">
+                {Math.round(mag)} Н
+              </text>
+            ))}
           </g>,
         );
       }
@@ -128,7 +163,7 @@ const CanvasOverlays = ({
       // Узловой момент Mz: круговая стрелка
       const mz = ld.moment?.[2] || 0;
       if (Math.abs(mz) > 1e-9) {
-        const r = 16;
+        const r = 16 * arrowScale;
         const ccw = mz > 0; // против часовой = положительное Mz
         // Дуга 270°
         const start = ccw ? -Math.PI / 2 : Math.PI / 2;
@@ -139,19 +174,22 @@ const CanvasOverlays = ({
         const endY = sy + r * Math.sin(end);
         const sweepFlag = ccw ? 1 : 0;
         const path = `M ${sweepX} ${sweepY} A ${r} ${r} 0 1 ${sweepFlag} ${endX} ${endY}`;
-        const ah = 6;
+        const ah = 6 * arrowScale;
         const tangent = ccw ? end - Math.PI / 2 : end + Math.PI / 2;
         const a1x = endX + Math.cos(tangent + Math.PI / 8) * ah;
         const a1y = endY + Math.sin(tangent + Math.PI / 8) * ah;
         const a2x = endX + Math.cos(tangent - Math.PI / 8) * ah;
         const a2y = endY + Math.sin(tangent - Math.PI / 8) * ah;
+        const fs = 10 * fontScale;
         items.push(
           <g key={`${ld.id}_M`}>
-            <path d={path} fill="none" stroke={ACCENT} strokeWidth={2} />
-            <polygon points={`${endX},${endY} ${a1x},${a1y} ${a2x},${a2y}`} fill={ACCENT} />
-            <text x={sx + r + 6} y={sy - r} fontSize={10} fill={ACCENT} fontFamily="monospace">
-              {Math.round(mz)} Н·м
-            </text>
+            <path d={path} fill="none" stroke={ACCENT} strokeWidth={2} pointerEvents="none" />
+            <polygon points={`${endX},${endY} ${a1x},${a1y} ${a2x},${a2y}`} fill={ACCENT} pointerEvents="none" />
+            {makeDraggableText(`loadM:${ld.id}`, sx + r + 6, sy - r, (x, y) => (
+              <text x={x} y={y} fontSize={fs} fill={ACCENT} fontFamily="monospace">
+                {Math.round(mz)} Н·м
+              </text>
+            ))}
           </g>,
         );
       }
@@ -176,23 +214,26 @@ const CanvasOverlays = ({
       if (mag < 1e-9) return null;
       const ux = fx / mag;
       const uy = -fy / mag;
-      const len = 50;
+      const len = 50 * arrowScale;
       const startX = sx - ux * len;
       const startY = sy - uy * len;
-      const ah = 7;
+      const ah = 7 * arrowScale;
       const angle = Math.atan2(sy - startY, sx - startX);
       const a1x = sx - Math.cos(angle - Math.PI / 6) * ah;
       const a1y = sy - Math.sin(angle - Math.PI / 6) * ah;
       const a2x = sx - Math.cos(angle + Math.PI / 6) * ah;
       const a2y = sy - Math.sin(angle + Math.PI / 6) * ah;
+      const fs = 10 * fontScale;
       return (
-        <g key={ld.id} pointerEvents="none">
-          <line x1={startX} y1={startY} x2={sx} y2={sy} stroke={ACCENT} strokeWidth={2} />
-          <polygon points={`${sx},${sy} ${a1x},${a1y} ${a2x},${a2y}`} fill={ACCENT} />
-          <circle cx={sx} cy={sy} r={3} fill={ACCENT} />
-          <text x={startX} y={startY - 4} fontSize={10} fill={ACCENT} fontFamily="monospace">
-            P={Math.round(mag)} Н
-          </text>
+        <g key={ld.id}>
+          <line x1={startX} y1={startY} x2={sx} y2={sy} stroke={ACCENT} strokeWidth={2} pointerEvents="none" />
+          <polygon points={`${sx},${sy} ${a1x},${a1y} ${a2x},${a2y}`} fill={ACCENT} pointerEvents="none" />
+          <circle cx={sx} cy={sy} r={3} fill={ACCENT} pointerEvents="none" />
+          {makeDraggableText(`load:${ld.id}`, startX, startY - 4, (x, y) => (
+            <text x={x} y={y} fontSize={fs} fill={ACCENT} fontFamily="monospace">
+              P={Math.round(mag)} Н
+            </text>
+          ))}
         </g>
       );
     }
@@ -230,7 +271,7 @@ const CanvasOverlays = ({
       const sfnx = fnx;
       const sfny = -fny;
 
-      const arrowLen = 24; // длина каждой стрелки в пикселях
+      const arrowLen = 24 * arrowScale; // длина каждой стрелки в пикселях
       // Количество стрелок зависит от длины элемента на экране
       const lenPx = lenM * pxPerM;
       const nArrows = Math.max(2, Math.min(20, Math.round(lenPx / 30)));
@@ -262,7 +303,7 @@ const CanvasOverlays = ({
         const tipY = toScreenY(wy);
         const tailX = tipX - sfnx * arrowLen;
         const tailY = tipY - sfny * arrowLen;
-        const ah = 5;
+        const ah = 5 * arrowScale;
         const angle = Math.atan2(tipY - tailY, tipX - tailX);
         const a1x = tipX - Math.cos(angle - Math.PI / 6) * ah;
         const a1y = tipY - Math.sin(angle - Math.PI / 6) * ah;
@@ -279,26 +320,25 @@ const CanvasOverlays = ({
         );
       }
 
-      // Подпись по центру
+      // Подпись по центру (перетаскиваемая)
       const midX = (topStartX + topEndX) / 2;
       const midY = (topStartY + topEndY) / 2;
-      items.push(
-        <text
-          key="label"
-          x={midX}
-          y={midY - 6}
-          fontSize={11}
-          fill={ACCENT}
-          fontFamily="monospace"
-          textAnchor="middle"
-        >
-          q = {Math.round(Math.abs(qy || qx))} Н/м
-        </text>,
-      );
-
+      const fs = 11 * fontScale;
       return (
-        <g key={ld.id} pointerEvents="none">
-          {items}
+        <g key={ld.id}>
+          <g pointerEvents="none">{items}</g>
+          {makeDraggableText(`load:${ld.id}`, midX, midY - 6, (x, y) => (
+            <text
+              x={x}
+              y={y}
+              fontSize={fs}
+              fill={ACCENT}
+              fontFamily="monospace"
+              textAnchor="middle"
+            >
+              q = {Math.round(Math.abs(qy || qx))} Н/м
+            </text>
+          ))}
         </g>
       );
     }
@@ -356,33 +396,48 @@ const CanvasOverlays = ({
 
     const mag = Math.sqrt(fx * fx + fy * fy);
     if (mag > 1e-3) {
-      // Реакция направлена от опоры в сторону действия (НЕ "в узел", а "из узла наружу")
-      const arr = arrowFromPoint(
-        sx,
-        sy,
-        fx,
-        fy,
-        50,
-        REACTION,
-        `R=${Math.round(mag)} Н`,
-        `${rxn.node_id}_RF`,
+      // Реакция: стрелка из узла наружу. Длина и наконечник масштабируются arrowScale.
+      const reactionLen = 50 * arrowScale;
+      const ux = fx / mag;
+      const uy = -fy / mag;
+      const ex = sx + ux * reactionLen;
+      const ey = sy + uy * reactionLen;
+      const ah = 8 * arrowScale;
+      const a1x = ex - ux * ah - uy * ah * 0.5;
+      const a1y = ey - uy * ah + ux * ah * 0.5;
+      const a2x = ex - ux * ah + uy * ah * 0.5;
+      const a2y = ey - uy * ah - ux * ah * 0.5;
+      const fs = 11 * fontScale;
+      items.push(
+        <g key={`${rxn.node_id}_RF`}>
+          <line x1={sx} y1={sy} x2={ex} y2={ey} stroke={REACTION} strokeWidth={2} pointerEvents="none" />
+          <polygon points={`${ex},${ey} ${a1x},${a1y} ${a2x},${a2y}`} fill={REACTION} pointerEvents="none" />
+          {makeDraggableText(`rxn:${rxn.node_id}`, ex + ux * 5, ey + uy * 5 - 2, (x, y) => (
+            <text
+              x={x}
+              y={y}
+              fontSize={fs}
+              fill={REACTION}
+              fontFamily="monospace"
+              textAnchor={ux > 0.5 ? "start" : ux < -0.5 ? "end" : "middle"}
+            >
+              R={Math.round(mag)} Н
+            </text>
+          ))}
+        </g>,
       );
-      if (arr) items.push(arr);
     }
 
     if (Math.abs(mz) > 1e-3) {
+      const fs = 10 * fontScale;
       items.push(
-        <text
-          key={`${rxn.node_id}_RM`}
-          x={sx + 12}
-          y={sy + 22}
-          fontSize={10}
-          fill={REACTION}
-          fontFamily="monospace"
-          pointerEvents="none"
-        >
-          M={Math.round(mz)} Н·м
-        </text>,
+        <g key={`${rxn.node_id}_RM`}>
+          {makeDraggableText(`rxnM:${rxn.node_id}`, sx + 12, sy + 22, (x, y) => (
+            <text x={x} y={y} fontSize={fs} fill={REACTION} fontFamily="monospace">
+              M={Math.round(mz)} Н·м
+            </text>
+          ))}
+        </g>,
       );
     }
 
@@ -400,35 +455,34 @@ const CanvasOverlays = ({
       {/* реакции опор (после расчёта) */}
       {showReactions && result?.reactions.map((rxn) => renderReaction(rxn))}
 
-      {/* узлы */}
+      {/* узлы — кружок (кликабельный) + перетаскиваемая подпись отдельной группой */}
       {model.nodes.map((n) => {
         const isSel = selSet.has(n.id);
         const isPending = pendingFirstNodeId === n.id;
+        const cx = toScreenX(n.coords[0]);
+        const cy = toScreenY(n.coords[1]);
+        const fs = 10 * fontScale;
         return (
-          <g
-            key={n.id}
-            style={{ cursor: isSel ? "move" : "pointer" }}
-            onClick={(e) => handleNodeClick(n, e)}
-            onPointerDown={handleNodePointerDown ? (e) => handleNodePointerDown(n, e) : undefined}
-          >
-            <circle
-              cx={toScreenX(n.coords[0])}
-              cy={toScreenY(n.coords[1])}
-              r={isSel || isPending ? NODE_R + 3 : NODE_R}
-              fill={isSel ? ACCENT : isPending ? ACCENT : BG}
-              stroke={isSel || isPending ? ACCENT : LINE}
-              strokeWidth={2}
-            />
-            <text
-              x={toScreenX(n.coords[0]) + 10}
-              y={toScreenY(n.coords[1]) - 8}
-              fontSize={10}
-              fill={THIN}
-              fontFamily="monospace"
-              pointerEvents="none"
+          <g key={n.id}>
+            <g
+              style={{ cursor: isSel ? "move" : "pointer" }}
+              onClick={(e) => handleNodeClick(n, e)}
+              onPointerDown={handleNodePointerDown ? (e) => handleNodePointerDown(n, e) : undefined}
             >
-              {n.id}
-            </text>
+              <circle
+                cx={cx}
+                cy={cy}
+                r={isSel || isPending ? NODE_R + 3 : NODE_R}
+                fill={isSel ? ACCENT : isPending ? ACCENT : BG}
+                stroke={isSel || isPending ? ACCENT : LINE}
+                strokeWidth={2}
+              />
+            </g>
+            {makeDraggableText(`node:${n.id}`, cx + 10, cy - 8, (x, y) => (
+              <text x={x} y={y} fontSize={fs} fill={THIN} fontFamily="monospace">
+                {n.id}
+              </text>
+            ))}
           </g>
         );
       })}

@@ -7,9 +7,28 @@ interface Props {
   gridStep: number;
   setGridStep: (g: number) => void;
   onStartTutorial?: () => void;
+  // Настройки отображения схемы
+  arrowScale: number;
+  setArrowScale: (v: number) => void;
+  fontScale: number;
+  setFontScale: (v: number) => void;
+  onResetView: () => void;
+  onResetLabelOffsets: () => void;
 }
 
-const EditorLeftPanel = ({ mode, setMode, gridStep, setGridStep, onStartTutorial }: Props) => (
+const EditorLeftPanel = ({
+  mode,
+  setMode,
+  gridStep,
+  setGridStep,
+  onStartTutorial,
+  arrowScale,
+  setArrowScale,
+  fontScale,
+  setFontScale,
+  onResetView,
+  onResetLabelOffsets,
+}: Props) => (
   <aside className="space-y-3">
     <div className="border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] p-3" data-tutorial="tools">
       <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-2">
@@ -71,6 +90,56 @@ const EditorLeftPanel = ({ mode, setMode, gridStep, setGridStep, onStartTutorial
           </button>
         ))}
       </div>
+    </div>
+
+    <div className="border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)]">
+          Вид
+        </p>
+        <button
+          onClick={() => { onResetView(); onResetLabelOffsets(); }}
+          className="text-[9px] font-gost uppercase tracking-wider text-[var(--drawing-line-thin)] hover:text-[var(--drawing-accent)] flex items-center gap-1"
+          title="Сбросить размеры стрелок, шрифта и положение подписей"
+        >
+          <Icon name="RotateCcw" size={10} /> Сброс
+        </button>
+      </div>
+      <label className="block">
+        <div className="flex items-center justify-between text-[10px] font-gost text-[var(--drawing-line-thin)] mb-0.5">
+          <span>Размер стрелок</span>
+          <span className="font-mono">{arrowScale.toFixed(2)}×</span>
+        </div>
+        <input
+          type="range"
+          min={0.3}
+          max={3}
+          step={0.05}
+          value={arrowScale}
+          onChange={(e) => setArrowScale(parseFloat(e.target.value))}
+          className="w-full"
+          aria-label="Размер стрелок нагрузок и реакций"
+        />
+      </label>
+      <label className="block">
+        <div className="flex items-center justify-between text-[10px] font-gost text-[var(--drawing-line-thin)] mb-0.5">
+          <span>Размер шрифта</span>
+          <span className="font-mono">{fontScale.toFixed(2)}×</span>
+        </div>
+        <input
+          type="range"
+          min={0.5}
+          max={2.5}
+          step={0.05}
+          value={fontScale}
+          onChange={(e) => setFontScale(parseFloat(e.target.value))}
+          className="w-full"
+          aria-label="Размер шрифта подписей на схеме"
+        />
+      </label>
+      <p className="text-[9px] font-gost text-[var(--drawing-line-thin)] leading-snug">
+        Перетаскивай подписи мышью, чтобы разместить их удобно.
+      </p>
     </div>
 
     <div className="border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] p-3 text-[11px] space-y-1.5">

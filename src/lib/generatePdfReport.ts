@@ -11,6 +11,7 @@
  *  6. Эпюры N, Q, M — векторные полигоны для каждого элемента
  */
 import { jsPDF } from "jspdf";
+import { svg2pdf } from "svg2pdf.js";
 import type { FrameModel, SolverResponse } from "./cae-model";
 import { runChecks, type ElementCheck } from "./cae-checks";
 import { getIndustrySpec } from "./cae-industry";
@@ -1514,11 +1515,86 @@ function _drawDiagramLegacyStub(
 }
  
 
+/**
+ * Рендерит SVG расчётной схемы в заданную область PDF (через svg2pdf.js).
+ * Возвращает true если получилось, false — если упало (тогда вызывающий код
+ * должен откатиться на векторную перерисовку через drawScheme).
+ *
+ * Клонируем SVG и подставляем явные размеры viewBox/width/height,
+ * чтобы svg2pdf корректно вычислил масштаб.
+ */
+async function renderSchemeFromSvg(
+  doc: jsPDF,
+  svgSource: SVGSVGElement,
+  ox: number,
+  oy: number,
+  boxW: number,
+  boxH: number,
+  title: string,
+): Promise<boolean> {
+  try {
+    // Рамка области схемы (как в drawScheme)
+    doc.setDrawColor(...C.grid);
+    doc.setLineWidth(0.3);
+    doc.rect(ox, oy, boxW, boxH);
+
+    // Подпись над рамкой
+    doc.setFont(fontState.name, "bold");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...C.thin);
+    doc.text(title, ox + 3, oy + 4);
+    doc.setFont(fontState.name, "normal");
+
+    // Клонируем исходный SVG (не трогаем DOM приложения)
+    const clone = svgSource.cloneNode(true) as SVGSVGElement;
+    const rect = svgSource.getBoundingClientRect();
+    const w = rect.width || 800;
+    const h = rect.height || 500;
+    if (!clone.getAttribute("viewBox")) {
+      clone.setAttribute("viewBox", `0 0 ${w} ${h}`);
+    }
+    clone.setAttribute("width", String(w));
+    clone.setAttribute("height", String(h));
+
+    // Прячем подсказку курсора (текст с координатами курсора снизу) — она не нужна в отчёте.
+    // Удаляем элементы с pointerEvents="none" и текст координат курсора.
+    // В CanvasOverlays курсорный текст помечен координатами 'x=…'. Удаляем простой эвристикой:
+    clone.querySelectorAll("text").forEach((t) => {
+      const txt = t.textContent || "";
+      if (/^x=\s*-?\d/.test(txt) && /масштаб/.test(txt)) t.remove();
+    });
+
+    // Подбираем такую область внутри рамки, чтобы сохранить пропорции SVG.
+    const innerPad = 6;
+    const availW = boxW - innerPad * 2;
+    const availH = boxH - innerPad * 2 - 4; // -4 на подпись сверху
+    const aspect = w / h;
+    let drawW = availW;
+    let drawH = drawW / aspect;
+    if (drawH > availH) { drawH = availH; drawW = drawH * aspect; }
+    const drawX = ox + (boxW - drawW) / 2;
+    const drawY = oy + 4 + (availH - drawH) / 2 + innerPad;
+
+    await svg2pdf(clone, doc, {
+      x: drawX,
+      y: drawY,
+      width: drawW,
+      height: drawH,
+    });
+    return true;
+  } catch (err) {
+     
+    console.warn("svg2pdf: не удалось перенести схему как вектор, откат на ручную отрисовку", err);
+    return false;
+  }
+}
+
 // ── Главная функция ────────────────────────────────────────────────────────
 export async function generatePdfReport(
   model: FrameModel,
   result: SolverResponse,
   projectName: string,
+  options?: { schemeSvg?: SVGSVGElement | null },
 ) {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const hasCyrillic = await ensureCyrillicFont(doc);
@@ -1548,10 +1624,27 @@ export async function generatePdfReport(
 
   const y = MT + 10;
 
-  // Расчётная схема — левая половина
+  // Расчётная схема — левая половина.
+  // Если из приложения передали живой SVG (со всеми ручными сдвигами подписей),
+  // переносим его как векторную графику через svg2pdf.js — отчёт получится
+  // 1-в-1 как пользователь видит на экране. При сбое — fallback на drawScheme.
   const schemeW = CW * 0.55;
   const schemeH = PH - MT - MB - 10 - 20; // минус штамп и нижний блок
-  drawScheme(doc, model, result, ML, y, schemeW, schemeH);
+  let schemeRendered = false;
+  if (options?.schemeSvg) {
+    schemeRendered = await renderSchemeFromSvg(
+      doc,
+      options.schemeSvg,
+      ML,
+      y,
+      schemeW,
+      schemeH,
+      "РАСЧЁТНАЯ СХЕМА",
+    );
+  }
+  if (!schemeRendered) {
+    drawScheme(doc, model, result, ML, y, schemeW, schemeH);
+  }
 
   // Правая колонка: сводка + реакции
   const rxX = ML + schemeW + 4;

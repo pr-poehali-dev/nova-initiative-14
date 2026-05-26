@@ -15,6 +15,8 @@ import { useCaeActions } from "./cae-editor/useCaeActions";
 import { useCaeSolver } from "./cae-editor/useCaeSolver";
 import { useCaeKeyboard } from "./cae-editor/useCaeKeyboard";
 import { useCaeEditorState } from "./cae-editor/useCaeEditorState";
+import { useCaeViewSettings } from "./cae-editor/useCaeViewSettings";
+import { useLabelOffsets } from "./cae-editor/useLabelOffsets";
 
 const CaeEditor = () => {
   const { id } = useParams<{ id: string }>();
@@ -84,6 +86,13 @@ const CaeEditor = () => {
     loadError,
     setLoadError,
   });
+
+  // Глобальные настройки отображения (размер стрелок и шрифта подписей).
+  // Сохраняются в localStorage между сессиями.
+  const viewSettings = useCaeViewSettings();
+
+  // Сдвиги подписей (drag-and-drop). Привязаны к проекту.
+  const labelOffsets = useLabelOffsets(projectId);
 
   const {
     onCanvasClick,
@@ -165,6 +174,12 @@ const CaeEditor = () => {
               gridStep={gridStep}
               setGridStep={setGridStep}
               onStartTutorial={() => setTutorialOpen(true)}
+              arrowScale={viewSettings.arrowScale}
+              setArrowScale={viewSettings.setArrowScale}
+              fontScale={viewSettings.fontScale}
+              setFontScale={viewSettings.setFontScale}
+              onResetView={viewSettings.resetView}
+              onResetLabelOffsets={labelOffsets.resetAll}
             />
           </div>
 
@@ -192,6 +207,9 @@ const CaeEditor = () => {
             clearError={clearError}
             onOpenHelp={() => setHelpOpen(true)}
             onOpenSettings={() => setSettingsOpen(true)}
+            arrowScale={viewSettings.arrowScale}
+            fontScale={viewSettings.fontScale}
+            labelOffsets={labelOffsets}
           />
 
           <EditorSidePanels

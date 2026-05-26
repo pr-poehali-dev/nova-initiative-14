@@ -37,7 +37,12 @@ const EditorTopBar = ({
     if (!result || pdfBusy) return;
     setPdfBusy(true);
     try {
-      await generatePdfReport(model, result, projectName);
+      // Берём живой SVG канваса со всеми ручными сдвигами подписей —
+      // чтобы расчётная схема в отчёте 1-в-1 совпадала с тем, что видит пользователь.
+      const schemeSvg = document.querySelector<SVGSVGElement>(
+        '[data-tutorial="canvas"] svg',
+      );
+      await generatePdfReport(model, result, projectName, { schemeSvg });
     } catch (e) {
       console.error("Ошибка генерации PDF:", e);
       alert("Не удалось сформировать PDF. Проверь подключение к интернету.");

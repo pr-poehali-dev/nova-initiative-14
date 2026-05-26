@@ -17,6 +17,7 @@ import type {
   FrameModel,
   SolverResponse,
 } from "@/lib/cae-model";
+import type { LabelOffsetsApi } from "@/pages/cae-editor/useLabelOffsets";
 import { BG } from "./canvas/canvas-constants";
 import CanvasGrid from "./canvas/CanvasGrid";
 import CanvasElements from "./canvas/CanvasElements";
@@ -54,6 +55,12 @@ interface Props {
   diagramScale: number;
   /** Внешний триггер для ручного автоподбора масштаба (кнопка «Подогнать»). */
   fitRequestId?: number;
+  /** Глобальный множитель размера стрелок (нагрузок и реакций). По умолчанию 1. */
+  arrowScale?: number;
+  /** Глобальный множитель размера шрифта подписей. По умолчанию 1. */
+  fontScale?: number;
+  /** API для пользовательских сдвигов подписей (drag-and-drop). */
+  labelOffsets?: LabelOffsetsApi;
 }
 
 const FrameCanvas = ({
@@ -71,6 +78,9 @@ const FrameCanvas = ({
   showDiagram,
   diagramScale,
   fitRequestId,
+  arrowScale = 1,
+  fontScale = 1,
+  labelOffsets,
 }: Props) => {
   // ── Viewport: размер, view, координатные функции ──
   const { svgRef, size, view, setView, toScreenX, toScreenY, toWorld } =
@@ -150,6 +160,9 @@ const FrameCanvas = ({
         toScreenX={toScreenX}
         toScreenY={toScreenY}
         pxPerM={view.pxPerM}
+        fontScale={fontScale}
+        labelOffsets={labelOffsets}
+        svgRef={svgRef}
       />
 
       <CanvasElements
@@ -164,6 +177,9 @@ const FrameCanvas = ({
         toScreenX={toScreenX}
         toScreenY={toScreenY}
         handleElementClick={handleElementClick}
+        fontScale={fontScale}
+        labelOffsets={labelOffsets}
+        svgRef={svgRef}
       />
 
       <CanvasDiagrams
@@ -187,6 +203,10 @@ const FrameCanvas = ({
         toScreenY={toScreenY}
         handleNodeClick={handleNodeClick}
         handleNodePointerDown={handleNodePointerDown}
+        arrowScale={arrowScale}
+        fontScale={fontScale}
+        labelOffsets={labelOffsets}
+        svgRef={svgRef}
       />
 
       <CanvasDiagramTooltip

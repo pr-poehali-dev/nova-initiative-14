@@ -1,5 +1,8 @@
+import { useState } from "react";
 import type { FrameModel, ModelElement, SolverResponse } from "@/lib/cae-model";
 import { ACCENT, LINE, ELEMENT_W } from "./canvas-constants";
+import DraggableLabel from "./DraggableLabel";
+import type { LabelOffsetsApi } from "@/pages/cae-editor/useLabelOffsets";
 
 interface Props {
   model: FrameModel;
@@ -13,7 +16,13 @@ interface Props {
   toScreenX: (x: number) => number;
   toScreenY: (y: number) => number;
   handleElementClick: (el: ModelElement, e: React.MouseEvent) => void;
+  fontScale?: number;
+  labelOffsets?: LabelOffsetsApi;
+  svgRef?: React.RefObject<SVGSVGElement>;
 }
+
+// Ширина невидимой зоны клика вокруг балки (px). Стандарт CAD: 12-14 px.
+const HIT_AREA_WIDTH = 14;
 
 const CanvasElements = ({
   model,
@@ -27,8 +36,12 @@ const CanvasElements = ({
   toScreenX,
   toScreenY,
   handleElementClick,
+  fontScale = 1,
+  labelOffsets,
+  svgRef,
 }: Props) => {
   const selSet = new Set(selectedElementIds);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   // === Деформированная схема ===
   const dispMap = new Map(
     (result?.nodal_displacements || []).map((d) => [d.node_id, d]),
@@ -37,24 +50,50 @@ const CanvasElements = ({
 
   return (
     <>
-      {/* элементы (исходные) */}
+      {/* Элементы (исходные) — рисуем как группу из двух линий:
+          1) видимая тонкая линия — то, что видит пользователь
+          2) невидимая широкая (transparent, stroke-width=14) — для удобного попадания мышью.
+          Подсветка при наведении — лёгкий цветовой акцент (а при выборе — полная подсветка). */}
       {model.elements.map((el) => {
         const a = model.nodes.find((n) => n.id === el.node_start);
         const b = model.nodes.find((n) => n.id === el.node_end);
         if (!a || !b) return null;
         const isSel = selSet.has(el.id);
+        const isHover = hoveredId === el.id && !isSel;
+        const x1 = toScreenX(a.coords[0]);
+        const y1 = toScreenY(a.coords[1]);
+        const x2 = toScreenX(b.coords[0]);
+        const y2 = toScreenY(b.coords[1]);
+        const stroke = isSel ? ACCENT : isHover ? ACCENT : LINE;
+        const width = isSel ? ELEMENT_W + 1.5 : isHover ? ELEMENT_W + 1 : ELEMENT_W;
         return (
-          <line
-            key={el.id}
-            x1={toScreenX(a.coords[0])}
-            y1={toScreenY(a.coords[1])}
-            x2={toScreenX(b.coords[0])}
-            y2={toScreenY(b.coords[1])}
-            stroke={isSel ? ACCENT : LINE}
-            strokeWidth={isSel ? ELEMENT_W + 1.5 : ELEMENT_W}
-            style={{ cursor: "pointer" }}
-            onClick={(e) => handleElementClick(el, e)}
-          />
+          <g key={el.id}>
+            {/* Видимая линия балки */}
+            <line
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke={stroke}
+              strokeWidth={width}
+              opacity={isHover ? 0.85 : 1}
+              pointerEvents="none"
+            />
+            {/* Широкая невидимая зона клика. Принимает все события мыши вместо тонкой линии. */}
+            <line
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke="transparent"
+              strokeWidth={HIT_AREA_WIDTH}
+              strokeLinecap="round"
+              style={{ cursor: "pointer" }}
+              onClick={(e) => handleElementClick(el, e)}
+              onPointerEnter={() => setHoveredId(el.id)}
+              onPointerLeave={() => setHoveredId((prev) => (prev === el.id ? null : prev))}
+            />
+          </g>
         );
       })}
 
@@ -82,22 +121,25 @@ const CanvasElements = ({
         const tx = mx + nx * off;
         const ty = my + ny * off;
         const label = el.label || el.id;
-        const w = label.length * 6 + 6;
-        return (
-          <g key={`lbl-${el.id}`} pointerEvents="none">
+        const fs = 10 * fontScale;
+        const w = label.length * fs * 0.6 + 6;
+        const h = fs + 2;
+        const draggable = !!labelOffsets && !!svgRef;
+        const inner = (cx: number, cy: number) => (
+          <>
             <rect
-              x={tx - w / 2}
-              y={ty - 6.5}
+              x={cx - w / 2}
+              y={cy - h / 2}
               width={w}
-              height={11}
+              height={h}
               fill="#ffffff"
               fillOpacity={0.85}
               rx={2}
             />
             <text
-              x={tx}
-              y={ty + 3}
-              fontSize={10}
+              x={cx}
+              y={cy + fs * 0.34}
+              fontSize={fs}
               fontFamily="monospace"
               fontWeight="bold"
               fill={LINE}
@@ -105,7 +147,24 @@ const CanvasElements = ({
             >
               {label}
             </text>
-          </g>
+          </>
+        );
+        if (!draggable) {
+          return (
+            <g key={`lbl-${el.id}`} pointerEvents="none">{inner(tx, ty)}</g>
+          );
+        }
+        return (
+          <DraggableLabel
+            key={`lbl-${el.id}`}
+            offsetKey={`elem:${el.id}`}
+            baseX={tx}
+            baseY={ty}
+            labelOffsets={labelOffsets}
+            svgRef={svgRef}
+          >
+            {(x, y) => inner(x, y)}
+          </DraggableLabel>
         );
       })}
 

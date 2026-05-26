@@ -5,12 +5,17 @@
  */
 import type { FrameModel } from "@/lib/cae-model";
 import { THIN } from "./canvas-constants";
+import DraggableLabel from "./DraggableLabel";
+import type { LabelOffsetsApi } from "@/pages/cae-editor/useLabelOffsets";
 
 interface Props {
   model: FrameModel;
   toScreenX: (x: number) => number;
   toScreenY: (y: number) => number;
   pxPerM: number;
+  fontScale?: number;
+  labelOffsets?: LabelOffsetsApi;
+  svgRef?: React.RefObject<SVGSVGElement>;
 }
 
 const DIM_COLOR = THIN;
@@ -27,7 +32,15 @@ const fmtLen = (m: number): string => {
   return `${+(m * 100).toFixed(1)} см`;
 };
 
-const CanvasDimensions = ({ model, toScreenX, toScreenY, pxPerM }: Props) => {
+const CanvasDimensions = ({
+  model,
+  toScreenX,
+  toScreenY,
+  pxPerM,
+  fontScale = 1,
+  labelOffsets,
+  svgRef,
+}: Props) => {
   const elements: React.ReactNode[] = [];
 
   for (const el of model.elements) {
@@ -132,23 +145,50 @@ const CanvasDimensions = ({ model, toScreenX, toScreenY, pxPerM }: Props) => {
         <line x1={t2x1} y1={t2y1} x2={t2x2} y2={t2y2}
           stroke={DIM_COLOR} strokeWidth={1} />
 
-        {/* Подпись длины */}
-        {showLabel && (
-          <text
-            x={txtX}
-            y={txtY}
-            fontSize={9}
-            fontFamily="monospace"
-            fill={DIM_COLOR}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            transform={`rotate(${angleDeg}, ${txtX}, ${txtY})`}
-          >
-            {fmtLen(worldLen)}
-          </text>
-        )}
       </g>,
     );
+
+    // Подпись длины — отдельной группой ВНЕ родительского <g opacity=…>,
+    // чтобы её можно было перетащить мышью независимо от размерной линии.
+    if (showLabel) {
+      const fs = 9 * fontScale;
+      const draggable = !!labelOffsets && !!svgRef;
+      const renderText = (cx: number, cy: number) => (
+        <text
+          x={cx}
+          y={cy}
+          fontSize={fs}
+          fontFamily="monospace"
+          fill={DIM_COLOR}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          transform={`rotate(${angleDeg}, ${cx}, ${cy})`}
+        >
+          {fmtLen(worldLen)}
+        </text>
+      );
+      if (!draggable) {
+        elements.push(
+          <g key={`dim-lbl-${el.id}`} opacity={DIM_OPACITY} pointerEvents="none">
+            {renderText(txtX, txtY)}
+          </g>,
+        );
+      } else {
+        elements.push(
+          <g key={`dim-lbl-${el.id}`} opacity={DIM_OPACITY}>
+            <DraggableLabel
+              offsetKey={`dim:${el.id}`}
+              baseX={txtX}
+              baseY={txtY}
+              labelOffsets={labelOffsets}
+              svgRef={svgRef}
+            >
+              {(x, y) => renderText(x, y)}
+            </DraggableLabel>
+          </g>,
+        );
+      }
+    }
   }
 
   // Подавляем warning: pxPerM используется для будущего адаптивного порога
