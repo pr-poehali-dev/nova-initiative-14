@@ -218,37 +218,9 @@ function drawScheme(
   doc.text(title, ox + 3, oy + 4);
   doc.setFont(fontState.name, "normal");
 
-  // Размерные линии длин стержней (тонкая засечка-выноска) — рисуем под слоем стержней
-  if (showDims) {
-    doc.setDrawColor(...C.thin);
-    doc.setLineWidth(0.2);
-    doc.setFontSize(6);
-    doc.setTextColor(...C.thin);
-    for (const el of model.elements) {
-      const a = model.nodes.find((n) => n.id === el.node_start);
-      const b = model.nodes.find((n) => n.id === el.node_end);
-      if (!a || !b) continue;
-      const ax = toX(a.coords[0]);
-      const ay = toY(a.coords[1]);
-      const bx = toX(b.coords[0]);
-      const by = toY(b.coords[1]);
-      const len = Math.hypot(bx - ax, by - ay);
-      if (len < 18) continue;
-      const lenM = Math.hypot(b.coords[0] - a.coords[0], b.coords[1] - a.coords[1]);
-      // нормаль "вверх-вправо" — подпись будет с одной стороны
-      const nx = (by - ay) / len;
-      const ny = -(bx - ax) / len;
-      const off = 0; // подпись прямо по оси стержня (как «4.031 м» в приложении)
-      const tx = (ax + bx) / 2 + nx * off;
-      const ty = (ay + by) / 2 + ny * off;
-      // Лёгкая подложка-плашка, чтобы текст не сливался со стержнем
-      const txt = `${lenM.toFixed(3)} м`;
-      const tw = doc.getTextWidth(txt) + 2;
-      doc.setFillColor(255, 255, 255);
-      doc.rect(tx - tw / 2, ty - 1.8, tw, 2.6, "F");
-      doc.text(txt, tx, ty + 0.3, { align: "center" });
-    }
-  }
+  // Длины стержней — теперь рисуем В САМОМ КОНЦЕ функции (после эпюр),
+  // чтобы плашки накладывались поверх и не пересекались с метками стержней.
+  // (см. блок «Подписи длин стержней» в конце drawScheme).
 
   // Элементы (поверх размерных линий)
   doc.setDrawColor(...C.ink);
@@ -285,7 +257,10 @@ function drawScheme(
     if (el.hinge_end) doc.circle(bx - ux * off, by - uy * off, r, "FD");
   }
 
-  // Подписи стержней (e1, e2, …) — на середине, со смещением по нормали
+  // Подписи стержней (e1, e2, …) — в позиции 40% длины со смещением по нормали
+  // в "противоположную" сторону относительно длины. Длина рисуется в позиции 60%
+  // со смещением по нормали в "положительную" сторону. Так подписи никогда
+  // не наезжают друг на друга.
   doc.setFont(fontState.name, "bold");
   doc.setFontSize(7);
   doc.setTextColor(...C.ink);
@@ -301,9 +276,13 @@ function drawScheme(
     if (len < 12) continue;
     const nx = (by - ay) / len;
     const ny = -(bx - ax) / len;
-    const off = 3.5;
-    const tx = (ax + bx) / 2 + nx * off;
-    const ty = (ay + by) / 2 + ny * off;
+    // Позиция 40% длины + смещение на -4 мм по нормали (одна сторона стержня)
+    const t = 0.40;
+    const midX = ax + (bx - ax) * t;
+    const midY = ay + (by - ay) * t;
+    const off = -4.5;
+    const tx = midX + nx * off;
+    const ty = midY + ny * off;
     const label = el.label || el.id;
     const tw = doc.getTextWidth(label) + 1.6;
     doc.setFillColor(255, 255, 255);
@@ -641,6 +620,42 @@ function drawScheme(
       }
     }
   }
+
+  // ── Подписи длин стержней (поверх всего) ──
+  // Размещаются в позиции 60% длины стержня и смещаются по нормали на +5 мм
+  // в "положительную" сторону. Метки стержней (e1, e2…) стоят в позиции 40%
+  // на отрицательной стороне нормали — таким образом подписи никогда
+  // не перекрываются ни друг с другом, ни с узлами на концах.
+  if (showDims) {
+    doc.setFont(fontState.name, "normal");
+    doc.setFontSize(6.5);
+    doc.setTextColor(...C.thin);
+    for (const el of model.elements) {
+      const a = model.nodes.find((n) => n.id === el.node_start);
+      const b = model.nodes.find((n) => n.id === el.node_end);
+      if (!a || !b) continue;
+      const ax = toX(a.coords[0]);
+      const ay = toY(a.coords[1]);
+      const bx = toX(b.coords[0]);
+      const by = toY(b.coords[1]);
+      const lenPx = Math.hypot(bx - ax, by - ay);
+      if (lenPx < 22) continue;
+      const lenM = Math.hypot(b.coords[0] - a.coords[0], b.coords[1] - a.coords[1]);
+      const nx = (by - ay) / lenPx;
+      const ny = -(bx - ax) / lenPx;
+      const t = 0.62;
+      const midX = ax + (bx - ax) * t;
+      const midY = ay + (by - ay) * t;
+      const off = 5;
+      const tx = midX + nx * off;
+      const ty = midY + ny * off;
+      const txt = `${lenM.toFixed(3)} м`;
+      const tw = doc.getTextWidth(txt) + 2;
+      doc.setFillColor(255, 255, 255);
+      doc.rect(tx - tw / 2, ty - 1.7, tw, 2.6, "F");
+      doc.text(txt, tx, ty + 0.4, { align: "center" });
+    }
+  }
 }
 
 // Форматирование сил и моментов с автомасштабом
@@ -812,27 +827,77 @@ function drawDiagramOverScheme(
     }
   }
 
-  // Подписи max/min с маркерами и белым контуром
+  // Подписи max/min — с детектом коллизий. Если плашки накладываются друг
+  // на друга — раздвигаем их по нормали стержня в обе стороны или по
+  // диагоналям, пока не найдём свободную позицию.
+  interface LblRect { x: number; y: number; w: number; h: number }
+  const placedLbls: LblRect[] = [];
+  const lblOverlaps = (a: LblRect, b: LblRect) =>
+    !(a.x + a.w < b.x || b.x + b.w < a.x || a.y + a.h < b.y || b.y + b.h < a.y);
+
   const drawValueLabel = (pt: { val: number; sxRel: number; syRel: number; elId: string }) => {
     if (Math.abs(pt.val) < 1e-9) return;
     const d = list.find((x) => x.el.id === pt.elId);
     const sign = pt.val >= 0 ? 1 : -1;
-    const offText = 3.5;
-    const lx = pt.sxRel + (d ? d.nx * sign * offText : 0);
-    const ly = pt.syRel - (d ? d.ny * sign * offText : 0);
     // Маркер
     doc.setFillColor(...color);
     doc.circle(pt.sxRel, pt.syRel, 0.9, "F");
     // Подпись
-    const valShown = kind === "uy" ? pt.val : pt.val; // для uy уже умножено на 1000 → мм
-    const txt = `${fmtNum(valShown)} ${unit}`;
+    const txt = `${fmtNum(pt.val)} ${unit}`;
     doc.setFont(fontState.name, "bold");
     doc.setFontSize(7);
     const tw = doc.getTextWidth(txt) + 2;
+    const th = 2.8;
+
+    // Кандидаты позиций для плашки: от ближайшей к точке до сдвинутых на 8/12/16 мм
+    const candidates: Array<{ x: number; y: number }> = [];
+    for (const offText of [3.5, 7, 11, 15]) {
+      const nx = d?.nx ?? 0;
+      const ny = d?.ny ?? 0;
+      // По нормали в текущую сторону (sign)
+      candidates.push({
+        x: pt.sxRel + nx * sign * offText - tw / 2,
+        y: pt.syRel - ny * sign * offText - 1.6,
+      });
+      // По нормали в противоположную сторону
+      candidates.push({
+        x: pt.sxRel - nx * sign * offText - tw / 2,
+        y: pt.syRel + ny * sign * offText - 1.6,
+      });
+      // По диагоналям (вдоль стержня + нормаль)
+      const ex = ny, ey = -nx; // вектор вдоль стержня (90° от нормали)
+      candidates.push({
+        x: pt.sxRel + ex * offText + nx * sign * offText - tw / 2,
+        y: pt.syRel - ey * offText - ny * sign * offText - 1.6,
+      });
+      candidates.push({
+        x: pt.sxRel - ex * offText + nx * sign * offText - tw / 2,
+        y: pt.syRel - (-ey) * offText - ny * sign * offText - 1.6,
+      });
+    }
+
+    // Выбираем первый кандидат без коллизий
+    let chosen = candidates[0];
+    for (const c of candidates) {
+      const r: LblRect = { x: c.x, y: c.y, w: tw, h: th };
+      const hasOverlap = placedLbls.some((p) => lblOverlaps(r, p));
+      if (!hasOverlap) {
+        chosen = c;
+        break;
+      }
+    }
+    placedLbls.push({ x: chosen.x, y: chosen.y, w: tw, h: th });
+
+    // Выноска от точки к центру плашки
+    doc.setDrawColor(...color);
+    doc.setLineWidth(0.3);
+    doc.line(pt.sxRel, pt.syRel, chosen.x + tw / 2, chosen.y + th / 2);
+
+    // Плашка
     doc.setFillColor(255, 255, 255);
-    doc.rect(lx - tw / 2, ly - 1.6, tw, 2.8, "F");
+    doc.rect(chosen.x, chosen.y, tw, th, "F");
     doc.setTextColor(...color);
-    doc.text(txt, lx, ly + 0.6, { align: "center" });
+    doc.text(txt, chosen.x + tw / 2, chosen.y + 2, { align: "center" });
     doc.setFont(fontState.name, "normal");
   };
   if (maxRef) drawValueLabel(maxRef);
@@ -1065,28 +1130,30 @@ function drawSingleElementUnfolded(
       doc.line(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]);
     }
 
-    // Подписи max/min с выноской
+    // Подписи max/min с выноской — с учётом коллизий и границ графика.
+    // Алгоритм: собираем список плашек, для каждой определяем "предпочтительную"
+    // позицию (выше точки если значение положительное, ниже если отрицательное),
+    // ограничиваем по X (не выходим за рамку графика) и проверяем пересечение
+    // с уже отрисованными плашками — если есть, ищем альтернативную позицию.
     let iMax = 0, iMin = 0;
     for (let i = 1; i < vals.length; i++) {
       if (vals[i] > vals[iMax]) iMax = i;
       if (vals[i] < vals[iMin]) iMin = i;
     }
 
-    const drawCallout = (i: number, isMax: boolean) => {
+    interface Rect { x: number; y: number; w: number; h: number }
+    const placed: Rect[] = [];
+    const overlaps = (a: Rect, b: Rect) =>
+      !(a.x + a.w < b.x || b.x + b.w < a.x || a.y + a.h < b.y || b.y + b.h < a.y);
+
+    const drawCallout = (i: number) => {
       if (Math.abs(vals[i]) < 1e-9) return;
       const px = toPxX(xs[i]);
       const py = toPxY(vals[i]);
       // Маркер
       doc.setFillColor(...color);
       doc.circle(px, py, 1.2, "F");
-      // Выноска: короткая линия от точки на 6 мм вверх/вниз и подпись на белой плашке
-      const above = vals[i] >= 0;
-      const dirY = above ? -1 : 1;
-      const callY = py + dirY * 6;
-      doc.setDrawColor(...color);
-      doc.setLineWidth(0.35);
-      doc.line(px, py, px, callY);
-      // Текст подписи: значение + координата
+
       const valTxt = `${fmtNum(vals[i])} ${unit}`;
       const coordTxt = `x = ${xs[i].toFixed(2)} м`;
       doc.setFont(fontState.name, "bold");
@@ -1097,27 +1164,80 @@ function drawSingleElementUnfolded(
       const tw2 = doc.getTextWidth(coordTxt);
       const tw = Math.max(tw1, tw2) + 3;
       const th = 7;
-      // Позиция плашки — не вылазит за края
-      let bxLbl = px - tw / 2;
-      if (bxLbl < plotX) bxLbl = plotX;
-      if (bxLbl + tw > plotX + plotW) bxLbl = plotX + plotW - tw;
-      const byLbl = above ? callY - th : callY;
+
+      // Список кандидатов «куда положить плашку»: предпочтительные первые
+      const preferAbove = vals[i] >= 0;
+      const candidates: Array<{ x: number; y: number; callY: number }> = [];
+      // 1) предпочтительная сторона
+      {
+        const dirY = preferAbove ? -1 : 1;
+        const callY = py + dirY * 6;
+        let bxLbl = px - tw / 2;
+        if (bxLbl < plotX) bxLbl = plotX;
+        if (bxLbl + tw > plotX + plotW) bxLbl = plotX + plotW - tw;
+        const byLbl = preferAbove ? callY - th : callY;
+        candidates.push({ x: bxLbl, y: byLbl, callY });
+      }
+      // 2) противоположная сторона
+      {
+        const dirY = preferAbove ? 1 : -1;
+        const callY = py + dirY * 6;
+        let bxLbl = px - tw / 2;
+        if (bxLbl < plotX) bxLbl = plotX;
+        if (bxLbl + tw > plotX + plotW) bxLbl = plotX + plotW - tw;
+        const byLbl = !preferAbove ? callY - th : callY;
+        candidates.push({ x: bxLbl, y: byLbl, callY });
+      }
+      // 3) сдвиг по горизонтали (если плашка пересекает с уже размещённой)
+      for (const dx of [-tw - 4, tw + 4, -tw / 2 - 6, tw / 2 + 6]) {
+        const dirY = preferAbove ? -1 : 1;
+        const callY = py + dirY * 6;
+        let bxLbl = px + dx - tw / 2;
+        if (bxLbl < plotX) bxLbl = plotX;
+        if (bxLbl + tw > plotX + plotW) bxLbl = plotX + plotW - tw;
+        const byLbl = preferAbove ? callY - th : callY;
+        candidates.push({ x: bxLbl, y: byLbl, callY });
+      }
+
+      // Выбираем первый кандидат без пересечений; если все плохи — берём предпочтительный
+      let chosen = candidates[0];
+      for (const c of candidates) {
+        const r: Rect = { x: c.x, y: c.y, w: tw, h: th };
+        const hasOverlap = placed.some((p) => overlaps(r, p));
+        // Также проверяем, не вылезла ли плашка за вертикальные пределы графика
+        const outsideY = c.y < plotTop - 8 || c.y + th > plotBot + 16;
+        if (!hasOverlap && !outsideY) {
+          chosen = c;
+          break;
+        }
+      }
+
+      placed.push({ x: chosen.x, y: chosen.y, w: tw, h: th });
+
+      // Выноска от точки к плашке (с лёгким изломом если плашка сдвинута)
+      doc.setDrawColor(...color);
+      doc.setLineWidth(0.35);
+      const lblCenterX = chosen.x + tw / 2;
+      doc.line(px, py, lblCenterX, chosen.callY);
+      doc.line(lblCenterX, chosen.callY, lblCenterX, chosen.y + th / 2);
+
+      // Сама плашка
       doc.setFillColor(255, 255, 255);
       doc.setDrawColor(...color);
       doc.setLineWidth(0.3);
-      doc.rect(bxLbl, byLbl, tw, th, "FD");
+      doc.rect(chosen.x, chosen.y, tw, th, "FD");
       doc.setFont(fontState.name, "bold");
       doc.setFontSize(8);
       doc.setTextColor(...color);
-      doc.text(valTxt, bxLbl + tw / 2, byLbl + 3.2, { align: "center" });
+      doc.text(valTxt, chosen.x + tw / 2, chosen.y + 3.2, { align: "center" });
       doc.setFont(fontState.name, "normal");
       doc.setFontSize(6.5);
       doc.setTextColor(...C.thin);
-      doc.text(coordTxt, bxLbl + tw / 2, byLbl + 6, { align: "center" });
+      doc.text(coordTxt, chosen.x + tw / 2, chosen.y + 6, { align: "center" });
     };
 
-    drawCallout(iMax, true);
-    if (iMin !== iMax) drawCallout(iMin, false);
+    drawCallout(iMax);
+    if (iMin !== iMax) drawCallout(iMin);
 
     // Подписи vMin/vMax на левой оси
     doc.setFont(fontState.name, "normal");

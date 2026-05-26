@@ -57,6 +57,8 @@ const CaeEditor = () => {
   // Мобильная раскладка: одна активная вкладка снизу под канвасом.
   // Не показывается на десктопе (lg-брейкпоинт и выше) — там обычные две колонки.
   const [mobileTab, setMobileTab] = useState<"tools" | "props" | "checks" | "results">("tools");
+  // Триггер ручной «подгонки масштаба» канвы — кнопка-лупа.
+  const [fitRequestId, setFitRequestId] = useState(0);
 
   // При первом визите на пустой проект показываем приветственный экран.
   // Туториал автозапускаем только если приветствие уже было показано (повторный визит)
@@ -228,6 +230,14 @@ const CaeEditor = () => {
                 <Icon name="Keyboard" size={18} />
               </button>
               <button
+                onClick={() => setFitRequestId((x) => x + 1)}
+                className="min-w-[44px] min-h-[44px] lg:min-w-0 lg:min-h-0 p-2 border-r border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)] active:bg-[var(--drawing-paper)] flex items-center justify-center"
+                title="Подогнать масштаб под содержимое (F)"
+                aria-label="Подогнать масштаб"
+              >
+                <Icon name="Maximize2" size={18} />
+              </button>
+              <button
                 onClick={() => setSettingsOpen(true)}
                 className="min-w-[44px] min-h-[44px] lg:min-w-0 lg:min-h-0 p-2 hover:bg-[var(--drawing-paper)] active:bg-[var(--drawing-paper)] flex items-center justify-center"
                 title="Настройки расчёта: отрасль, теория прочности, коэф. запаса"
@@ -250,6 +260,7 @@ const CaeEditor = () => {
               result={result}
               showDiagram={showDiagram}
               diagramScale={diagramScale}
+              fitRequestId={fitRequestId}
             />
             {displayError && (
               <div className="absolute top-14 left-2 right-2 bg-[var(--drawing-accent)] text-white text-xs font-gost p-2 flex items-start gap-2 z-20 shadow-lg">
