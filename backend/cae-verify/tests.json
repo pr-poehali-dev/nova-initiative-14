@@ -1,0 +1,22 @@
+{
+  "tests": [
+    {
+      "name": "Verify endpoint returns report",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "verdict": "string",
+        "passed": "number",
+        "total": "number"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "CORS preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    }
+  ]
+}
