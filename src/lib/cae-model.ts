@@ -50,6 +50,8 @@ export interface ModelElement {
   hinge_start?: boolean;
   /** Шарнир на конечном узле элемента (Mz=0 в правом конце). */
   hinge_end?: boolean;
+  /** Человекочитаемая подпись стержня (например, e1, e2). Если не задана — берётся id. */
+  label?: string;
 }
 
 export type DofName = "ux" | "uy" | "uz" | "rx" | "ry" | "rz";

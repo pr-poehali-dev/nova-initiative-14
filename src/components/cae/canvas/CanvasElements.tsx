@@ -58,6 +58,57 @@ const CanvasElements = ({
         );
       })}
 
+      {/* Подписи стержней (e1, e2, …) — на середине стержня, со смещением по нормали
+          так, чтобы не пересекать ось стержня. Чтобы текст был всегда читаемый —
+          под подписью рисуем белую плашку. */}
+      {model.elements.map((el) => {
+        const a = model.nodes.find((n) => n.id === el.node_start);
+        const b = model.nodes.find((n) => n.id === el.node_end);
+        if (!a || !b) return null;
+        const ax = toScreenX(a.coords[0]);
+        const ay = toScreenY(a.coords[1]);
+        const bx = toScreenX(b.coords[0]);
+        const by = toScreenY(b.coords[1]);
+        const mx = (ax + bx) / 2;
+        const my = (ay + by) / 2;
+        const dx = bx - ax;
+        const dy = by - ay;
+        const len = Math.hypot(dx, dy);
+        if (len < 24) return null;
+        // нормаль "вниз-вправо" в экране (для горизонтальных балок будет ниже линии)
+        const nx = dy / len;
+        const ny = -dx / len;
+        const off = 11;
+        const tx = mx + nx * off;
+        const ty = my + ny * off;
+        const label = el.label || el.id;
+        const w = label.length * 6 + 6;
+        return (
+          <g key={`lbl-${el.id}`} pointerEvents="none">
+            <rect
+              x={tx - w / 2}
+              y={ty - 6.5}
+              width={w}
+              height={11}
+              fill="#ffffff"
+              fillOpacity={0.85}
+              rx={2}
+            />
+            <text
+              x={tx}
+              y={ty + 3}
+              fontSize={10}
+              fontFamily="monospace"
+              fontWeight="bold"
+              fill={LINE}
+              textAnchor="middle"
+            >
+              {label}
+            </text>
+          </g>
+        );
+      })}
+
       {/* Шарниры на концах элементов — белый кружок с обводкой возле узла,
           смещённый на 12 px вдоль оси стержня. Маркер для ферм, шатунов,
           подкосов, балок Гербера. */}
