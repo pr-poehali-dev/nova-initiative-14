@@ -83,13 +83,24 @@ const CaeProjects = () => {
               2D-редактор с&nbsp;каталогом ГОСТ-профилей и&nbsp;конечно-элементным решателем. Создайте проект из&nbsp;шаблона или с&nbsp;нуля.
             </p>
           </div>
-          <Link
-            to="/cae/projects/new"
-            className="btn-drawing btn-drawing-accent text-xs shrink-0 self-start md:self-end inline-flex"
-          >
-            <Icon name="Plus" size={14} className="mr-1.5" />
-            Новый проект
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-2 shrink-0 self-start md:self-end">
+            <Link
+              to="/cae/projects/new"
+              className="btn-drawing btn-drawing-accent text-xs inline-flex"
+            >
+              <Icon name="Plus" size={14} className="mr-1.5" />
+              Создать 2D
+            </Link>
+            <button
+              disabled
+              className="btn-drawing text-xs inline-flex opacity-50 cursor-not-allowed"
+              title="3D-редактор в разработке — верификация расчётов на эталонных задачах ещё не пройдена"
+            >
+              <Icon name="Box" size={14} className="mr-1.5" />
+              Создать 3D
+              <span className="ml-1.5 font-gost text-[9px] uppercase tracking-wider text-amber-700">скоро</span>
+            </button>
+          </div>
         </div>
 
         {/* Banner */}
@@ -101,6 +112,31 @@ const CaeProjects = () => {
               Доступны каталоги ГОСТ-сталей и&nbsp;сечений (двутавры, швеллеры, уголки, трубы), параметрические сечения и&nbsp;10 шаблонов типовых задач. 3D-редактор и&nbsp;PDF-отчёт по&nbsp;ЕСКД &mdash; на&nbsp;подходе.
             </p>
           </div>
+        </div>
+
+        {/* Тизер 3D-редактора */}
+        <div className="border-2 border-dashed border-amber-700/40 bg-amber-50/30 p-5 mb-8 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="shrink-0 w-10 h-10 border-2 border-amber-700/50 flex items-center justify-center">
+            <Icon name="Box" size={20} className="text-amber-700" />
+          </div>
+          <div className="flex-1">
+            <p className="font-gost-upright font-bold text-sm mb-1">
+              3D-редактор пространственных рам — в разработке
+            </p>
+            <p className="text-xs text-[var(--drawing-line-thin)] leading-relaxed">
+              МКЭ-расчёт пространственных рам с эпюрами N, Qy, Qz, Mz, My, Mx и проверками
+              по&nbsp;СП&nbsp;16. Сейчас проходим верификацию на эталонных задачах.
+            </p>
+          </div>
+          <a
+            href="https://t.me/+QgiLIa1gFRY4Y2Iy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-drawing text-[10px] shrink-0 inline-flex border-amber-700/60 hover:border-amber-700"
+          >
+            <Icon name="Bell" size={12} className="mr-1.5 text-amber-700" />
+            Уведомить о выходе
+          </a>
         </div>
 
         {loading ? (
