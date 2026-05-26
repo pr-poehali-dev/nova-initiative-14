@@ -132,6 +132,7 @@ const FrameCanvas = ({
   return (
     <svg
       ref={svgRef}
+      data-scheme-svg="frame"
       className="w-full h-full select-none"
       style={{
         background: BG,

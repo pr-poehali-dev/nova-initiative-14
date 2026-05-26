@@ -39,8 +39,12 @@ const EditorTopBar = ({
     try {
       // Берём живой SVG канваса со всеми ручными сдвигами подписей —
       // чтобы расчётная схема в отчёте 1-в-1 совпадала с тем, что видит пользователь.
+      // ВАЖНО: ищем по data-scheme-svg, а не по [data-tutorial="canvas"] svg,
+      // потому что внутри блока канваса лежат ещё иконки Lucide-кнопок тулбара
+      // (Undo2, Redo2, Keyboard, Maximize2, Settings) — каждая тоже <svg>.
+      // querySelector брал первую — иконку Undo2 — и в отчёт уходила «стрелка назад».
       const schemeSvg = document.querySelector<SVGSVGElement>(
-        '[data-tutorial="canvas"] svg',
+        '[data-scheme-svg="frame"]',
       );
       await generatePdfReport(model, result, projectName, { schemeSvg });
     } catch (e) {
