@@ -1567,12 +1567,17 @@ async function renderSchemeFromSvg(
     });
 
     // Нормализация всех <text> для корректного рендера через svg2pdf:
-    //  1) фиксируем безопасный sans-serif шрифт (Roboto уже встроен в PDF),
+    //  1) фиксируем шрифт Roboto (загружен через ensureCyrillicFont, содержит
+    //     кириллицу) — svg2pdf берёт шрифты, зарегистрированные в jsPDF через
+    //     addFont, по ТОЧНОМУ совпадению имени font-family,
     //  2) сбрасываем унаследованный letter-spacing (иначе символы расходятся
     //     через пробел, как «R = 5 0 . 7»),
-    //  3) транслитерируем кириллические единицы (кН, Н, МН, м, ·) в латиницу,
-    //     потому что встроенный шрифт svg2pdf по умолчанию НЕ содержит
-    //     кириллических глифов и подменяет их случайными символами.
+    //  3) если шрифт с кириллицей НЕ загрузился (fontState.name === helvetica) —
+    //     транслитерируем единицы в латиницу как запасной вариант, чтобы
+    //     отчёт не выглядел сломанным.
+    const useCyrillic = fontState.name === "Roboto";
+    const fontFamily = useCyrillic ? "Roboto" : "helvetica";
+
     const cyrToLatUnits = (s: string): string =>
       s
         .replace(/МН·м/g, "MN*m")
@@ -1587,10 +1592,10 @@ async function renderSchemeFromSvg(
         .replace(/·/g, "*");
 
     const fixTextNode = (t: SVGTextElement | SVGTSpanElement) => {
-      t.setAttribute("font-family", "Roboto, Helvetica, Arial, sans-serif");
+      t.setAttribute("font-family", fontFamily);
       t.setAttribute("letter-spacing", "0");
       t.style.letterSpacing = "0";
-      t.style.fontFamily = "Roboto, Helvetica, Arial, sans-serif";
+      t.style.fontFamily = fontFamily;
     };
 
     clone.querySelectorAll("text").forEach((t) => {
@@ -1598,13 +1603,15 @@ async function renderSchemeFromSvg(
       t.querySelectorAll("tspan").forEach((ts) =>
         fixTextNode(ts as SVGTSpanElement),
       );
-      // Заменяем текст в самом узле или в его дочерних tspan
-      if (t.children.length === 0) {
-        t.textContent = cyrToLatUnits(t.textContent || "");
-      } else {
-        t.querySelectorAll("tspan").forEach((ts) => {
-          ts.textContent = cyrToLatUnits(ts.textContent || "");
-        });
+      // Транслитерация — только если шрифт с кириллицей не доступен
+      if (!useCyrillic) {
+        if (t.children.length === 0) {
+          t.textContent = cyrToLatUnits(t.textContent || "");
+        } else {
+          t.querySelectorAll("tspan").forEach((ts) => {
+            ts.textContent = cyrToLatUnits(ts.textContent || "");
+          });
+        }
       }
     });
 
