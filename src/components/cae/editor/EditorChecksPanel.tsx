@@ -10,6 +10,7 @@ import { useState } from "react";
 import Icon from "@/components/ui/icon";
 import type { FrameModel, SolverResponse } from "@/lib/cae-model";
 import { runChecks, utilizationColor, type ElementCheck } from "@/lib/cae-checks";
+import { safeFixed, safeNum } from "@/lib/safe-number";
 
 interface Props {
   model: FrameModel;
@@ -23,7 +24,22 @@ const EditorChecksPanel = ({ model, result, onFocusElement, onOpenSettings }: Pr
 
   if (!result) return null;
 
-  const summary = runChecks(model, result);
+  // Защита от падений: если runChecks по какой-то причине бросит исключение
+  // (битые данные в проекте, отсутствие поля у сечения), показываем
+  // тихий fallback вместо краша всего экрана редактора.
+  let summary;
+  try {
+    summary = runChecks(model, result);
+  } catch (err) {
+    console.warn("EditorChecksPanel: runChecks упал", err);
+    return (
+      <div className="border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] p-3">
+        <span className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)]">
+          Проверки временно недоступны
+        </span>
+      </div>
+    );
+  }
 
   if (summary.checks.length === 0) {
     return (
@@ -63,7 +79,7 @@ const EditorChecksPanel = ({ model, result, onFocusElement, onOpenSettings }: Pr
             className="px-1.5 py-0.5 rounded text-[10px] normal-case tracking-normal text-white"
             style={{ backgroundColor: overallColor }}
           >
-            η_max = {summary.max_utilization.toFixed(2)}
+            η_max = {safeFixed(summary.max_utilization, 2)}
           </span>
         </span>
         <Icon name={open ? "ChevronUp" : "ChevronDown"} size={14} />
@@ -125,7 +141,10 @@ const EditorChecksPanel = ({ model, result, onFocusElement, onOpenSettings }: Pr
 
 const ChecksRow = ({ check, onFocus }: { check: ElementCheck; onFocus: () => void }) => {
   const color = utilizationColor(check.status);
-  const fmt = (v: number) => (check.unit === "МПа" ? (v / 1e6).toFixed(1) : (v * 1000).toFixed(2));
+  const fmt = (v: number | null | undefined) =>
+    check.unit === "МПа"
+      ? safeFixed(safeNum(v) / 1e6, 1)
+      : safeFixed(safeNum(v) * 1000, 2);
   return (
     <tr
       onClick={onFocus}
@@ -140,7 +159,7 @@ const ChecksRow = ({ check, onFocus }: { check: ElementCheck; onFocus: () => voi
         className="px-2 py-1 text-right font-bold"
         style={{ color, minWidth: 50 }}
       >
-        {check.utilization.toFixed(2)}
+        {safeFixed(check.utilization, 2)}
       </td>
     </tr>
   );

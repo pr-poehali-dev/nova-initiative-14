@@ -1,5 +1,6 @@
 import Icon from "@/components/ui/icon";
 import type { EditorMode } from "@/components/cae/FrameCanvas";
+import { safeFixed } from "@/lib/safe-number";
 
 interface Props {
   mode: EditorMode;
@@ -108,7 +109,7 @@ const EditorLeftPanel = ({
       <label className="block">
         <div className="flex items-center justify-between text-[10px] font-gost text-[var(--drawing-line-thin)] mb-0.5">
           <span>Размер стрелок</span>
-          <span className="font-mono">{arrowScale.toFixed(2)}×</span>
+          <span className="font-mono">{safeFixed(arrowScale, 2, "1.00")}×</span>
         </div>
         <input
           type="range"
@@ -124,7 +125,7 @@ const EditorLeftPanel = ({
       <label className="block">
         <div className="flex items-center justify-between text-[10px] font-gost text-[var(--drawing-line-thin)] mb-0.5">
           <span>Размер шрифта</span>
-          <span className="font-mono">{fontScale.toFixed(2)}×</span>
+          <span className="font-mono">{safeFixed(fontScale, 2, "1.00")}×</span>
         </div>
         <input
           type="range"

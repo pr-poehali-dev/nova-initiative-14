@@ -177,6 +177,7 @@ export function runChecks(model: FrameModel, result: SolverResponse): ChecksSumm
   const industry = getIndustrySpec(settings.industry);
 
   for (const el of result.elements) {
+    try {
     const modelEl = model.elements.find((e) => e.id === el.element_id);
     if (!modelEl) continue;
     const mat = model.materials.find((m) => m.id === modelEl.material_id);
@@ -261,6 +262,11 @@ export function runChecks(model: FrameModel, result: SolverResponse): ChecksSumm
             `σ = N/A = ${(sigmaActual / 1e6).toFixed(1)} МПа ≤ φ·[σ] = ${(allowable / 1e6).toFixed(1)} МПа`,
         });
       }
+    }
+    } catch (err) {
+      // Сбойный элемент не должен валить весь рендер таблицы проверок.
+      // Например, у пользовательского сечения может отсутствовать I_z/I_y.
+      console.warn("runChecks: пропускаем элемент", el?.element_id, err);
     }
   }
 

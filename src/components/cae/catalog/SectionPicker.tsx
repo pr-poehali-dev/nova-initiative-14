@@ -14,6 +14,7 @@ import {
   removeUserSection,
 } from "@/lib/cae-user-library";
 import CatalogShell from "./CatalogShell";
+import { safeFixed, safeNum } from "@/lib/safe-number";
 
 interface Props {
   open: boolean;
@@ -24,10 +25,10 @@ interface Props {
 
 const SectionPreview = ({ s }: { s: Section }) => (
   <div className="border border-[var(--drawing-line)] p-2 bg-[var(--drawing-paper)] text-[10px] font-mono space-y-0.5">
-    <p>A = {(s.A * 1e4).toFixed(3)} см²</p>
-    <p>Iz = {((s.I_z ?? 0) * 1e8).toFixed(3)} см⁴ · Wz = {((s.W_z ?? 0) * 1e6).toFixed(3)} см³</p>
-    <p>Iy = {((s.I_y ?? 0) * 1e8).toFixed(3)} см⁴ · Wy = {((s.W_y ?? 0) * 1e6).toFixed(3)} см³</p>
-    <p>It = {((s.I_t ?? 0) * 1e8).toFixed(3)} см⁴</p>
+    <p>A = {safeFixed(safeNum(s.A) * 1e4, 3)} см²</p>
+    <p>Iz = {safeFixed(safeNum(s.I_z) * 1e8, 3)} см⁴ · Wz = {safeFixed(safeNum(s.W_z) * 1e6, 3)} см³</p>
+    <p>Iy = {safeFixed(safeNum(s.I_y) * 1e8, 3)} см⁴ · Wy = {safeFixed(safeNum(s.W_y) * 1e6, 3)} см³</p>
+    <p>It = {safeFixed(safeNum(s.I_t) * 1e8, 3)} см⁴</p>
   </div>
 );
 
@@ -142,7 +143,7 @@ const SectionPicker = ({ open, onClose, currentId, onPick }: Props) => {
                               active ? "text-white/85" : "text-[var(--drawing-line-thin)]"
                             }`}
                           >
-                            A={(s.A * 1e4).toFixed(2)} см² · Iz={((s.I_z ?? 0) * 1e8).toFixed(0)} см⁴
+                            A={safeFixed(safeNum(s.A) * 1e4, 2)} см² · Iz={safeFixed(safeNum(s.I_z) * 1e8, 0)} см⁴
                           </p>
                         </button>
                         <button
@@ -187,9 +188,9 @@ const SectionPicker = ({ open, onClose, currentId, onPick }: Props) => {
                     >
                       <p className="font-gost-upright font-bold text-[12px] leading-tight">{s.id}</p>
                       <p className={`text-[10px] font-mono mt-0.5 ${active ? "text-white/85" : "text-[var(--drawing-line-thin)]"}`}>
-                        A={(s.A * 1e4).toFixed(2)} см²
+                        A={safeFixed(safeNum(s.A) * 1e4, 2)} см²
                         {" · "}
-                        Iz={(((s.I_z ?? 0) * 1e8).toFixed(0))} см⁴
+                        Iz={safeFixed(safeNum(s.I_z) * 1e8, 0)} см⁴
                       </p>
                     </button>
                   );

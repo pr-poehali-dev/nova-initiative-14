@@ -5,6 +5,7 @@ import {
   type MaterialCatalogEntry,
 } from "@/lib/cae-catalog";
 import type { Material } from "@/lib/cae-model";
+import { safeFixed, safeNum } from "@/lib/safe-number";
 import {
   loadUserMaterials as _loadUserMaterials,
   saveUserMaterial as _saveUserMaterial,
@@ -136,7 +137,7 @@ const MaterialPicker = ({ open, onClose, currentId, onPick }: Props) => {
                               active ? "text-white/80" : "text-[var(--drawing-line-thin)]"
                             }`}
                           >
-                            E = {(m.E / 1e9).toFixed(1)} ГПа · σт = {((m.sigma_yield ?? 0) / 1e6).toFixed(0)} МПа · ρ = {m.rho} кг/м³
+                            E = {safeFixed(safeNum(m.E) / 1e9, 1)} ГПа · σт = {safeFixed(safeNum(m.sigma_yield) / 1e6, 0)} МПа · ρ = {safeNum(m.rho)} кг/м³
                           </p>
                         </button>
                         <button
@@ -198,7 +199,7 @@ const MaterialPicker = ({ open, onClose, currentId, onPick }: Props) => {
                           active ? "text-white/80" : "text-[var(--drawing-line-thin)]"
                         }`}
                       >
-                        E = {(m.E / 1e9).toFixed(0)} ГПа · σт = {((m.sigma_yield ?? 0) / 1e6).toFixed(0)} МПа · ρ = {m.rho} кг/м³
+                        E = {safeFixed(safeNum(m.E) / 1e9, 0)} ГПа · σт = {safeFixed(safeNum(m.sigma_yield) / 1e6, 0)} МПа · ρ = {safeNum(m.rho)} кг/м³
                       </p>
                     </button>
                   );
