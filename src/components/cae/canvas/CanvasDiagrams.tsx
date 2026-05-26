@@ -86,10 +86,11 @@ const CanvasDiagrams = ({ model, result, showDiagram, diagramScale, toScreenX, t
     elDataList.push({ el, vals, xs: er.diagrams.x, color, nx, ny, dx, dy, len, a, b, maxAbs });
   }
 
-  // Глобальный максимум и минимум (для единого масштаба подписей)
+  // Глобальный максимум и минимум — только для подписей и поиска экстремальных точек.
+  // Масштаб эпюры каждого элемента — per-element (maxAbs конкретного элемента),
+  // иначе при сосредоточенной нагрузке все остальные стержни рисуются в 1px и невидимы.
   const globalMax = Math.max(...elDataList.flatMap((d) => d.vals));
   const globalMin = Math.min(...elDataList.flatMap((d) => d.vals));
-  const globalMaxAbs = Math.max(1e-12, ...elDataList.flatMap((d) => d.vals.map(Math.abs)));
   const offsetPx = 40 * diagramScale;
 
   // Находим точки глобального макс и мин
@@ -99,19 +100,19 @@ const CanvasDiagrams = ({ model, result, showDiagram, diagramScale, toScreenX, t
   const svgElements: React.ReactNode[] = [];
 
   for (const d of elDataList) {
-    const { el, vals, xs, color, nx, ny, dx, dy, len, a } = d;
+    const { el, vals, xs, color, nx, ny, dx, dy, len, a, maxAbs } = d;
     const points: string[] = [];
-    const screenPts: { sx: number; sy: number }[] = [];
 
     for (let i = 0; i < xs.length; i++) {
       const t = xs[i] / len;
       const wx = a.coords[0] + dx * t;
       const wy = a.coords[1] + dy * t;
-      const dist = (vals[i] / globalMaxAbs) * offsetPx;
+      // Per-element масштаб: эпюра каждого стержня занимает offsetPx в максимуме.
+      // Это стандартная практика в профессиональных CAE (ЛИРА, SCAD, SAP2000).
+      const dist = (vals[i] / maxAbs) * offsetPx;
       const sx = toScreenX(wx) + nx * dist;
       const sy = toScreenY(wy) - ny * dist;
       points.push(`${sx},${sy}`);
-      screenPts.push({ sx, sy });
 
       if (vals[i] === globalMax && maxPoint === null) {
         maxPoint = { sx, sy, val: globalMax, idx: i, elId: el.id };
