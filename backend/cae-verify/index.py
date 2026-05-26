@@ -345,6 +345,321 @@ def build_portal_frame(H: float = 3.0, L: float = 4.0, P: float = 5000.0) -> dic
     }
 
 
+def build_cantilever_tip_moment(L: float = 2.0, M0: float = 15000.0) -> dict:
+    """
+    Тест 6: КОНСОЛЬ С СОСРЕДОТОЧЕННЫМ МОМЕНТОМ НА КОНЦЕ.
+
+    Схема:
+        |═══════════════⤴ M₀
+        |   L = 2 м
+
+    Точное решение (Феодосьев):
+        M(x) = M₀ = const   — эпюра постоянная по всей длине
+        Q(x) = 0
+        δ_tip = M₀·L² / (2·E·I)
+        θ_tip = M₀·L / (E·I)
+        R_y   = 0
+        R_M   = -M₀     (восстанавливающий момент в заделке)
+
+    Цель — поймать ошибки в обработке внешнего момента (mz),
+    которая никак не задействуется в тестах 1-5.
+    """
+    return {
+        "name": "Консоль + сосредоточенный момент на конце",
+        "scheme": "Cantilever + tip moment",
+        "expected": {
+            "max_displacement_m": M0 * L**2 / (2 * E * I),
+            "max_moment_nm": M0,
+            "reaction_fy_n": 0.0,
+            "reaction_mz_nm": -M0,
+        },
+        "model": {
+            "meta": {"dim": "2d"},
+            "materials": [STEEL],
+            "sections": [I20],
+            "nodes": [
+                {"id": "n1", "coords": [0, 0, 0]},
+                {"id": "n2", "coords": [L, 0, 0]},
+            ],
+            "elements": [
+                {"id": "e1", "node_start": "n1", "node_end": "n2",
+                 "material_id": "steel", "section_id": "i20"},
+            ],
+            "boundary_conditions": [
+                {"id": "bc1", "node_id": "n1", "type": "fixed",
+                 "constrained_dofs": ["ux", "uy", "rz"]},
+            ],
+            "loads": [
+                {"id": "ld1", "type": "nodal_force", "node_id": "n2",
+                 "force": [0, 0, 0], "moment": [0, 0, M0]},
+            ],
+        },
+    }
+
+
+def build_simply_supported_center_moment(L: float = 4.0, M0: float = 20000.0) -> dict:
+    """
+    Тест 7: ШАРНИРНАЯ БАЛКА + СОСРЕДОТОЧЕННЫЙ МОМЕНТ В ЦЕНТРЕ.
+
+    Схема:
+                       ⤴ M₀
+        △==============●===============△
+        |              L/2             |
+
+    Точное решение (Тимошенко):
+        R_A = -M₀/L      (вниз слева)
+        R_B = +M₀/L      (вверх справа)
+        M(x < L/2) = R_A·x = -M₀·x/L
+        M(x > L/2) = R_A·x + M₀ = M₀·(1 - x/L)
+        |M_max|  = M₀/2  (по обеим сторонам от центра — скачок 2·M₀/2)
+
+    На самом деле, в узле приложения M₀ эпюра претерпевает скачок размером M₀,
+    значит на двух элементах:
+        - левый: М по концам = 0 и -M₀/2 (по модулю M₀/2 — это пик слева)
+        - правый: М по концам = M₀/2 и 0  (M₀/2 — это пик справа)
+        max|M| по всей раме = M₀/2 = 10000 Н·м
+
+    Цель — поймать ошибки в эпюре М когда есть узловой момент И узловые
+    реакции одновременно.
+    """
+    return {
+        "name": "Шарнирная балка + момент в центре",
+        "scheme": "Simply supported + central moment",
+        "expected": {
+            "max_moment_nm": M0 / 2,
+            "reaction_fy_n": -M0 / L,
+        },
+        "model": {
+            "meta": {"dim": "2d"},
+            "materials": [STEEL],
+            "sections": [I20],
+            "nodes": [
+                {"id": "n1", "coords": [0, 0, 0]},
+                {"id": "n2", "coords": [L / 2, 0, 0]},
+                {"id": "n3", "coords": [L, 0, 0]},
+            ],
+            "elements": [
+                {"id": "e1", "node_start": "n1", "node_end": "n2",
+                 "material_id": "steel", "section_id": "i20"},
+                {"id": "e2", "node_start": "n2", "node_end": "n3",
+                 "material_id": "steel", "section_id": "i20"},
+            ],
+            "boundary_conditions": [
+                {"id": "bc1", "node_id": "n1", "type": "pinned",
+                 "constrained_dofs": ["ux", "uy"]},
+                {"id": "bc2", "node_id": "n3", "type": "roller_y",
+                 "constrained_dofs": ["uy"]},
+            ],
+            "loads": [
+                {"id": "ld1", "type": "nodal_force", "node_id": "n2",
+                 "force": [0, 0, 0], "moment": [0, 0, M0]},
+            ],
+        },
+    }
+
+
+def build_two_point_loads(L: float = 6.0, P: float = 10000.0, a: float = 2.0) -> dict:
+    """
+    Тест 8: ШАРНИРНАЯ БАЛКА С ДВУМЯ СИММЕТРИЧНЫМИ СИЛАМИ (4-точечный изгиб).
+
+    Схема:
+                ⬇ P              ⬇ P
+        △======●================●=======△
+        |  a   |     L-2a       |  a   |
+        |             L = 6 м             |
+
+    Это «классический четырёхточечный изгиб» — стандарт ASTM для испытания
+    материалов. Между точками приложения сил эпюра M = const = P·a,
+    эпюра Q = 0 — чистый изгиб без сдвига. Очень удобная задача.
+
+    Точное решение:
+        R_A = R_B = P
+        M_max = P·a  на участке между силами (постоянный)
+        δ_center = P·a·(3·L² - 4·a²) / (24·E·I)   — прогиб посредине
+    """
+    L_mid = L - 2 * a  # средний участок, на котором M = const
+    return {
+        "name": "Балка с двумя силами (4-точечный изгиб)",
+        "scheme": "Simply supported + two symmetric point loads",
+        "expected": {
+            "max_displacement_m": P * a * (3 * L**2 - 4 * a**2) / (24 * E * I),
+            "max_moment_nm": P * a,
+            "reaction_fy_n": P,
+        },
+        "model": {
+            "meta": {"dim": "2d"},
+            "materials": [STEEL],
+            "sections": [I20],
+            "nodes": [
+                {"id": "n1", "coords": [0, 0, 0]},
+                {"id": "n2", "coords": [a, 0, 0]},
+                {"id": "n3", "coords": [a + L_mid, 0, 0]},
+                {"id": "n4", "coords": [L, 0, 0]},
+            ],
+            "elements": [
+                {"id": "e1", "node_start": "n1", "node_end": "n2",
+                 "material_id": "steel", "section_id": "i20"},
+                {"id": "e2", "node_start": "n2", "node_end": "n3",
+                 "material_id": "steel", "section_id": "i20"},
+                {"id": "e3", "node_start": "n3", "node_end": "n4",
+                 "material_id": "steel", "section_id": "i20"},
+            ],
+            "boundary_conditions": [
+                {"id": "bc1", "node_id": "n1", "type": "pinned",
+                 "constrained_dofs": ["ux", "uy"]},
+                {"id": "bc2", "node_id": "n4", "type": "roller_y",
+                 "constrained_dofs": ["uy"]},
+            ],
+            "loads": [
+                {"id": "ld1", "type": "nodal_force", "node_id": "n2",
+                 "force": [0, -P, 0], "moment": [0, 0, 0]},
+                {"id": "ld2", "type": "nodal_force", "node_id": "n3",
+                 "force": [0, -P, 0], "moment": [0, 0, 0]},
+            ],
+        },
+    }
+
+
+def build_two_span_continuous(L: float = 4.0, q: float = 5000.0) -> dict:
+    """
+    Тест 9: ДВУХПРОЛЁТНАЯ НЕРАЗРЕЗНАЯ БАЛКА С UDL.
+
+    Схема:
+        ⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇  q (Н/м)
+        △═══════════════△═══════════════△
+        |     L = 4 м     |    L = 4 м    |
+
+    Сверхстатическая система (1 раз неопределимая). Точное решение через
+    три-моментное уравнение Клапейрона:
+        M_B (на средней опоре) = -q·L² / 8 = -10000  Н·м
+        R_A = R_C = 3·q·L / 8
+        R_B     = 5·q·L / 4
+        M_max  в пролёте = 9·q·L² / 128 ≈ 5625 Н·м
+        Глобальный |M|_max = q·L²/8 = 10000 (на средней опоре).
+        δ_max в пролёте ≈ q·L⁴ / (185·E·I)
+
+    Цель — проверить, корректно ли солвер собирает глобальную матрицу
+    жёсткости при кинематической связи через общий узел (для одной балки
+    это тривиально, но для неразрезной даёт нетривиальную реакцию R_B).
+    """
+    return {
+        "name": "Двухпролётная неразрезная балка",
+        "scheme": "Two-span continuous beam + UDL",
+        "expected": {
+            "max_moment_nm": q * L**2 / 8,   # |M| на средней опоре
+            "reaction_fy_n": 3 * q * L / 8,  # R_A на крайней опоре
+        },
+        "model": {
+            "meta": {"dim": "2d"},
+            "materials": [STEEL],
+            "sections": [I20],
+            "nodes": [
+                {"id": "n1", "coords": [0, 0, 0]},
+                {"id": "n2", "coords": [L, 0, 0]},
+                {"id": "n3", "coords": [2 * L, 0, 0]},
+            ],
+            "elements": [
+                {"id": "e1", "node_start": "n1", "node_end": "n2",
+                 "material_id": "steel", "section_id": "i20"},
+                {"id": "e2", "node_start": "n2", "node_end": "n3",
+                 "material_id": "steel", "section_id": "i20"},
+            ],
+            "boundary_conditions": [
+                {"id": "bc1", "node_id": "n1", "type": "pinned",
+                 "constrained_dofs": ["ux", "uy"]},
+                {"id": "bc2", "node_id": "n2", "type": "roller_y",
+                 "constrained_dofs": ["uy"]},
+                {"id": "bc3", "node_id": "n3", "type": "roller_y",
+                 "constrained_dofs": ["uy"]},
+            ],
+            "loads": [
+                {"id": "ld1", "type": "distributed_uniform", "element_id": "e1",
+                 "load_local_per_length": [0, -q, 0]},
+                {"id": "ld2", "type": "distributed_uniform", "element_id": "e2",
+                 "load_local_per_length": [0, -q, 0]},
+            ],
+            "analysis_options": {"diagram_subdivisions": 30},
+        },
+    }
+
+
+def build_truss_triangle(L: float = 3.0, P: float = 10000.0) -> dict:
+    """
+    Тест 10: ТРЕУГОЛЬНАЯ ФЕРМА С ВЕРТИКАЛЬНОЙ СИЛОЙ В ВЕРШИНЕ.
+
+    Схема (равнобедренный треугольник, высота H = L·√3/2 ≈ 2.6 м):
+
+                       ⬇ P
+                       ●  n3
+                      / \
+                  e2 /   \ e3
+                    /     \
+                   /       \
+              n1 ●─────────● n2
+                 △   e1    △
+                 |── L = 3 ─|
+
+    Все стержни — шарнирные (hinge_start=true, hinge_end=true) → ферма.
+    Углы: e2 и e3 наклонены под 60° к горизонту.
+
+    Точное решение (метод вырезания узлов):
+        В узле n3: ΣFy = 0  →  -P + N₂·sin(60°) + N₃·sin(60°) = 0
+                   ΣFx = 0  →  -N₂·cos(60°) + N₃·cos(60°) = 0  →  N₂ = N₃
+                   ⇒  N₂ = N₃ = P / (2·sin 60°) = P / √3 ≈ 5773.5 Н (сжатие)
+        В узле n1: ΣFy = 0  →  R_A + N₂·sin(60°)·(-1) = 0  →  R_A = P/2
+                   (горизонтальная компонента N₂ балансируется тягой e1)
+        В нижнем поясе: N₁ = N₂·cos(60°) = P·cos(60°)/(2·sin(60°)) = P/(2·tan 60°)
+                       = P/(2·√3) ≈ 2886.8 Н (растяжение)
+
+    Цель — проверить осевые усилия N (которые в балочных тестах около нуля)
+    и поведение шарнирных соединений (hinge_start/hinge_end).
+    """
+    import math
+    H = L * math.sqrt(3) / 2  # высота равностороннего треугольника
+    N_diagonal = P / math.sqrt(3)       # модуль осевой силы в наклонных стержнях
+    N_bottom = P / (2 * math.sqrt(3))   # осевая сила в нижнем поясе
+    return {
+        "name": "Треугольная ферма + вертикальная сила в вершине",
+        "scheme": "Equilateral triangular truss + tip vertical load",
+        "expected": {
+            # Максимум осевой силы по всем 3 стержням — это диагональ.
+            "max_axial_n": N_diagonal,
+            "reaction_fy_n": P / 2,  # реакция в опоре n1
+        },
+        "model": {
+            "meta": {"dim": "2d"},
+            "materials": [STEEL],
+            "sections": [I20],
+            "nodes": [
+                {"id": "n1", "coords": [0, 0, 0]},
+                {"id": "n2", "coords": [L, 0, 0]},
+                {"id": "n3", "coords": [L / 2, H, 0]},
+            ],
+            "elements": [
+                {"id": "e1", "node_start": "n1", "node_end": "n2",
+                 "material_id": "steel", "section_id": "i20",
+                 "hinge_start": True, "hinge_end": True},
+                {"id": "e2", "node_start": "n1", "node_end": "n3",
+                 "material_id": "steel", "section_id": "i20",
+                 "hinge_start": True, "hinge_end": True},
+                {"id": "e3", "node_start": "n2", "node_end": "n3",
+                 "material_id": "steel", "section_id": "i20",
+                 "hinge_start": True, "hinge_end": True},
+            ],
+            "boundary_conditions": [
+                {"id": "bc1", "node_id": "n1", "type": "pinned",
+                 "constrained_dofs": ["ux", "uy"]},
+                {"id": "bc2", "node_id": "n2", "type": "roller_y",
+                 "constrained_dofs": ["uy"]},
+            ],
+            "loads": [
+                {"id": "ld1", "type": "nodal_force", "node_id": "n3",
+                 "force": [0, -P, 0], "moment": [0, 0, 0]},
+            ],
+        },
+    }
+
+
 # ============================================================
 # ЗАПУСК СОЛВЕРА И СРАВНЕНИЕ
 # ============================================================
@@ -385,6 +700,16 @@ def find_max_abs_moment(response: dict) -> float:
         if mz_max > m:
             m = mz_max
     return m
+
+
+def find_max_abs_axial(response: dict) -> float:
+    """Максимум |N| по всем элементам (для ферм)."""
+    n = 0.0
+    for el in response.get("elements", []):
+        n_max = el.get("max_values", {}).get("abs_N_max", 0)
+        if n_max > n:
+            n = n_max
+    return n
 
 
 def find_reaction(response: dict, node_id: str, key: str) -> float:
@@ -455,6 +780,19 @@ def evaluate_test(test: dict) -> dict:
         checks.append({
             "metric": "Момент M_max, Н·м",
             "expected": round(expected["max_moment_nm"], 2),
+            "actual": round(actual_val, 2),
+            "error_pct": round(err * 100, 2),
+            "pass": err <= TOLERANCE,
+        })
+
+    # max_axial — максимальное |N| по всем элементам (для ферм)
+    if "max_axial_n" in expected:
+        actual_val = find_max_abs_axial(response)
+        actual["max_axial_n"] = actual_val
+        err = rel_error(actual_val, expected["max_axial_n"])
+        checks.append({
+            "metric": "Осевая сила N_max, Н",
+            "expected": round(expected["max_axial_n"], 2),
             "actual": round(actual_val, 2),
             "error_pct": round(err * 100, 2),
             "pass": err <= TOLERANCE,
@@ -587,11 +925,16 @@ def handler(event: dict, context) -> dict:
         }
 
     tests = [
-        build_cantilever_point_load(),
-        build_simply_supported_center_load(),
-        build_simply_supported_udl(),
-        build_cantilever_udl(),
-        build_portal_frame(),
+        build_cantilever_point_load(),           # 0
+        build_simply_supported_center_load(),    # 1
+        build_simply_supported_udl(),            # 2
+        build_cantilever_udl(),                  # 3
+        build_portal_frame(),                    # 4
+        build_cantilever_tip_moment(),           # 5: новый — момент на конце
+        build_simply_supported_center_moment(),  # 6: новый — момент в центре
+        build_two_point_loads(),                 # 7: новый — 4-точечный изгиб
+        build_two_span_continuous(),             # 8: новый — неразрезная балка
+        build_truss_triangle(),                  # 9: новый — треугольная ферма
     ]
 
     # Поддержка ?test=N — прогнать только один тест (полезно для отладки,
