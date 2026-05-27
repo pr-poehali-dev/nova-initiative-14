@@ -240,8 +240,36 @@ PASS 10/10, погрешность прогибов 1.5–3%, моменты и 
 
 Тесты `backend/sso-auth/tests.json` (8 кейсов: CORS, missing-action, invalid email, weak password, missing credentials, non-existent account, no token для userinfo/refresh) — **8/8 PASS** после декомпозиции.
 
-## 12. Backend (НЕ рефакторился)
+## 12. Backend — cae-solver
 
-Остался один монолит — расчётный движок МКЭ, требует особой осторожности:
+`backend/cae-solver/solver.py` — класс `FrameSolver` + точка входа `solve()`
+(~500 строк). Линейная статика балочных рам 2D/3D, балка Тимошенко с
+учётом сдвига. Поддерживает шарниры, фермы, узловые/распределённые/точечные
+нагрузки. `index.py` — тонкий HTTP-роутер с авторизацией и логом запусков.
 
-- `backend/cae-solver/solver.py` (~1065 строк) — FEM-решатель
+| Файл | Ответственность |
+|---|---|
+| `backend/cae-solver/models.py` | Dataclasses `Material`, `Section`, `Node`, `Element`, `BoundaryCondition`, `Load`, `SolveResult` + константы DOF (`DOF_INDEX_2D/3D`) |
+| `backend/cae-solver/geometry.py` | `element_length_and_direction`, `build_transformation_3d` (3×3 направляющие косинусы), `build_full_transformation` (12×12 для 3D / 6×6 для 2D) |
+| `backend/cae-solver/stiffness.py` | `beam_local_k_3d` (12×12 с двумя плоскостями изгиба и кручением), `beam_local_k_2d` (6×6 с обработкой шарниров через отдельные подматрицы 3qL/8) |
+| `backend/cae-solver/loads.py` | `fixed_end_forces_3d/2d_uniform/point` — эквивалентные узловые усилия от внутрипролётных нагрузок (с учётом шарниров по таблицам сопромата) |
+| `backend/cae-solver/postprocess.py` | `fixed_fixed_deflection_at(x, L, EI, loads, dim)` — частное решение прогиба для эрмитовой интерполяции (формулы Roark/Тимошенко) |
+| `backend/cae-solver/solver.py` | `FrameSolver._parse/_build_element_stiffness/solve()` + `solve(payload)` точка входа. Автоподавление «висячих» DOF (для ферм с балочной формулировкой). |
+
+Тесты `backend/cae-solver/tests.json` (9 кейсов: CORS, validate, demo-консоль 2D, демо-лимит, авторизация, аналитика PL³/48EI, 3D-балка, ферма с шарнирами) — **9/9 PASS**.
+
+**Регрессия через `cae-verify`** (10 эталонных задач Феодосьева/Тимошенко): **PASS 10/10** после декомпозиции — численные результаты идентичны оригиналу.
+
+### Подводный камень при правке солвера
+
+При переносе формулы эпюры `Mza_at_x` знаки **начального момента и нагрузок
+должны быть согласованы** (все одинаково: `+ Qy_a·x` → нагрузки тоже `+`):
+
+```python
+Mza_at_x = -f_end[2] + f_end[1] * x   # M_z(x) = M_z_a + Qy_a·x
+Mza_at_x += qy * x * x / 2            # для UDL — со знаком +
+Mza_at_x += ld.force[1] * (x - a)     # для точечной — со знаком +
+```
+
+Аналитическая проверка: консоль с P=−10000 на свободном конце даёт M(0)=−PL,
+M(L)=0; шарнирная балка с UDL даёт параболу M_max=qL²/8 в середине.
