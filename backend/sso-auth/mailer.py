@@ -30,42 +30,77 @@ def to_punycode_email(addr: str) -> str:
     return f'{local}@{domain_ascii}'
 
 
+def _prepare_smtp_login(raw: str) -> str:
+    """
+    Яндекс 360 поддерживает два формата логина для SMTP:
+      - обычный email:        info@диплом-инж.рф  → info@xn----gtbhgbqhkfi.xn--p1ai
+      - технический (общий ящик): домен/владелец/ящик → оставляем как есть,
+        домен уже должен быть в ASCII (punycode).
+    """
+    s = raw.strip()
+    if '@' in s:
+        return to_punycode_email(s)
+    # Слэш-формат Яндекс 360 — не трогаем, Яндекс принимает как есть
+    return s
+
+
 def send_email(to: str, subject: str, html_body: str, text_body: str) -> bool:
     """
     Отправляет письмо через Яндекс 360 SMTP (SSL 465).
     Не валит запрос при ошибке — возвращает False, ошибка пишется в stdout.
+
+    Поддерживает два формата YANDEX_SMTP_USER:
+      - обычный:    info@диплом-инж.рф
+      - технический (общий ящик): домен/login/shared  — для Яндекс 360
     """
     smtp_login_raw = os.environ.get('YANDEX_SMTP_USER') or os.environ.get('SSO_SMTP_USER')
     smtp_password = os.environ.get('YANDEX_SMTP_PASSWORD') or os.environ.get('SSO_SMTP_PASSWORD')
-    smtp_from_raw = os.environ.get('SSO_SMTP_FROM') or os.environ.get('SSO_SMTP_USER') or smtp_login_raw
+    # From-заголовок: отдельный секрет или берём из логина (только если это email, а не слэш-формат)
+    smtp_from_raw = os.environ.get('SSO_SMTP_FROM') or os.environ.get('SSO_SMTP_USER')
 
     if not smtp_login_raw or not smtp_password:
         print('[sso-auth] SMTP secrets not configured, email skipped')
         return False
 
-    smtp_login = to_punycode_email(smtp_login_raw.strip())
-    smtp_from = to_punycode_email((smtp_from_raw or smtp_login_raw).strip())
+    smtp_login = _prepare_smtp_login(smtp_login_raw)
+
+    # From-адрес в письме должен быть валидным email (не слэш-формат).
+    # Если отдельный SSO_SMTP_FROM не задан, вычисляем из логина:
+    #   слэш-формат домен/владелец/ящик → берём последний сегмент как ящик,
+    #   домен — первый сегмент.
+    if smtp_from_raw and '@' in smtp_from_raw:
+        smtp_from = to_punycode_email(smtp_from_raw.strip())
+    elif '/' in smtp_login_raw:
+        parts = smtp_login_raw.strip().split('/')
+        domain_part = parts[0]  # уже punycode
+        mailbox_part = parts[-1]
+        smtp_from = f'{mailbox_part}@{domain_part}'
+    else:
+        smtp_from = smtp_login
+
     recipient = to_punycode_email(to.strip())
+
+    # Домен для Message-ID: берём из smtp_from
+    msg_id_domain = smtp_from.split('@')[-1] if '@' in smtp_from else 'diplom-inzh.ru'
 
     msg = EmailMessage()
     msg.set_charset('utf-8')
     msg['Subject'] = subject
     msg['From'] = formataddr(('Диплом-Инж.рф', smtp_from), charset='utf-8')
     msg['To'] = recipient
-    msg['Reply-To'] = formataddr(('Диплом-Инж.рф · поддержка', smtp_login), charset='utf-8')
+    msg['Reply-To'] = formataddr(('Диплом-Инж.рф · поддержка', 'info@xn----gtbhgbqhkfi.xn--p1ai'), charset='utf-8')
     msg['Date'] = formatdate(localtime=True)
-    msg['Message-ID'] = make_msgid(domain=smtp_from.split('@')[-1])
+    msg['Message-ID'] = make_msgid(domain=msg_id_domain)
     msg.set_content(text_body)
     msg.add_alternative(html_body, subtype='html')
 
+    print(f'[sso-auth] SMTP attempt: login={smtp_login!r} from={smtp_from!r} to={recipient!r}')
     try:
         ctx = ssl.create_default_context()
         with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, context=ctx, timeout=20) as server:
             server.login(smtp_login, smtp_password)
-            # Envelope-from = smtp_login (для DKIM/SPF Яндекс).
-            # Header From = no-reply@ (для отображения у пользователя).
-            server.send_message(msg, from_addr=smtp_login, to_addrs=[recipient])
-        print(f'[sso-auth] email sent: login={smtp_login} from_header={smtp_from} to={recipient}')
+            server.send_message(msg, from_addr=smtp_from, to_addrs=[recipient])
+        print(f'[sso-auth] email sent OK: to={recipient!r}')
         return True
     except Exception as e:
         print(f'[sso-auth] SMTP error: type={type(e).__name__} msg={e!r}')

@@ -53,6 +53,15 @@
       "path": "/?action=refresh",
       "body": {},
       "expectedStatus": 400
+    },
+    {
+      "name": "Повторная отправка письма — test-адрес",
+      "method": "POST",
+      "path": "/?action=resend-verification",
+      "body": {"email": "97sega97@gmail.com"},
+      "expectedStatus": 200,
+      "expectedBody": {"ok": true},
+      "bodyMatcher": "partial"
     }
   ]
 }
