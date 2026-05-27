@@ -97,6 +97,27 @@ function getTargetRect(target: string): Rect | null {
   return { top: r.top, left: r.left, width: r.width, height: r.height };
 }
 
+/**
+ * Прокручивает страницу так, чтобы целевой элемент туториала оказался
+ * в видимой области. Если элемент уже виден — ничего не делаем (избегаем «дёргания»).
+ * Используется один раз на смену шага.
+ */
+function scrollTargetIntoView(target: string) {
+  const el = document.querySelector(`[data-tutorial="${target}"]`);
+  if (!el) return;
+  const r = (el as HTMLElement).getBoundingClientRect();
+  const vh = window.innerHeight;
+  // Запас сверху/снизу — место под тултип
+  const TOP_MARGIN = 120;
+  const BOTTOM_MARGIN = 240;
+  if (r.top >= TOP_MARGIN && r.bottom <= vh - BOTTOM_MARGIN) return;
+  (el as HTMLElement).scrollIntoView({
+    behavior: "smooth",
+    block: "center",
+    inline: "center",
+  });
+}
+
 function placeTooltip(rect: Rect, placement: TutorialStep["placement"]): { top: number; left: number } {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
@@ -139,6 +160,13 @@ const EditorTutorial = ({ open, onClose }: Props) => {
   useEffect(() => {
     if (open) setStep(0);
   }, [open]);
+
+  // При смене шага — прокручиваем подсвеченный элемент в видимую область.
+  // Делаем это до старта polling-а, чтобы маска появилась сразу в правильном месте.
+  useEffect(() => {
+    if (!open) return;
+    scrollTargetIntoView(STEPS[step].target);
+  }, [open, step]);
 
   // Отслеживаем позицию целевого элемента (на ресайз/скролл)
   useEffect(() => {

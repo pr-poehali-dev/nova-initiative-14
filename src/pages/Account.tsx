@@ -5,6 +5,7 @@ import Icon from "@/components/ui/icon";
 import { useAuth } from "@/contexts/AuthContext";
 import { SITE_URL } from "@/lib/seo";
 import PointsAchievementsBlock from "@/components/account/PointsAchievementsBlock";
+import MyTicketsBlock from "@/components/account/MyTicketsBlock";
 import AdminPanel from "@/components/account/AdminPanel";
 import InviteFriendModal from "@/components/cae/InviteFriendModal";
 import SupportTicketModal from "@/components/SupportTicketModal";
@@ -62,6 +63,9 @@ const Account = () => {
 
         {/* Очки и ачивки */}
         <PointsAchievementsBlock onInvite={() => setInviteOpen(true)} />
+
+        {/* Мои обращения в техподдержку */}
+        <MyTicketsBlock onNewTicket={() => setSupportOpen(true)} />
 
         <div className="grid gap-5 md:grid-cols-2">
           {/* Профиль */}

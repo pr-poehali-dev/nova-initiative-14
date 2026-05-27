@@ -1,7 +1,8 @@
 /**
  * Блок канвы в редакторе CAE.
  * Содержит:
- *  - плавающую панель инструментов (undo/redo/help/fit/settings)
+ *  - плавающую панель инструментов (undo/redo/help/fit/settings) слева
+ *  - плавающие иконки валидации/подсказки/глаза/эпюр справа
  *  - FrameCanvas
  *  - баннер ошибки решателя/загрузки
  */
@@ -9,6 +10,8 @@ import Icon from "@/components/ui/icon";
 import FrameCanvas, { type EditorMode, type DiagramKind } from "@/components/cae/FrameCanvas";
 import type { FrameModel, SolverResponse } from "@/lib/cae-model";
 import type { LabelOffsetsApi } from "@/pages/cae-editor/useLabelOffsets";
+import type { ValidationIssue } from "@/lib/cae-validate";
+import CanvasFloatingControls from "./CanvasFloatingControls";
 
 interface Props {
   model: FrameModel;
@@ -38,6 +41,13 @@ interface Props {
   fontScale?: number;
   labelOffsets?: LabelOffsetsApi;
   elementLimit?: number;
+
+  /* — Управление эпюрами/деформацией прямо на канвасе — */
+  issues?: ValidationIssue[];
+  setShowDiagram?: (d: DiagramKind) => void;
+  setDiagramScale?: (v: number) => void;
+  onFocusNode?: (id: string) => void;
+  onFocusElement?: (id: string) => void;
 }
 
 const EditorCanvasArea = ({
@@ -68,6 +78,11 @@ const EditorCanvasArea = ({
   fontScale,
   labelOffsets,
   elementLimit,
+  issues,
+  setShowDiagram,
+  setDiagramScale,
+  onFocusNode,
+  onFocusElement,
 }: Props) => (
   <div
     className="border-2 border-[var(--drawing-line)] relative h-[58vh] min-h-[360px] lg:h-[70vh] lg:min-h-[480px]"
@@ -139,6 +154,23 @@ const EditorCanvasArea = ({
       labelOffsets={labelOffsets}
       elementLimit={elementLimit}
     />
+
+    {/* Плавающие иконки правого края: валидация, подсказка, глаз, эпюры.
+        Это десктоп-улучшение — на мобильных вкладках остаётся свой UX. */}
+    {issues && setShowDiagram && setDiagramScale && onFocusNode && onFocusElement && (
+      <div className="hidden md:contents">
+        <CanvasFloatingControls
+          issues={issues}
+          onFocusNode={onFocusNode}
+          onFocusElement={onFocusElement}
+          hasResult={!!result}
+          showDiagram={showDiagram}
+          setShowDiagram={setShowDiagram}
+          diagramScale={diagramScale}
+          setDiagramScale={setDiagramScale}
+        />
+      </div>
+    )}
 
     {displayError && (
       <div className="absolute top-14 left-2 right-2 bg-[var(--drawing-accent)] text-white text-xs font-gost p-2 flex items-start gap-2 z-20 shadow-lg">

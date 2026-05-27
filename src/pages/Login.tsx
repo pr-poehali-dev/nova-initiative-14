@@ -4,6 +4,8 @@ import { Helmet } from "@/lib/helmet-shim";
 import { useAuth } from "@/contexts/AuthContext";
 import { SITE_URL } from "@/lib/seo";
 import OAuthButtons from "@/components/OAuthButtons";
+import { resendVerification } from "@/lib/auth";
+import Icon from "@/components/ui/icon";
 
 const Login = () => {
   const { login, loading, error, clearError, user } = useAuth();
@@ -14,6 +16,13 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // Состояние повторной отправки письма — показываем кнопку только при нужной ошибке
+  const [resendBusy, setResendBusy] = useState(false);
+  const [resendDone, setResendDone] = useState<string | null>(null);
+
+  // Опознаём ошибку «email не подтверждён» — текст приходит с бэка
+  const needsVerification =
+    !!error && /подтвердите email|не подтверждён|не подтвержден/i.test(error);
 
   if (user) {
     setTimeout(() => nav(from, { replace: true }), 0);
@@ -22,10 +31,25 @@ const Login = () => {
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     clearError();
+    setResendDone(null);
     setSubmitting(true);
     const ok = await login(email.trim().toLowerCase(), password);
     setSubmitting(false);
     if (ok) nav(from, { replace: true });
+  };
+
+  const onResend = async () => {
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail) return;
+    setResendBusy(true);
+    setResendDone(null);
+    const res = await resendVerification(trimmedEmail);
+    setResendBusy(false);
+    setResendDone(
+      res.ok
+        ? "Письмо отправлено заново. Проверьте папку «Входящие» и «Спам»."
+        : res.message || "Не удалось отправить письмо. Попробуйте позже.",
+    );
   };
 
   return (
@@ -77,8 +101,28 @@ const Login = () => {
           </div>
 
           {error && (
-            <p className="font-gost text-xs text-[var(--drawing-accent)] border-l-2 border-[var(--drawing-accent)] pl-3">
-              {error}
+            <div className="border-l-2 border-[var(--drawing-accent)] pl-3 space-y-2">
+              <p className="font-gost text-xs text-[var(--drawing-accent)]">
+                {error}
+              </p>
+              {needsVerification && (
+                <button
+                  type="button"
+                  onClick={onResend}
+                  disabled={resendBusy || !email.trim()}
+                  className="btn-drawing text-[11px] inline-flex border-[var(--drawing-accent)] text-[var(--drawing-accent)] hover:bg-[var(--drawing-accent)] hover:text-white transition-colors disabled:opacity-50"
+                  title="Отправит письмо с ссылкой подтверждения на указанный email"
+                >
+                  <Icon name={resendBusy ? "Loader" : "Mail"} size={12} className={`mr-1.5 ${resendBusy ? "animate-spin" : ""}`} />
+                  {resendBusy ? "Отправляем…" : "Отправить письмо заново"}
+                </button>
+              )}
+            </div>
+          )}
+
+          {resendDone && (
+            <p className="font-gost text-xs text-[var(--drawing-line)] border-l-2 border-[var(--drawing-line)] pl-3 bg-[var(--drawing-line)]/5 py-2">
+              {resendDone}
             </p>
           )}
 

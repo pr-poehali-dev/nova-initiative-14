@@ -101,14 +101,9 @@ const EditorRightPanel = ({
     );
   }
 
-  return (
-    <div className="border-2 border-dashed border-[var(--drawing-line-thin)] bg-[var(--drawing-bg)] p-3 text-[var(--drawing-line-thin)]">
-      <p className="font-gost text-[10px] uppercase tracking-[0.2em] mb-1">Подсказка</p>
-      <p className="text-[11px] leading-relaxed">
-        Выберите узел или элемент, чтобы настроить опору, нагрузку или удалить.
-      </p>
-    </div>
-  );
+  // Если ничего не выбрано — не показываем пустую заглушку.
+  // Подсказка теперь живёт в иконке вопроса на канвасе (CanvasFloatingControls).
+  return null;
 };
 
 export default EditorRightPanel;

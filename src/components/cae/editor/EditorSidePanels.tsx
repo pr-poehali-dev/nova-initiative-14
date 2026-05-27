@@ -10,7 +10,6 @@ import Icon from "@/components/ui/icon";
 import EditorLeftPanel from "./EditorLeftPanel";
 import EditorRightPanel from "./EditorRightPanel";
 import EditorResultsPanel from "./EditorResultsPanel";
-import EditorIssuesPanel from "./EditorIssuesPanel";
 import EditorChecksPanel from "./EditorChecksPanel";
 import type { EditorMode, DiagramKind } from "@/components/cae/FrameCanvas";
 import type { FrameModel, SolverResponse, BoundaryCondition } from "@/lib/cae-model";
@@ -152,14 +151,16 @@ const EditorSidePanels = ({
 
   return (
     <>
-      {/* Десктоп: правая колонка со всеми панелями сразу.
-          Мобилка: ниже идёт блок с вкладками. */}
+      {/* Десктоп: правая колонка.
+          Список проблем модели и переключатели эпюр перенесены на канвас —
+          в плавающие иконки CanvasFloatingControls, чтобы не отвлекать
+          от схемы и не загромождать боковую колонку.
+
+          Здесь остаются только:
+           - свойства выбранного узла/элемента (EditorRightPanel)
+           - проверки прочности по нормам (EditorChecksPanel)
+           - таблицы результатов: реакции/прогибы/напряжения (EditorResultsPanel) */}
       <aside className="hidden lg:block space-y-3 text-[12px]">
-        <EditorIssuesPanel
-          issues={issues}
-          onFocusNode={focusNode}
-          onFocusElement={focusElement}
-        />
         <div data-tutorial="props">
           <EditorRightPanel {...rightPanelProps} />
         </div>

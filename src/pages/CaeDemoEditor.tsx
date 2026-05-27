@@ -270,6 +270,11 @@ const CaeDemoEditor = () => {
             fontScale={viewSettings.fontScale}
             labelOffsets={labelOffsets}
             elementLimit={DEMO_ELEMENT_LIMIT}
+            issues={issues}
+            setShowDiagram={setShowDiagram}
+            setDiagramScale={setDiagramScale}
+            onFocusNode={(id) => setSelectedNodeIds([id])}
+            onFocusElement={(id) => setSelectedElementIds([id])}
           />
 
           <EditorSidePanels

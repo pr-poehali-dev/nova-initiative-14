@@ -22,6 +22,18 @@ export default function PointsAchievementsBlock({ onInvite }: Props) {
   const [profile, setProfile] = useState<ReferralProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async (text: string) => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard недоступен в этом контексте */
+    }
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -128,11 +140,16 @@ export default function PointsAchievementsBlock({ onInvite }: Props) {
           />
           <button
             type="button"
-            onClick={() => navigator.clipboard?.writeText(refUrl)}
-            className="font-gost uppercase tracking-wider text-[10px] hover:text-[var(--drawing-accent)]"
+            onClick={() => handleCopy(refUrl)}
+            className={`font-gost uppercase tracking-wider text-[10px] inline-flex items-center gap-1 transition-colors ${
+              copied
+                ? "text-[var(--drawing-accent)]"
+                : "text-[var(--drawing-line-thin)] hover:text-[var(--drawing-accent)]"
+            }`}
             title="Скопировать"
           >
-            Копировать
+            <Icon name={copied ? "Check" : "Copy"} size={11} />
+            {copied ? "Скопировано" : "Копировать"}
           </button>
         </div>
       )}

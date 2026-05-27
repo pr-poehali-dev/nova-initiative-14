@@ -162,6 +162,19 @@ export async function fetchUserInfo(accessToken: string) {
   return call<{ user: SsoUser }>("userinfo", "GET", undefined, accessToken);
 }
 
+/**
+ * Повторно отправляет письмо с подтверждением email.
+ * Бэкенд намеренно отвечает 200 даже если email не зарегистрирован —
+ * чтобы не раскрывать существование аккаунта.
+ */
+export async function resendVerification(email: string) {
+  return call<{ ok: boolean; email_sent?: boolean; message?: string }>(
+    "resend-verification",
+    "POST",
+    { email },
+  );
+}
+
 export type OAuthProvider = "yandex" | "vk" | "google" | "mailru";
 
 export const PROVIDER_LABELS: Record<OAuthProvider, string> = {

@@ -212,6 +212,11 @@ const CaeEditor = () => {
             arrowScale={viewSettings.arrowScale}
             fontScale={viewSettings.fontScale}
             labelOffsets={labelOffsets}
+            issues={issues}
+            setShowDiagram={setShowDiagram}
+            setDiagramScale={setDiagramScale}
+            onFocusNode={(id) => setSelectedNodeIds([id])}
+            onFocusElement={(id) => setSelectedElementIds([id])}
           />
 
           <EditorSidePanels
