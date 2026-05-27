@@ -43,6 +43,17 @@ import {
   setElementHinge as setElementHingePure,
 } from "./actions/elementActions";
 
+export interface UseCaeActionsOptions {
+  /**
+   * Лимит узлов в модели (альфа-тест: 10).
+   * При попытке создать узел сверх лимита создание блокируется и вызывается
+   * onNodeLimitReached. Если не указан — лимит не применяется.
+   */
+  nodeLimit?: number;
+  /** Колбэк, вызываемый при достижении лимита узлов (для показа модалки). */
+  onNodeLimitReached?: () => void;
+}
+
 export function useCaeActions(
   model: FrameModel,
   updateModel: (next: FrameModel) => void,
@@ -50,12 +61,19 @@ export function useCaeActions(
   selectedElementIds: string[],
   setSelectedNodeIds: (ids: string[]) => void,
   setSelectedElementIds: (ids: string[]) => void,
+  options: UseCaeActionsOptions = {},
 ) {
+  const { nodeLimit, onNodeLimitReached } = options;
   // Совместимость с одиночным выбором (правая панель показывает свойства одного объекта)
   const selectedNodeId = selectedNodeIds.length === 1 ? selectedNodeIds[0] : null;
   const selectedElementId = selectedElementIds.length === 1 ? selectedElementIds[0] : null;
 
   const onCanvasClick = (worldX: number, worldY: number) => {
+    // Лимит узлов (альфа-тест): блокируем создание и зовём модалку.
+    if (nodeLimit !== undefined && model.nodes.length >= nodeLimit) {
+      onNodeLimitReached?.();
+      return;
+    }
     const r = addNodeAt(model, worldX, worldY);
     updateModel(r.model);
     if (r.nodeIds) setSelectedNodeIds(r.nodeIds);
@@ -69,6 +87,14 @@ export function useCaeActions(
   };
 
   const duplicateSelected = (offsetX = 0.5, offsetY = -0.5) => {
+    // Считаем сколько новых узлов появится при дублировании — если выходим
+    // за лимит, ничего не делаем и показываем модалку.
+    if (nodeLimit !== undefined && selectedNodeIds.length > 0) {
+      if (model.nodes.length + selectedNodeIds.length > nodeLimit) {
+        onNodeLimitReached?.();
+        return;
+      }
+    }
     const r = duplicateSelection(model, selectedNodeIds, selectedElementIds, offsetX, offsetY);
     updateModel(r.model);
     if (r.nodeIds) setSelectedNodeIds(r.nodeIds);

@@ -10,6 +10,7 @@ import EditorSidePanels from "@/components/cae/editor/EditorSidePanels";
 import ContextPropertiesPopup, {
   type ContextTarget,
 } from "@/components/cae/editor/ContextPropertiesPopup";
+import NodeLimitModal from "@/components/cae/NodeLimitModal";
 import { MaterialPicker, SectionPicker } from "@/components/cae/CatalogPanel";
 import KeyboardHintsDialog from "@/components/cae/editor/KeyboardHintsDialog";
 import EditorTutorial from "@/components/cae/editor/EditorTutorial";
@@ -25,11 +26,26 @@ import { useCaeViewSettings } from "./cae-editor/useCaeViewSettings";
 import { useLabelOffsets } from "./cae-editor/useLabelOffsets";
 import { SITE_URL } from "@/lib/seo";
 import DemoLimitModal from "@/components/cae/DemoLimitModal";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 const CaeDemoEditor = () => {
+  const { user, loading: authLoadingCtx } = useAuth();
+  const nav = useNavigate();
+
+  // Авторизованный пользователь не должен попадать на демо —
+  // перебрасываем в его реальный список проектов.
+  useEffect(() => {
+    if (!authLoadingCtx && user) {
+      nav("/cae/projects", { replace: true });
+    }
+  }, [user, authLoadingCtx, nav]);
+
   const [limitModalOpen, setLimitModalOpen] = useState(false);
   const [contextTarget, setContextTarget] = useState<ContextTarget | null>(null);
+  const NODE_LIMIT_ALPHA = 10;
+  const [nodeLimitOpen, setNodeLimitOpen] = useState(false);
   const {
     model,
     updateModel,
@@ -144,6 +160,10 @@ const CaeDemoEditor = () => {
     selectedElementIds,
     setSelectedNodeIds,
     setSelectedElementIds,
+    {
+      nodeLimit: NODE_LIMIT_ALPHA,
+      onNodeLimitReached: () => setNodeLimitOpen(true),
+    },
   );
 
   useCaeKeyboard({
@@ -362,6 +382,13 @@ const CaeDemoEditor = () => {
         onClose={() => setLimitModalOpen(false)}
         usedSolves={solveCount}
         solveLimit={solveLimit}
+      />
+
+      <NodeLimitModal
+        open={nodeLimitOpen}
+        onClose={() => setNodeLimitOpen(false)}
+        currentLimit={NODE_LIMIT_ALPHA}
+        currentNodeCount={model.nodes.length}
       />
 
       {/* Контекстный popup со свойствами узла/элемента.

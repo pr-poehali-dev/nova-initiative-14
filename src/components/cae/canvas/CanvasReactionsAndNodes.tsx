@@ -118,7 +118,9 @@ const CanvasReactionsAndNodes = ({
       {/* реакции опор (после расчёта) */}
       {showReactions && result?.reactions.map((rxn) => renderReaction(rxn))}
 
-      {/* узлы — кружок (кликабельный) + перетаскиваемая подпись отдельной группой */}
+      {/* узлы — кружок (кликабельный) + перетаскиваемая подпись отдельной группой.
+          Hit-area увеличена прозрачным кружком 18px: тапнуть пальцем по
+          узлу 6px на смартфоне без этого почти невозможно. */}
       {model.nodes.map((n) => {
         const isSel = selSet.has(n.id);
         const isPending = pendingFirstNodeId === n.id;
@@ -133,6 +135,7 @@ const CanvasReactionsAndNodes = ({
               onPointerDown={handleNodePointerDown ? (e) => handleNodePointerDown(n, e) : undefined}
               onContextMenu={handleNodeContextMenu ? (e) => handleNodeContextMenu(n, e) : undefined}
             >
+              {/* Видимый кружок узла */}
               <circle
                 cx={cx}
                 cy={cy}
@@ -140,6 +143,13 @@ const CanvasReactionsAndNodes = ({
                 fill={isSel ? ACCENT : isPending ? ACCENT : BG}
                 stroke={isSel || isPending ? ACCENT : LINE}
                 strokeWidth={2}
+              />
+              {/* Невидимая зона клика 18px — комфортная для тапа пальцем (44px диаметр) */}
+              <circle
+                cx={cx}
+                cy={cy}
+                r={18}
+                fill="transparent"
               />
             </g>
             {makeDraggableText(`node:${n.id}`, cx + 10, cy - 8, (x, y) => (

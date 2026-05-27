@@ -9,7 +9,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { FrameModel, ModelNode, ModelElement } from "@/lib/cae-model";
 import type { EditorMode } from "@/components/cae/FrameCanvas";
-import { NODE_R } from "./canvas-constants";
 
 /** Цель открытия контекстного popup'а свойств. */
 export interface ContextRequest {
@@ -135,8 +134,9 @@ export function useCanvasInteractions({
 
 
   // === Поиск узла под курсором (для draw-element / select) ===
+  // Радиус 18px (комфортный для тапа пальцем) пересчитан в мировые единицы.
   const nodeAt = (worldX: number, worldY: number): ModelNode | null => {
-    const r = (NODE_R + 4) / pxPerM;
+    const r = 18 / pxPerM;
     for (const n of model.nodes) {
       const dx = n.coords[0] - worldX;
       const dy = n.coords[1] - worldY;

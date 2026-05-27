@@ -103,6 +103,9 @@ export function useCanvasPointer({
 
     // средняя/правая кнопка или с shift — pan
     if (e.button === 1 || e.button === 2 || e.shiftKey) {
+      // Для middle-click важно — иначе Chrome/Firefox запустят свой
+      // «autoscroll-mode» с курсором-якорем поверх нашего pan'а.
+      e.preventDefault();
       setPanning({ x: sx, y: sy });
       svgRef.current!.setPointerCapture(e.pointerId);
       return;

@@ -21,10 +21,10 @@ from auth import json_response
 from utils import project_to_dict, slugify
 
 
-# Квота активных проектов на пользователя.
-# На время альфа-тестирования квота поднята до 1000 — все пользователи считаются альфа-тестерами,
-# подписка не проверяется, расчёты бесплатны.
-DEFAULT_PROJECT_QUOTA = 1000
+# Квота активных (не архивированных) проектов на пользователя.
+# Альфа-тест: 10 проектов — защита от спама до выхода платных тарифов.
+# Архивированные не считаются — пользователь может удалить старые и создать новые.
+DEFAULT_PROJECT_QUOTA = 10
 
 
 def action_list_projects(conn, user: dict) -> dict:
@@ -101,9 +101,11 @@ def action_create_project(conn, user: dict, body: dict) -> dict:
             return json_response(403, {
                 'error': 'quota_exceeded',
                 'message': (
-                    f'Достигнут лимит активных проектов вашего тарифа ({DEFAULT_PROJECT_QUOTA}). '
-                    'Архивируйте лишние или обновите тариф.'
+                    f'Достигнут лимит альфа-теста: {DEFAULT_PROJECT_QUOTA} активных проектов. '
+                    f'Удалите ненужные в списке проектов, чтобы создать новый.'
                 ),
+                'limit': DEFAULT_PROJECT_QUOTA,
+                'active_count': active_count,
             })
 
         cur.execute(

@@ -127,6 +127,19 @@ const ContextPropertiesPopup = ({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  // Блокируем скролл body, пока popup открыт. На мобиле особенно важно:
+  // иначе при свайпе по подложке/попапу страница сайта прокручивается под ним.
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    const prevTouchAction = document.body.style.touchAction;
+    document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.touchAction = prevTouchAction;
+    };
+  }, []);
+
   // Клик мимо — закрыть. Слушаем pointerdown по window, проверяем
   // что клик НЕ внутри popup. Mousedown в фазе capture, чтобы успеть
   // до click на канве (иначе будут гонки с handleSvgClick).
@@ -170,9 +183,11 @@ const ContextPropertiesPopup = ({
 
   return (
     <>
-      {/* Подложка — только на мобиле, чтобы было видно «модальность» */}
+      {/* Подложка — только на мобиле, чтобы было видно «модальность».
+          touchAction:none — гасит скролл фона при свайпе по подложке. */}
       <div
         className="fixed inset-0 bg-black/30 z-40 md:hidden"
+        style={{ touchAction: "none" }}
         onPointerDown={onClose}
         aria-hidden="true"
       />

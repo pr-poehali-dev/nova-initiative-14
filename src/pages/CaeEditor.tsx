@@ -7,6 +7,7 @@ import EditorSidePanels from "@/components/cae/editor/EditorSidePanels";
 import ContextPropertiesPopup, {
   type ContextTarget,
 } from "@/components/cae/editor/ContextPropertiesPopup";
+import NodeLimitModal from "@/components/cae/NodeLimitModal";
 import { MaterialPicker, SectionPicker } from "@/components/cae/CatalogPanel";
 import KeyboardHintsDialog from "@/components/cae/editor/KeyboardHintsDialog";
 import EditorTutorial from "@/components/cae/editor/EditorTutorial";
@@ -95,6 +96,11 @@ const CaeEditor = () => {
   // null = закрыт. Содержит координаты клика и тип/id объекта.
   const [contextTarget, setContextTarget] = useState<ContextTarget | null>(null);
 
+  // Лимит узлов на альфа-тесте — защита от перегрузки решателя
+  // на больших моделях, пока публичная версия не оптимизирована.
+  const NODE_LIMIT_ALPHA = 10;
+  const [nodeLimitOpen, setNodeLimitOpen] = useState(false);
+
   // Глобальные настройки отображения (размер стрелок и шрифта подписей).
   // Сохраняются в localStorage между сессиями.
   const viewSettings = useCaeViewSettings();
@@ -128,6 +134,10 @@ const CaeEditor = () => {
     selectedElementIds,
     setSelectedNodeIds,
     setSelectedElementIds,
+    {
+      nodeLimit: NODE_LIMIT_ALPHA,
+      onNodeLimitReached: () => setNodeLimitOpen(true),
+    },
   );
 
   useCaeKeyboard({
@@ -307,6 +317,13 @@ const CaeEditor = () => {
         onClose={() => setSettingsOpen(false)}
         settings={model.analysis_settings ?? DEFAULT_ANALYSIS_SETTINGS}
         onChange={(s) => updateModel({ ...model, analysis_settings: s })}
+      />
+
+      <NodeLimitModal
+        open={nodeLimitOpen}
+        onClose={() => setNodeLimitOpen(false)}
+        currentLimit={NODE_LIMIT_ALPHA}
+        currentNodeCount={model.nodes.length}
       />
 
       {/* Контекстный popup со свойствами узла/элемента.

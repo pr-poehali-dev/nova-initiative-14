@@ -13,6 +13,7 @@
  *  - useCanvasPointer   — pointer/touch: pan, pinch, drag, click-suppression
  *  - useCanvasInteractions — выбор узлов/элементов, draw-element, drag-start
  */
+import { useEffect } from "react";
 import type {
   FrameModel,
   SolverResponse,
@@ -149,6 +150,30 @@ const FrameCanvas = ({
     elementLimit,
     onRequestContext,
   });
+
+  // Подавляем встроенный «autoscroll-mode» Chrome/Firefox по middle-click.
+  // React-event приходит уже после, поэтому preventDefault там не сработает —
+  // нужен native listener в фазе capture.
+  useEffect(() => {
+    const el = svgRef.current;
+    if (!el) return;
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button === 1) {
+        e.preventDefault();
+      }
+    };
+    // auxclick — событие отпускания средней/правой кнопки. Тоже гасим,
+    // чтобы не открывалось контекстное меню браузера.
+    const onAuxClick = (e: MouseEvent) => {
+      if (e.button === 1) e.preventDefault();
+    };
+    el.addEventListener("mousedown", onMouseDown);
+    el.addEventListener("auxclick", onAuxClick);
+    return () => {
+      el.removeEventListener("mousedown", onMouseDown);
+      el.removeEventListener("auxclick", onAuxClick);
+    };
+  }, [svgRef]);
 
   return (
     <svg
