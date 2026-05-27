@@ -1,5 +1,12 @@
 User-agent: *
 Allow: /
-Disallow: /privacy
+Disallow: /account
+Disallow: /login
+Disallow: /register
+Disallow: /verify-email
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /oauth/
+Disallow: /cae/projects
 
 Sitemap: https://xn----gtbhgbqhkfi.xn--p1ai/sitemap.xml
