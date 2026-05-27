@@ -665,12 +665,17 @@ function drawDiagramOverScheme(
     const sx_arr: number[] = [];
     const sy_arr: number[] = [];
     let iLocalMax = 0;
+    // Знаковое соглашение РФ-школы: эпюра M рисуется со стороны РАСТЯНУТОГО волокна.
+    // Положительный Mz по нашему солверу растягивает "нижнее" волокно (правую сторону
+    // относительно направления стержня), поэтому для Mz инвертируем знак — эпюра
+    // ложится со стороны растянутого волокна (под балкой при q вниз, наружу на стойках).
+    const signFactor = kind === "Mz" ? -1 : 1;
     for (let i = 0; i < d.xs.length; i++) {
       const t = d.xs[i] / d.len;
       const wx = d.a.coords[0] + d.dx * t;
       const wy = d.a.coords[1] + d.dy * t;
       // В мире: смещение по нормали на vals[i]*k. Учитываем что Y экрана инвертирован.
-      const dist = d.vals[i] * k;
+      const dist = signFactor * d.vals[i] * k;
       const sx = toX(wx) + d.nx * dist;
       const sy = toY(wy) - d.ny * dist; // - потому что мировая y вверх, экранная вниз
       sx_arr.push(sx);
@@ -741,7 +746,10 @@ function drawDiagramOverScheme(
   ) => {
     if (Math.abs(pt.val) < globalAbs * SIGNIFICANCE) return;
     const d = list.find((x) => x.el.id === pt.elId);
-    const sign = pt.val >= 0 ? 1 : -1;
+    // Подпись смещается в ту же сторону, куда легла эпюра. Для Mz знак инвертирован
+    // (эпюра рисуется со стороны растянутого волокна) — учитываем это и для подписи.
+    const labelSignFactor = kind === "Mz" ? -1 : 1;
+    const sign = (pt.val >= 0 ? 1 : -1) * labelSignFactor;
     // Маркер: для глобальных экстремумов крупнее
     doc.setFillColor(...color);
     doc.circle(pt.sxRel, pt.syRel, isGlobalExtremum ? 1.2 : 0.7, "F");

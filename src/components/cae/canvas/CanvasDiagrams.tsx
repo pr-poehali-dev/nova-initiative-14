@@ -103,13 +103,19 @@ const CanvasDiagrams = ({ model, result, showDiagram, diagramScale, toScreenX, t
     const { el, vals, xs, color, nx, ny, dx, dy, len, a, maxAbs } = d;
     const points: string[] = [];
 
+    // Знаковое соглашение РФ-школы: эпюра M рисуется со стороны РАСТЯНУТОГО волокна.
+    // Левая нормаль (-uy, ux) указывает "вверх" для горизонтального стержня и "наружу"
+    // влево для вертикального. Положительный Mz по нашему солверу растягивает нижнее
+    // волокно (правая сторона относительно направления стержня), поэтому для Mz
+    // инвертируем знак — эпюра ложится на сторону растянутого волокна.
+    const signFactor = showDiagram === "Mz" ? -1 : 1;
     for (let i = 0; i < xs.length; i++) {
       const t = xs[i] / len;
       const wx = a.coords[0] + dx * t;
       const wy = a.coords[1] + dy * t;
       // Per-element масштаб: эпюра каждого стержня занимает offsetPx в максимуме.
       // Это стандартная практика в профессиональных CAE (ЛИРА, SCAD, SAP2000).
-      const dist = (vals[i] / maxAbs) * offsetPx;
+      const dist = signFactor * (vals[i] / maxAbs) * offsetPx;
       const sx = toScreenX(wx) + nx * dist;
       const sy = toScreenY(wy) - ny * dist;
       points.push(`${sx},${sy}`);
@@ -142,10 +148,12 @@ const CanvasDiagrams = ({ model, result, showDiagram, diagramScale, toScreenX, t
     const unit = UNITS[kind] ?? "";
     const text = `${fmtVal(pt.val, kind)} ${unit}`;
 
-    // Смещение подписи: чуть дальше от линии эпюры
+    // Смещение подписи: чуть дальше от линии эпюры (в ту же сторону, куда легла эпюра).
+    // Для Mz знак инвертирован — подпись тоже должна следовать за инверсией.
     const d = elDataList.find((d) => d.el.id === pt.elId);
     const extraOffset = 10;
-    const sign = pt.val >= 0 ? 1 : -1;
+    const signFactor = kind === "Mz" ? -1 : 1;
+    const sign = (pt.val >= 0 ? 1 : -1) * signFactor;
     const lx = pt.sx + (d ? d.nx * sign * extraOffset : 0);
     const ly = pt.sy - (d ? d.ny * sign * extraOffset : 0);
 
