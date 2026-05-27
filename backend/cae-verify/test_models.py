@@ -31,6 +31,14 @@ def build_cantilever_point_load(L: float = 2.0, P: float = 10000.0) -> dict:
             "max_moment_nm": P * L,
             "reaction_fy_n": P,
             "reaction_mz_nm": P * L,
+            "max_shear_n": P,  # Q = P = const по всей консоли
+            "shear_signed": [
+                # В заделке Q = +P (положительная по конвенции солвера),
+                # на свободном конце такая же. Знак критичен для проверки
+                # согласования Q = dM/dx.
+                {"element_id": "e1", "where": "start", "value": P},
+                {"element_id": "e1", "where": "end", "value": P},
+            ],
         },
         "model": {
             "meta": {"dim": "2d"},
@@ -68,6 +76,7 @@ def build_simply_supported_center_load(L: float = 4.0, P: float = 20000.0) -> di
             "max_displacement_m": P * L**3 / (48 * E * I),
             "max_moment_nm": P * L / 4,
             "reaction_fy_n": P / 2,
+            "max_shear_n": P / 2,  # |Q| = P/2 на обоих полупролётах
         },
         "model": {
             "meta": {"dim": "2d"},
@@ -110,6 +119,14 @@ def build_simply_supported_udl(L: float = 4.0, q: float = 5000.0) -> dict:
             "max_displacement_m": 5 * q * L**4 / (384 * E * I),
             "max_moment_nm": q * L**2 / 8,
             "reaction_fy_n": q * L / 2,
+            "max_shear_n": q * L / 2,  # пиковая |Q| на концах = qL/2
+            "shear_signed": [
+                # Регрессия на баг знака Qya: должна быть линейная эпюра
+                # +qL/2 → 0 → −qL/2, а не уезжать на постоянную составляющую.
+                {"element_id": "e1", "where": "start", "value": q * L / 2},
+                {"element_id": "e1", "where": "mid", "value": 0.0},
+                {"element_id": "e1", "where": "end", "value": -q * L / 2},
+            ],
         },
         "model": {
             "meta": {"dim": "2d"},
@@ -151,6 +168,12 @@ def build_cantilever_udl(L: float = 2.0, q: float = 5000.0) -> dict:
             "max_moment_nm": q * L**2 / 2,
             "reaction_fy_n": q * L,
             "reaction_mz_nm": q * L**2 / 2,
+            "max_shear_n": q * L,  # пиковая |Q| в заделке
+            "shear_signed": [
+                # В заделке Q = +qL, на свободном конце Q = 0.
+                {"element_id": "e1", "where": "start", "value": q * L},
+                {"element_id": "e1", "where": "end", "value": 0.0},
+            ],
         },
         "model": {
             "meta": {"dim": "2d"},
@@ -240,6 +263,7 @@ def build_cantilever_tip_moment(L: float = 2.0, M0: float = 15000.0) -> dict:
             "max_moment_nm": M0,
             "reaction_fy_n": 0.0,
             "reaction_mz_nm": -M0,
+            "max_shear_n": 0.0,  # чистый изгиб моментом: Q ≡ 0
         },
         "model": {
             "meta": {"dim": "2d"},
@@ -326,6 +350,13 @@ def build_two_point_loads(L: float = 6.0, P: float = 10000.0, a: float = 2.0) ->
             "max_displacement_m": P * a * (3 * L**2 - 4 * a**2) / (24 * E * I),
             "max_moment_nm": P * a,
             "reaction_fy_n": P,
+            "max_shear_n": P,  # |Q| = P на крайних участках, 0 на среднем
+            "shear_signed": [
+                # Чистый изгиб посередине: Q = 0 на всём элементе e2.
+                {"element_id": "e2", "where": "start", "value": 0.0},
+                {"element_id": "e2", "where": "mid", "value": 0.0},
+                {"element_id": "e2", "where": "end", "value": 0.0},
+            ],
         },
         "model": {
             "meta": {"dim": "2d"},
@@ -374,6 +405,7 @@ def build_two_span_continuous(L: float = 4.0, q: float = 5000.0) -> dict:
         "expected": {
             "max_moment_nm": q * L**2 / 8,   # |M| на средней опоре
             "reaction_fy_n": 3 * q * L / 8,  # R_A на крайней опоре
+            "max_shear_n": 5 * q * L / 8,    # пиковая |Q| у средней опоры
         },
         "model": {
             "meta": {"dim": "2d"},

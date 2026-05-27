@@ -63,6 +63,41 @@ def find_max_abs_axial(response: dict) -> float:
     return n
 
 
+def find_max_abs_shear(response: dict) -> float:
+    """
+    Максимум |Qy| по всем элементам (для балок 2D).
+    Солвер не публикует abs_Qy_max в max_values, поэтому считаем из массива.
+    """
+    q = 0.0
+    for el in response.get("elements", []):
+        qy_arr = el.get("diagrams", {}).get("Qy", [])
+        for v in qy_arr:
+            if abs(v) > q:
+                q = abs(v)
+    return q
+
+
+def shear_at(response: dict, element_id: str, where: str) -> float:
+    """
+    Поперечная сила Qy в характерной точке элемента.
+    where = 'start' | 'mid' | 'end'. Возвращает значение СО ЗНАКОМ —
+    критично для проверки соотношения dM/dx = Q (см. фикс знака Qya).
+    """
+    for el in response.get("elements", []):
+        if el.get("element_id") != element_id:
+            continue
+        qy_arr = el.get("diagrams", {}).get("Qy", [])
+        if not qy_arr:
+            return 0.0
+        if where == "start":
+            return float(qy_arr[0])
+        if where == "end":
+            return float(qy_arr[-1])
+        if where == "mid":
+            return float(qy_arr[len(qy_arr) // 2])
+    return 0.0
+
+
 def find_reaction(response: dict, node_id: str, key: str) -> float:
     """Реакция в указанном узле по компоненте (fx / fy / mz)."""
     for r in response.get("reactions", []):

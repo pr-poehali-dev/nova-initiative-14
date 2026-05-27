@@ -17,9 +17,11 @@ from solver_client import (
     call_solver,
     find_max_abs_axial,
     find_max_abs_moment,
+    find_max_abs_shear,
     find_reaction,
     rel_error,
     sample_diagram,
+    shear_at,
     sum_reactions,
 )
 
@@ -75,6 +77,27 @@ def evaluate_test(test: dict) -> dict:
         v = find_max_abs_axial(response)
         actual["max_axial_n"] = v
         checks.append(_check("Осевая сила N_max, Н", v, expected["max_axial_n"]))
+
+    # Максимальное |Qy| по всем элементам — основная сверка поперечной силы.
+    if "max_shear_n" in expected:
+        v = find_max_abs_shear(response)
+        actual["max_shear_n"] = v
+        checks.append(_check("Поперечная сила Q_max, Н", v, expected["max_shear_n"]))
+
+    # Поперечная сила Qy в характерной точке СО ЗНАКОМ.
+    # Формат ожидания: "shear_signed": {"element_id": "...", "where": "start|mid|end", "value": ±X}
+    # Это критическая проверка, отлавливающая баги конвенции знака
+    # (например, рассогласование Q = dM/dx).
+    if "shear_signed" in expected:
+        for spec in expected["shear_signed"]:
+            v = shear_at(response, spec["element_id"], spec["where"])
+            label = f'Qy({spec["element_id"]}, {spec["where"]}), Н'
+            actual.setdefault("shear_signed", []).append({
+                "element_id": spec["element_id"],
+                "where": spec["where"],
+                "value": v,
+            })
+            checks.append(_check(label, v, spec["value"]))
 
     # Реакция R_y на левой опоре n1 (стандартная для балок).
     if "reaction_fy_n" in expected:
