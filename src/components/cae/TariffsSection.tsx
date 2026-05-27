@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import type { CaeTariff } from "@/lib/cae";
+import AlphaTestBanner from "@/components/AlphaTestBanner";
 
 interface Props {
   tariffs: CaeTariff[];
@@ -51,6 +52,9 @@ export default function TariffsSection({ tariffs }: Props) {
       <p className="font-gost text-sm text-center text-[var(--drawing-line-thin)] max-w-2xl mx-auto mb-6">
         Участники раннего доступа получат фиксированную скидку на&nbsp;год.
       </p>
+
+      {/* Плашка альфа-теста — пояснение к тарифам */}
+      <AlphaTestBanner size="compact" className="max-w-2xl mx-auto mb-8" hideCta />
 
       {/* Переключатель месяц / год */}
       <div className="flex items-center justify-center gap-3 mb-10">

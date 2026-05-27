@@ -8,6 +8,7 @@ import { createProject } from "@/lib/cae";
 import { saveProjectModel } from "@/lib/cae-model";
 import TemplateGallery from "@/components/cae/TemplateGallery";
 import { FRAME_TEMPLATES, type FrameTemplate } from "@/lib/cae-catalog";
+import AlphaTestBanner from "@/components/AlphaTestBanner";
 
 const CaeNewProject = () => {
   const { user, loading: authLoading } = useAuth();
@@ -79,9 +80,11 @@ const CaeNewProject = () => {
         <h1 className="font-gost-upright text-2xl md:text-3xl font-black uppercase tracking-wide mb-2">
           Новый проект
         </h1>
-        <p className="text-sm text-[var(--drawing-line-thin)] mb-8">
+        <p className="text-sm text-[var(--drawing-line-thin)] mb-6">
           Выберите шаблон типовой задачи или начните с&nbsp;нуля. Шаблон создаст готовую расчётную схему с&nbsp;опорами и&nbsp;нагрузкой —&nbsp;останется только посчитать.
         </p>
+
+        <AlphaTestBanner size="compact" className="mb-8" hideCta />
 
         <form onSubmit={onSubmit} className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">

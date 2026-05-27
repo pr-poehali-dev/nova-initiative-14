@@ -8,6 +8,7 @@ import { fetchCaeTariffs, joinWaitlist, type CaeTariff } from "@/lib/cae";
 import Notify3DForm from "@/components/cae/Notify3DForm";
 import TariffsSection from "@/components/cae/TariffsSection";
 import MentoringCrossSell from "@/components/cae/MentoringCrossSell";
+import AlphaTestBanner from "@/components/AlphaTestBanner";
 
 const formatPrice = (kopecks: number) => {
   if (kopecks <= 0) return "0 ₽";
@@ -98,6 +99,9 @@ const CaeLanding = () => {
       </Helmet>
 
       <div className="max-w-[1200px] mx-auto px-4 pt-20 md:pt-24 pb-16">
+        {/* Альфа-тест */}
+        <AlphaTestBanner className="mb-10" />
+
         {/* Hero */}
         <section className="text-center mb-16">
           <p className="font-gost text-[11px] uppercase tracking-[0.3em] text-[var(--drawing-line-thin)] mb-4">
