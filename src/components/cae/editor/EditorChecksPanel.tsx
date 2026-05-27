@@ -114,15 +114,18 @@ const EditorChecksPanel = ({ model, result, onFocusElement, onOpenSettings }: Pr
             </button>
           </div>
 
-          {/* Таблица проверок */}
-          <div className="max-h-[280px] overflow-y-auto">
-            <table className="w-full text-[11px] font-mono">
+          {/* Таблица проверок.
+              На мобиле обернули в overflow-x-auto + min-w-[360px] —
+              без этого 5 колонок (элем / проверка / факт / доп / η)
+              сжимались до нечитаемой каши на телефонах ≤360px. */}
+          <div className="max-h-[280px] overflow-y-auto overflow-x-auto">
+            <table className="w-full min-w-[360px] text-[11px] font-mono">
               <thead className="bg-[var(--drawing-paper)] sticky top-0">
                 <tr className="border-b border-[var(--drawing-line)]">
-                  <th className="text-left px-2 py-1 font-gost text-[10px] uppercase tracking-wider">Элем.</th>
+                  <th className="text-left px-2 py-1 font-gost text-[10px] uppercase tracking-wider whitespace-nowrap">Элем.</th>
                   <th className="text-left px-2 py-1 font-gost text-[10px] uppercase tracking-wider">Проверка</th>
-                  <th className="text-right px-2 py-1 font-gost text-[10px] uppercase tracking-wider">Факт</th>
-                  <th className="text-right px-2 py-1 font-gost text-[10px] uppercase tracking-wider">Доп.</th>
+                  <th className="text-right px-2 py-1 font-gost text-[10px] uppercase tracking-wider whitespace-nowrap">Факт</th>
+                  <th className="text-right px-2 py-1 font-gost text-[10px] uppercase tracking-wider whitespace-nowrap">Доп.</th>
                   <th className="text-right px-2 py-1 font-gost text-[10px] uppercase tracking-wider">η</th>
                 </tr>
               </thead>

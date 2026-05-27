@@ -338,6 +338,23 @@ select.drawing-input {
   width: 100%;
 }
 
+/* На мобиле iOS зумит страницу, если шрифт инпута < 16px.
+   Принудительно ставим 16px на узких экранах — текст в редакторе CAE
+   обычно меньше, но это критично для UX: без этого фикса при каждом
+   тапе на поле «Fx, Н» страница увеличивается и ломается layout. */
+@media (max-width: 768px) {
+  input.drawing-input,
+  textarea.drawing-input,
+  select.drawing-input,
+  input[type="number"],
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 input.drawing-input:focus,
 textarea.drawing-input:focus,
 select.drawing-input:focus {

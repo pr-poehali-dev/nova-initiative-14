@@ -61,7 +61,7 @@ export default function ElementPropertiesPanel({
       </p>
       <button
         onClick={() => setMatPickerOpen(true)}
-        className="w-full text-left border border-[var(--drawing-line)] px-2 py-1.5 mb-2 text-[11px] hover:bg-[var(--drawing-paper)] flex items-center justify-between gap-2"
+        className="w-full text-left border border-[var(--drawing-line)] px-2 py-1.5 mb-2 text-[11px] hover:bg-[var(--drawing-paper)] flex items-center justify-between gap-2 min-h-[40px] lg:min-h-0"
       >
         <span className="truncate">{matName}</span>
         <Icon name="ChevronRight" size={12} className="shrink-0" />
@@ -72,7 +72,7 @@ export default function ElementPropertiesPanel({
       </p>
       <button
         onClick={() => setSecPickerOpen(true)}
-        className="w-full text-left border border-[var(--drawing-line)] px-2 py-1.5 mb-3 text-[11px] hover:bg-[var(--drawing-paper)] flex items-center justify-between gap-2"
+        className="w-full text-left border border-[var(--drawing-line)] px-2 py-1.5 mb-3 text-[11px] hover:bg-[var(--drawing-paper)] flex items-center justify-between gap-2 min-h-[40px] lg:min-h-0"
       >
         <span className="truncate">{secName}</span>
         <Icon name="ChevronRight" size={12} className="shrink-0" />
@@ -91,7 +91,7 @@ export default function ElementPropertiesPanel({
           <button
             key={h.end}
             onClick={() => setElementHinge(h.end, !h.on)}
-            className={`border py-1.5 px-1.5 text-[10px] font-gost uppercase flex items-center justify-center gap-1.5 ${
+            className={`border py-1.5 px-1.5 text-[10px] font-gost uppercase flex items-center justify-center gap-1.5 min-h-[40px] lg:min-h-0 ${
               h.on
                 ? "bg-[var(--drawing-accent)] text-white border-[var(--drawing-accent)]"
                 : "border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)]"
@@ -174,7 +174,7 @@ export default function ElementPropertiesPanel({
 
       <button
         onClick={deleteSelected}
-        className="w-full border border-[var(--drawing-accent)] text-[var(--drawing-accent)] py-1.5 text-[10px] font-gost uppercase tracking-wider hover:bg-[var(--drawing-accent)] hover:text-white"
+        className="w-full border border-[var(--drawing-accent)] text-[var(--drawing-accent)] py-2 text-[10px] font-gost uppercase tracking-wider hover:bg-[var(--drawing-accent)] hover:text-white min-h-[40px] lg:min-h-0"
       >
         Удалить элемент
       </button>

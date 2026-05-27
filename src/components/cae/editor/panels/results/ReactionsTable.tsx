@@ -12,26 +12,30 @@ export default function ReactionsTable({
       <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-1.5">
         Реакции опор
       </p>
-      <table className="w-full text-[10px] font-mono border-collapse">
-        <thead>
-          <tr className="border-b border-[var(--drawing-line-thin)]">
-            <th className="text-left py-0.5 text-[var(--drawing-line-thin)] font-normal">Узел</th>
-            <th className="text-right py-0.5 text-[var(--drawing-line-thin)] font-normal">Fx, Н</th>
-            <th className="text-right py-0.5 text-[var(--drawing-line-thin)] font-normal">Fy, Н</th>
-            <th className="text-right py-0.5 text-[var(--drawing-line-thin)] font-normal">Mz, Н·м</th>
-          </tr>
-        </thead>
-        <tbody>
-          {reactions.map((r) => (
-            <tr key={r.node_id} className="border-b border-[var(--drawing-line-thin)]/30">
-              <td className="py-0.5">{r.node_id}</td>
-              <td className="text-right py-0.5">{Math.round(r.fx)}</td>
-              <td className="text-right py-0.5">{Math.round(r.fy)}</td>
-              <td className="text-right py-0.5">{Math.round(r.mz)}</td>
+      {/* overflow-x-auto + min-w — на узком экране таблица скроллится горизонтально,
+          а не уплотняется до слипшихся цифр. */}
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[320px] text-[10px] font-mono border-collapse">
+          <thead>
+            <tr className="border-b border-[var(--drawing-line-thin)]">
+              <th className="text-left py-0.5 px-1 text-[var(--drawing-line-thin)] font-normal whitespace-nowrap">Узел</th>
+              <th className="text-right py-0.5 px-1 text-[var(--drawing-line-thin)] font-normal whitespace-nowrap">Fx, Н</th>
+              <th className="text-right py-0.5 px-1 text-[var(--drawing-line-thin)] font-normal whitespace-nowrap">Fy, Н</th>
+              <th className="text-right py-0.5 px-1 text-[var(--drawing-line-thin)] font-normal whitespace-nowrap">Mz, Н·м</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {reactions.map((r) => (
+              <tr key={r.node_id} className="border-b border-[var(--drawing-line-thin)]/30">
+                <td className="py-0.5 px-1 whitespace-nowrap">{r.node_id}</td>
+                <td className="text-right py-0.5 px-1 whitespace-nowrap">{Math.round(r.fx)}</td>
+                <td className="text-right py-0.5 px-1 whitespace-nowrap">{Math.round(r.fy)}</td>
+                <td className="text-right py-0.5 px-1 whitespace-nowrap">{Math.round(r.mz)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

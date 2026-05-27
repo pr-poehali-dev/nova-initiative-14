@@ -166,7 +166,7 @@ export default function NodePropertiesPanel({
       <div className="extension-line-h w-full my-3" />
       <button
         onClick={deleteSelected}
-        className="w-full border border-[var(--drawing-accent)] text-[var(--drawing-accent)] py-1.5 text-[10px] font-gost uppercase tracking-wider hover:bg-[var(--drawing-accent)] hover:text-white"
+        className="w-full border border-[var(--drawing-accent)] text-[var(--drawing-accent)] py-2 text-[10px] font-gost uppercase tracking-wider hover:bg-[var(--drawing-accent)] hover:text-white min-h-[40px] lg:min-h-0"
       >
         Удалить узел
       </button>

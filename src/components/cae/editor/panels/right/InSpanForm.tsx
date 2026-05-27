@@ -37,7 +37,7 @@ export default function InSpanForm({ onAdd }: { onAdd: (pos: number, py: number)
       <button
         type="button"
         onClick={() => onAdd(pos, py)}
-        className="w-full border border-[var(--drawing-accent)] text-[var(--drawing-accent)] py-1.5 text-[10px] font-gost uppercase tracking-wider hover:bg-[var(--drawing-accent)] hover:text-white"
+        className="w-full border border-[var(--drawing-accent)] text-[var(--drawing-accent)] py-2 text-[10px] font-gost uppercase tracking-wider hover:bg-[var(--drawing-accent)] hover:text-white min-h-[40px] lg:min-h-0"
       >
         Добавить силу
       </button>
