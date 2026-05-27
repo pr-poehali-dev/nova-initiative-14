@@ -154,6 +154,7 @@ const CaeEditor = () => {
       <div className="pt-16 md:pt-16">
         <EditorTopBar
           projectName={projectName}
+          projectId={projectId}
           model={model}
           result={result}
           dirty={dirty}

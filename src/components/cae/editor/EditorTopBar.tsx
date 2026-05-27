@@ -6,6 +6,7 @@ import { generatePdfReport } from "@/lib/generatePdfReport";
 
 interface Props {
   projectName: string;
+  projectId?: number;
   model: FrameModel;
   result: SolverResponse | null;
   dirty: boolean;
@@ -18,8 +19,11 @@ interface Props {
   onSolve: () => void;
 }
 
+const SUPPORT_EMAIL = "hello@diplom-inzh.ru";
+
 const EditorTopBar = ({
   projectName,
+  projectId,
   model,
   result,
   dirty,
@@ -32,6 +36,49 @@ const EditorTopBar = ({
   onSolve,
 }: Props) => {
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [reportCopied, setReportCopied] = useState(false);
+
+  // Формирует mailto-ссылку с предзаполненной темой и телом письма для техподдержки.
+  // В теле — ID проекта, название, тип расчёта, URL страницы и краткая статистика модели.
+  // Это позволяет инженеру техподдержки сразу открыть проект и воспроизвести проблему.
+  const buildSupportMailto = (): string => {
+    const idStr = projectId ? String(projectId) : "не определён";
+    const dim = model.meta.dim === "2d" ? "Плоская рама 2D" : "Пространственная 3D";
+    const pageUrl = typeof window !== "undefined" ? window.location.href : "";
+    const subject = `Проблема в CAE-проекте #${idStr}: ${projectName || "без названия"}`;
+    const body = [
+      "Здравствуйте!",
+      "",
+      "Опишите проблему здесь:",
+      "—",
+      "",
+      "————————————————————————",
+      "ТЕХНИЧЕСКАЯ ИНФОРМАЦИЯ (не удаляйте):",
+      `ID проекта: ${idStr}`,
+      `Название: ${projectName || "без названия"}`,
+      `Тип расчёта: ${dim}`,
+      `Узлов: ${model.nodes?.length ?? 0}, элементов: ${model.elements?.length ?? 0}`,
+      `Расчёт выполнен: ${result ? "да" : "нет"}`,
+      `Страница: ${pageUrl}`,
+    ].join("\n");
+    return `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
+  const handleReportProblem = async () => {
+    const idStr = projectId ? String(projectId) : "";
+    // Копируем ID в буфер — это страховка на случай, если у пользователя
+    // mailto не настроен (веб-почта) и он будет писать в форму вручную.
+    try {
+      if (idStr && navigator.clipboard) {
+        await navigator.clipboard.writeText(idStr);
+        setReportCopied(true);
+        setTimeout(() => setReportCopied(false), 2500);
+      }
+    } catch {
+      // Игнорируем — основное действие (mailto) всё равно сработает.
+    }
+    window.location.href = buildSupportMailto();
+  };
 
   const handleExportJson = () => {
     const blob = new Blob([JSON.stringify(model, null, 2)], { type: "application/json" });
@@ -96,6 +143,23 @@ const EditorTopBar = ({
           {dirty && " · несохранено"}
           {lastSaved && !dirty && ` · сохранено в ${lastSaved}`}
         </p>
+        <button
+          type="button"
+          onClick={handleReportProblem}
+          title={
+            projectId
+              ? `Откроет почтовый клиент с письмом в техподдержку. ID проекта #${projectId} будет вложен в письмо и скопирован в буфер обмена.`
+              : "Откроет почтовый клиент с письмом в техподдержку."
+          }
+          className="mt-1 inline-flex items-center gap-1 font-gost text-[10px] uppercase tracking-[0.15em] text-[var(--drawing-line-thin)] hover:text-[var(--drawing-accent)] transition-colors"
+        >
+          <Icon name={reportCopied ? "Check" : "LifeBuoy"} size={11} />
+          {reportCopied
+            ? `ID #${projectId} скопирован — открываем почту…`
+            : projectId
+              ? `Сообщить о проблеме · ID #${projectId}`
+              : "Сообщить о проблеме"}
+        </button>
       </div>
       <div className="ml-auto flex flex-wrap gap-2">
         <button
