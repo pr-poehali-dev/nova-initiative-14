@@ -1,5 +1,187 @@
 import { Link } from "react-router-dom";
 
+/**
+ * Геометрия зубчатого колеса. Для зацепления соседних колёс расстояние
+ * между центрами должно равняться сумме делительных радиусов (Rd1 + Rd2).
+ * Параметры: Ra (наружный), Rd (делительный, штриховой), Rf (впадин), z (число зубьев).
+ */
+type Gear = {
+  cx: number;
+  cy: number;
+  Ra: number;
+  Rd: number;
+  Rf: number;
+  z: number;
+  /** угол поворота в градусах, чтобы зубья соседних шестерён попадали во впадины */
+  phase: number;
+};
+
+const gearToothPath = (g: Gear): string => {
+  // Профиль строится упрощённо (трапециевидный зуб), но визуально читается
+  // как зубчатое колесо в инженерной графике (упрощённый вид по ГОСТ 2.402).
+  const step = 360 / g.z;
+  const toothHalf = step * 0.22; // полуширина вершины зуба, градусы
+  const flank = step * 0.32;     // полуширина основания зуба, градусы
+  const toRad = (d: number) => ((d + g.phase) * Math.PI) / 180;
+  const pt = (r: number, a: number) =>
+    `${(g.cx + r * Math.cos(toRad(a))).toFixed(2)},${(g.cy + r * Math.sin(toRad(a))).toFixed(2)}`;
+
+  let d = "";
+  for (let i = 0; i < g.z; i++) {
+    const a0 = i * step;            // центр впадины
+    const aR1 = a0 + (step / 2) - flank;     // выход из впадины (низ зуба слева)
+    const aR2 = a0 + (step / 2) - toothHalf; // вершина зуба слева
+    const aR3 = a0 + (step / 2) + toothHalf; // вершина зуба справа
+    const aR4 = a0 + (step / 2) + flank;     // основание зуба справа
+    const aR5 = a0 + step;                   // центр следующей впадины
+    if (i === 0) d += `M ${pt(g.Rf, a0)} `;
+    d += `L ${pt(g.Rf, aR1)} `;
+    d += `L ${pt(g.Ra, aR2)} `;
+    d += `L ${pt(g.Ra, aR3)} `;
+    d += `L ${pt(g.Rf, aR4)} `;
+    d += `L ${pt(g.Rf, aR5)} `;
+  }
+  return d + "Z";
+};
+
+const GearTrainDrawing = () => {
+  // Три колеса в зацеплении. Центры на одной горизонтали (y=34), расстояния
+  // между центрами равны сумме делительных радиусов соседей.
+  // G1: Rd=18 + G2: Rd=15 → центр G2 на X=30+33=63
+  // G2: Rd=15 + G3: Rd=16 → центр G3 на X=63+31=94
+  const G1: Gear = { cx: 30, cy: 34, Ra: 21, Rd: 18, Rf: 15, z: 14, phase: 0 };
+  // Для попадания зубьев G2 во впадины G1: фаза = (step/2) от линии центров.
+  // У G1 шаг 360/14=25.71°, у G2 шаг 360/12=30°. Линия центров горизонтальна.
+  // Зуб G1 на 0° — нужна впадина G2 со стороны 180°.
+  const G2: Gear = { cx: 63, cy: 34, Ra: 18, Rd: 15, Rf: 12, z: 12, phase: 15 };
+  const G3: Gear = { cx: 94, cy: 34, Ra: 19, Rd: 16, Rf: 13, z: 13, phase: 0 };
+  const gears = [G1, G2, G3];
+
+  return (
+    <svg
+      viewBox="0 0 124 100"
+      preserveAspectRatio="xMidYMid meet"
+      className="absolute inset-0 w-full h-full"
+      aria-hidden="true"
+    >
+      {/* центральные оси через каждое колесо (штрих-пунктир по ГОСТ 2.303) */}
+      {gears.map((g, i) => (
+        <g key={`axis-${i}`} stroke="var(--drawing-line-thin)" strokeWidth="0.25" strokeDasharray="3 1.2 0.4 1.2">
+          <line x1={g.cx - g.Ra - 3} y1={g.cy} x2={g.cx + g.Ra + 3} y2={g.cy} />
+          <line x1={g.cx} y1={g.cy - g.Ra - 3} x2={g.cx} y2={g.cy + g.Ra + 3} />
+        </g>
+      ))}
+
+      {/* делительные окружности — штриховая тонкая (по ГОСТ — основной признак шестерни) */}
+      {gears.map((g, i) => (
+        <circle
+          key={`pitch-${i}`}
+          cx={g.cx}
+          cy={g.cy}
+          r={g.Rd}
+          fill="none"
+          stroke="var(--drawing-line-thin)"
+          strokeWidth="0.3"
+          strokeDasharray="2.2 1.1"
+        />
+      ))}
+
+      {/* окружности впадин — тонкая сплошная */}
+      {gears.map((g, i) => (
+        <circle
+          key={`root-${i}`}
+          cx={g.cx}
+          cy={g.cy}
+          r={g.Rf}
+          fill="none"
+          stroke="var(--drawing-line-thin)"
+          strokeWidth="0.25"
+        />
+      ))}
+
+      {/* зубчатые венцы — основная толстая линия */}
+      {gears.map((g, i) => (
+        <path
+          key={`teeth-${i}`}
+          d={gearToothPath(g)}
+          fill="var(--drawing-paper)"
+          stroke="var(--drawing-line)"
+          strokeWidth="0.55"
+          strokeLinejoin="miter"
+        />
+      ))}
+
+      {/* ступицы (валы) */}
+      {gears.map((g, i) => (
+        <g key={`hub-${i}`}>
+          <circle
+            cx={g.cx}
+            cy={g.cy}
+            r={g.Rf * 0.35}
+            fill="var(--drawing-paper)"
+            stroke="var(--drawing-line)"
+            strokeWidth="0.4"
+          />
+          <circle
+            cx={g.cx}
+            cy={g.cy}
+            r={g.Rf * 0.15}
+            fill="var(--drawing-line)"
+          />
+        </g>
+      ))}
+
+      {/* размерная линия Ø180 — диаметр центрального колеса */}
+      <g stroke="var(--drawing-line)" strokeWidth="0.3" fill="none">
+        <line x1={G2.cx - G2.Ra} y1={G2.cy - G2.Ra - 7} x2={G2.cx + G2.Ra} y2={G2.cy - G2.Ra - 7} />
+        <line x1={G2.cx - G2.Ra} y1={G2.cy - G2.Ra - 8.5} x2={G2.cx - G2.Ra} y2={G2.cy - G2.Ra - 5.5} />
+        <line x1={G2.cx + G2.Ra} y1={G2.cy - G2.Ra - 8.5} x2={G2.cx + G2.Ra} y2={G2.cy - G2.Ra - 5.5} />
+        {/* стрелки */}
+        <polygon points={`${G2.cx - G2.Ra},${G2.cy - G2.Ra - 7} ${G2.cx - G2.Ra + 1.5},${G2.cy - G2.Ra - 6.4} ${G2.cx - G2.Ra + 1.5},${G2.cy - G2.Ra - 7.6}`} fill="var(--drawing-line)" />
+        <polygon points={`${G2.cx + G2.Ra},${G2.cy - G2.Ra - 7} ${G2.cx + G2.Ra - 1.5},${G2.cy - G2.Ra - 6.4} ${G2.cx + G2.Ra - 1.5},${G2.cy - G2.Ra - 7.6}`} fill="var(--drawing-line)" />
+      </g>
+      <text
+        x={G2.cx}
+        y={G2.cy - G2.Ra - 8.5}
+        textAnchor="middle"
+        fontFamily="var(--font-gost, monospace)"
+        fontSize="2.6"
+        fill="var(--drawing-line)"
+      >
+        ⌀180
+      </text>
+
+      {/* поясняющие позиции деталей (выноски как в спецификации) */}
+      <g fontFamily="var(--font-gost, monospace)" fontSize="2.4" fill="var(--drawing-line-thin)">
+        <circle cx={G1.cx - G1.Ra - 4} cy={G1.cy - G1.Ra - 4} r="2.2" fill="var(--drawing-paper)" stroke="var(--drawing-line)" strokeWidth="0.3" />
+        <text x={G1.cx - G1.Ra - 4} y={G1.cy - G1.Ra - 3.2} textAnchor="middle" fill="var(--drawing-line)">1</text>
+        <line x1={G1.cx - G1.Ra - 2.3} y1={G1.cy - G1.Ra - 2.8} x2={G1.cx - G1.Ra * 0.6} y2={G1.cy - G1.Ra * 0.6} stroke="var(--drawing-line-thin)" strokeWidth="0.25" />
+
+        <circle cx={G2.cx} cy={G2.cy + G2.Ra + 5} r="2.2" fill="var(--drawing-paper)" stroke="var(--drawing-line)" strokeWidth="0.3" />
+        <text x={G2.cx} y={G2.cy + G2.Ra + 5.8} textAnchor="middle" fill="var(--drawing-line)">2</text>
+        <line x1={G2.cx} y1={G2.cy + G2.Ra + 2.8} x2={G2.cx} y2={G2.cy + G2.Ra * 0.5} stroke="var(--drawing-line-thin)" strokeWidth="0.25" />
+
+        <circle cx={G3.cx + G3.Ra + 4} cy={G3.cy - G3.Ra - 4} r="2.2" fill="var(--drawing-paper)" stroke="var(--drawing-line)" strokeWidth="0.3" />
+        <text x={G3.cx + G3.Ra + 4} y={G3.cy - G3.Ra - 3.2} textAnchor="middle" fill="var(--drawing-line)">3</text>
+        <line x1={G3.cx + G3.Ra + 2.3} y1={G3.cy - G3.Ra - 2.8} x2={G3.cx + G3.Ra * 0.6} y2={G3.cy - G3.Ra * 0.6} stroke="var(--drawing-line-thin)" strokeWidth="0.25" />
+      </g>
+
+      {/* модуль зацепления — справочная подпись */}
+      <text
+        x={G2.cx}
+        y={G2.cy + 1}
+        textAnchor="middle"
+        fontFamily="var(--font-gost, monospace)"
+        fontSize="2"
+        fill="var(--drawing-line-thin)"
+        opacity="0.7"
+      >
+        m=2.5
+      </text>
+    </svg>
+  );
+};
+
 const HeroSection = () => {
   return (
     <section className="pt-28 pb-16 px-4 md:px-8 max-w-[1200px] mx-auto">
@@ -45,28 +227,26 @@ const HeroSection = () => {
           </div>
 
           <div className="md:col-span-5 flex items-center justify-center">
-            <div className="relative w-full aspect-square border-[2px] border-[var(--drawing-line)] hatching-blue flex items-end p-6">
-              <div className="absolute top-0 bottom-0 left-1/2 extension-line-v" />
-              <div className="absolute left-0 right-0 top-1/2 extension-line-h" />
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[70%] aspect-square rounded-full border-[2px] border-[var(--drawing-line)]" />
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[30%] aspect-square rounded-full border-[1.5px] border-dashed border-[var(--drawing-line-thin)]" />
-              <div className="absolute top-[15%] left-1/2 -translate-x-1/2 dimension-line w-[70%]">
-                <span className="font-gost text-[10px] whitespace-nowrap">&empty;180</span>
-              </div>
-              <div className="absolute top-3 right-3 roughness-symbol text-[var(--drawing-line-thin)]">
+            <div className="relative w-full aspect-square border-[2px] border-[var(--drawing-line)] hatching-blue flex items-end p-6 overflow-hidden">
+              <GearTrainDrawing />
+
+              <div className="absolute top-3 right-3 roughness-symbol text-[var(--drawing-line-thin)] z-20">
                 Ra 3.2
               </div>
-              <div className="relative z-10 w-full">
-                <p className="font-gost text-[10px] uppercase tracking-[0.15em] text-[var(--drawing-line-thin)] mb-1">
-                  Екатеринбург&nbsp;&middot; Машиностроение и&nbsp;механика
-                </p>
-                <p className="font-gost-upright text-2xl md:text-3xl font-bold tracking-tight leading-tight text-[var(--drawing-line)]">
-                  Инженеры
-                  <br />
-                  обучают
-                  <br />
-                  инженеров
-                </p>
+
+              <div className="relative z-20 w-full">
+                <div className="inline-block bg-[var(--drawing-paper)]/85 backdrop-blur-[1px] px-3 py-2 border-l-2 border-[var(--drawing-accent)]">
+                  <p className="font-gost text-[10px] uppercase tracking-[0.15em] text-[var(--drawing-line-thin)] mb-1">
+                    Екатеринбург&nbsp;&middot; Машиностроение и&nbsp;механика
+                  </p>
+                  <p className="font-gost-upright text-2xl md:text-3xl font-bold tracking-tight leading-tight text-[var(--drawing-line)]">
+                    Инженеры
+                    <br />
+                    обучают
+                    <br />
+                    инженеров
+                  </p>
+                </div>
               </div>
             </div>
           </div>
