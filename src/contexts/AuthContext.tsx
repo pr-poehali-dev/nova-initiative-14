@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import {
   type SsoUser,
+  type RegisterOptions,
   getAccessToken,
   getRefreshToken,
   getStoredUser,
@@ -21,7 +22,7 @@ interface AuthState {
 
 interface AuthApi extends AuthState {
   login: (email: string, password: string) => Promise<boolean>;
-  register: (email: string, password: string, fullName?: string) => Promise<boolean>;
+  register: (email: string, password: string, fullName?: string, options?: RegisterOptions) => Promise<boolean>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   clearError: () => void;
@@ -84,9 +85,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return false;
   }, [handleTokens]);
 
-  const register = useCallback(async (email: string, password: string, fullName?: string): Promise<boolean> => {
+  const register = useCallback(async (email: string, password: string, fullName?: string, options?: RegisterOptions): Promise<boolean> => {
     setState((s) => ({ ...s, loading: true, error: null }));
-    const res = await apiRegister(email, password, fullName);
+    const res = await apiRegister(email, password, fullName, options);
     if (res.ok && res.data) {
       handleTokens(res.data);
       return true;

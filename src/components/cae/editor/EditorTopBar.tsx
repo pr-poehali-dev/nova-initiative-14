@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import type { FrameModel, SolverResponse } from "@/lib/cae-model";
 import { generatePdfReport } from "@/lib/generatePdfReport";
+import SupportTicketModal from "@/components/SupportTicketModal";
 
 interface Props {
   projectName: string;
@@ -19,8 +20,6 @@ interface Props {
   onSolve: () => void;
 }
 
-const SUPPORT_EMAIL = "hello@diplom-inzh.ru";
-
 const EditorTopBar = ({
   projectName,
   projectId,
@@ -36,19 +35,15 @@ const EditorTopBar = ({
   onSolve,
 }: Props) => {
   const [pdfBusy, setPdfBusy] = useState(false);
-  const [reportCopied, setReportCopied] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
 
-  // Формирует mailto-ссылку с предзаполненной темой и телом письма для техподдержки.
-  // В теле — ID проекта, название, тип расчёта, URL страницы и краткая статистика модели.
-  // Это позволяет инженеру техподдержки сразу открыть проект и воспроизвести проблему.
-  const buildSupportMailto = (): string => {
+  // Подготовка тех. блока для предзаполнения тикета в техподдержку.
+  // Тикет создаётся через support-api, ответ придёт на email пользователя.
+  const buildSupportPrefill = (): { title: string; body: string } => {
     const idStr = projectId ? String(projectId) : "не определён";
     const dim = model.meta.dim === "2d" ? "Плоская рама 2D" : "Пространственная 3D";
-    const pageUrl = typeof window !== "undefined" ? window.location.href : "";
-    const subject = `Проблема в CAE-проекте #${idStr}: ${projectName || "без названия"}`;
+    const title = `Проблема в CAE-проекте #${idStr}: ${projectName || "без названия"}`;
     const body = [
-      "Здравствуйте!",
-      "",
       "Опишите проблему здесь:",
       "—",
       "",
@@ -59,25 +54,8 @@ const EditorTopBar = ({
       `Тип расчёта: ${dim}`,
       `Узлов: ${model.nodes?.length ?? 0}, элементов: ${model.elements?.length ?? 0}`,
       `Расчёт выполнен: ${result ? "да" : "нет"}`,
-      `Страница: ${pageUrl}`,
     ].join("\n");
-    return `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  };
-
-  const handleReportProblem = async () => {
-    const idStr = projectId ? String(projectId) : "";
-    // Копируем ID в буфер — это страховка на случай, если у пользователя
-    // mailto не настроен (веб-почта) и он будет писать в форму вручную.
-    try {
-      if (idStr && navigator.clipboard) {
-        await navigator.clipboard.writeText(idStr);
-        setReportCopied(true);
-        setTimeout(() => setReportCopied(false), 2500);
-      }
-    } catch {
-      // Игнорируем — основное действие (mailto) всё равно сработает.
-    }
-    window.location.href = buildSupportMailto();
+    return { title, body };
   };
 
   const handleExportJson = () => {
@@ -145,20 +123,12 @@ const EditorTopBar = ({
         </p>
         <button
           type="button"
-          onClick={handleReportProblem}
-          title={
-            projectId
-              ? `Откроет почтовый клиент с письмом в техподдержку. ID проекта #${projectId} будет вложен в письмо и скопирован в буфер обмена.`
-              : "Откроет почтовый клиент с письмом в техподдержку."
-          }
+          onClick={() => setSupportOpen(true)}
+          title="Откроет форму обращения в техподдержку с предзаполненной тех. информацией"
           className="mt-1 inline-flex items-center gap-1 font-gost text-[10px] uppercase tracking-[0.15em] text-[var(--drawing-line-thin)] hover:text-[var(--drawing-accent)] transition-colors"
         >
-          <Icon name={reportCopied ? "Check" : "LifeBuoy"} size={11} />
-          {reportCopied
-            ? `ID #${projectId} скопирован — открываем почту…`
-            : projectId
-              ? `Сообщить о проблеме · ID #${projectId}`
-              : "Сообщить о проблеме"}
+          <Icon name="LifeBuoy" size={11} />
+          {projectId ? `Сообщить о проблеме · ID #${projectId}` : "Сообщить о проблеме"}
         </button>
       </div>
       {/* Счётчики модели — узлы и элементы. На время альфа-теста лимит безграничный (∞). */}
@@ -225,6 +195,14 @@ const EditorTopBar = ({
         </button>
       </div>
     </div>
+
+    <SupportTicketModal
+      open={supportOpen}
+      onClose={() => setSupportOpen(false)}
+      defaultTitle={buildSupportPrefill().title}
+      defaultBody={buildSupportPrefill().body}
+      defaultKind="bug"
+    />
   </div>
   );
 };

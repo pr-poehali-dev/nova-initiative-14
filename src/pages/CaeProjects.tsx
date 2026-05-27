@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { SITE_URL } from "@/lib/seo";
 import { listProjects, archiveProject, type CaeProject } from "@/lib/cae";
 import Notify3DForm from "@/components/cae/Notify3DForm";
+import InviteFriendModal from "@/components/cae/InviteFriendModal";
 
 const formatDate = (iso: string | null) => {
   if (!iso) return "";
@@ -22,6 +23,7 @@ const CaeProjects = () => {
   const [projects, setProjects] = useState<CaeProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -104,6 +106,15 @@ const CaeProjects = () => {
               <Icon name="Box" size={14} className="mr-1.5" />
               Создать 3D
               <span className="ml-1.5 font-gost text-[9px] uppercase tracking-wider text-amber-700">скоро</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setInviteOpen(true)}
+              className="btn-drawing text-xs inline-flex border-[var(--drawing-accent)] text-[var(--drawing-accent)] hover:bg-[var(--drawing-accent)] hover:text-white transition-colors"
+              title="Получите +10 баллов за каждого друга и +1 балл за день его активности"
+            >
+              <Icon name="UserPlus" size={14} className="mr-1.5" />
+              Пригласить друга
             </button>
           </div>
         </div>
@@ -267,6 +278,8 @@ const CaeProjects = () => {
           </div>
         )}
       </div>
+
+      <InviteFriendModal open={inviteOpen} onClose={() => setInviteOpen(false)} />
     </>
   );
 };

@@ -48,11 +48,15 @@ def user_agent(event: dict) -> str:
 
 
 def get_user_payload(conn, user_id: int) -> dict:
-    """Пользователь + его роли в формате для возврата клиенту."""
+    """Пользователь + его роли в формате для возврата клиенту.
+
+    Включает поля реферальной программы (referral_code, is_admin) — нужны фронту
+    для показа админ-панели и кнопки «Пригласить друга»."""
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute(
             "SELECT id, email, full_name, phone, avatar_url, locale, "
-            "email_verified_at, is_active, created_at "
+            "email_verified_at, is_active, created_at, "
+            "is_admin, referral_code, marketing_consent "
             "FROM sso_users WHERE id = %s",
             (user_id,),
         )
@@ -70,6 +74,9 @@ def get_user_payload(conn, user_id: int) -> dict:
             'locale': u['locale'],
             'email_verified': bool(u['email_verified_at']),
             'is_active': u['is_active'],
+            'is_admin': bool(u.get('is_admin')),
+            'referral_code': u.get('referral_code'),
+            'marketing_consent': bool(u.get('marketing_consent')),
             'roles': roles,
             'created_at': u['created_at'].isoformat() if u['created_at'] else None,
         }

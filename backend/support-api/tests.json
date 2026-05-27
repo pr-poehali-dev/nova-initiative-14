@@ -1,0 +1,50 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS CORS",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Без action",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 400
+    },
+    {
+      "name": "create-ticket без email/токена",
+      "method": "POST",
+      "path": "/?action=create-ticket",
+      "body": {"title": "Тест", "body": "Описание проблемы"},
+      "expectedStatus": 400
+    },
+    {
+      "name": "create-ticket с email (анонимно)",
+      "method": "POST",
+      "path": "/?action=create-ticket",
+      "body": {
+        "title": "Тест бага",
+        "body": "Подробное описание проблемы для теста",
+        "email": "test-anon@example.com",
+        "kind": "bug",
+        "self_importance": "normal"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {"ok": true},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "my-tickets без токена",
+      "method": "GET",
+      "path": "/?action=my-tickets",
+      "expectedStatus": 401
+    },
+    {
+      "name": "admin-list без токена",
+      "method": "GET",
+      "path": "/?action=admin-list",
+      "expectedStatus": 401
+    }
+  ]
+}

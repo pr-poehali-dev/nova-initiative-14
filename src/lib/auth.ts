@@ -13,6 +13,12 @@ export interface SsoUser {
   created_at: string | null;
   is_alpha_tester?: boolean;
   cae_plan?: string;
+  /** Флаг администратора (выдаётся вручную в БД). Открывает доступ к админке. */
+  is_admin?: boolean;
+  /** Личный реф-код пользователя для приглашения друзей. */
+  referral_code?: string | null;
+  /** Согласие на маркетинговую рассылку. */
+  marketing_consent?: boolean;
 }
 
 /**
@@ -115,11 +121,28 @@ async function call<T = unknown>(
   };
 }
 
-export async function register(email: string, password: string, fullName?: string) {
+export interface RegisterOptions {
+  /** Реф-код пригласившего (из ?ref=ABCDEFGH на лендинге). */
+  refCode?: string;
+  /** Согласие на маркетинговую рассылку. */
+  marketingConsent?: boolean;
+  /** Хочу попасть в лист ожидания приоритетной волны. */
+  joinWaitlist?: boolean;
+}
+
+export async function register(
+  email: string,
+  password: string,
+  fullName?: string,
+  options?: RegisterOptions,
+) {
   return call<TokenPair>("register", "POST", {
     email,
     password,
     full_name: fullName || "",
+    ref_code: options?.refCode || "",
+    marketing_consent: options?.marketingConsent || false,
+    join_waitlist: options?.joinWaitlist || false,
   });
 }
 

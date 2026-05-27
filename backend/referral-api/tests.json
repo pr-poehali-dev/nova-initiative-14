@@ -1,0 +1,30 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS CORS",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Без action",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 400,
+      "expectedBody": {"error": "missing_action"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "get-profile без токена",
+      "method": "GET",
+      "path": "/?action=get-profile",
+      "expectedStatus": 401
+    },
+    {
+      "name": "leaderboard публичный",
+      "method": "GET",
+      "path": "/?action=leaderboard",
+      "expectedStatus": 200
+    }
+  ]
+}

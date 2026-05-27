@@ -1,13 +1,20 @@
-import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState, type FormEvent } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Helmet } from "@/lib/helmet-shim";
 import { useAuth } from "@/contexts/AuthContext";
 import { SITE_URL } from "@/lib/seo";
 import OAuthButtons from "@/components/OAuthButtons";
+import Icon from "@/components/ui/icon";
+import {
+  getRememberedRefCode,
+  rememberRefCode,
+  clearRememberedRefCode,
+} from "@/lib/referrals";
 
 const Register = () => {
   const { register, loading, error, clearError, user } = useAuth();
   const nav = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,6 +22,26 @@ const Register = () => {
   const [fullName, setFullName] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Реф-код берём сначала из URL (?ref=), потом из localStorage (если был сохранён ранее)
+  const initialRef =
+    searchParams.get("ref")?.trim().toUpperCase().slice(0, 16) ||
+    getRememberedRefCode() ||
+    "";
+  const [refCode, setRefCode] = useState(initialRef);
+
+  // Согласия: маркетинг и вайтлист. Если в URL пришёл флаг — ставим включённым.
+  const [marketingConsent, setMarketingConsent] = useState(
+    searchParams.get("marketing") === "1",
+  );
+  const [joinWaitlist, setJoinWaitlist] = useState(
+    searchParams.get("waitlist") === "1" || searchParams.get("from") === "cae-demo",
+  );
+
+  // Запомним реф-код, чтобы он не потерялся при переходах
+  useEffect(() => {
+    if (refCode) rememberRefCode(refCode);
+  }, [refCode]);
 
   if (user) {
     setTimeout(() => nav("/account", { replace: true }), 0);
@@ -35,9 +62,16 @@ const Register = () => {
     }
 
     setSubmitting(true);
-    const ok = await register(email.trim().toLowerCase(), password, fullName);
+    const ok = await register(email.trim().toLowerCase(), password, fullName, {
+      refCode: refCode || undefined,
+      marketingConsent,
+      joinWaitlist,
+    });
     setSubmitting(false);
-    if (ok) nav("/account", { replace: true });
+    if (ok) {
+      clearRememberedRefCode();
+      nav("/account", { replace: true });
+    }
   };
 
   const msg = localError || error;
@@ -58,6 +92,22 @@ const Register = () => {
         <p className="text-sm text-center text-[var(--drawing-line-thin)] mb-8">
           Один аккаунт &mdash; для&nbsp;наставничества, статей и&nbsp;будущего CAE-калькулятора.
         </p>
+
+        {/* Бейдж пригласившего */}
+        {refCode && (
+          <div className="border-[1.5px] border-[var(--drawing-accent)] bg-[var(--drawing-accent)]/10 p-3 mb-5 flex items-start gap-2 text-xs">
+            <Icon name="Gift" size={16} className="text-[var(--drawing-accent)] mt-0.5 shrink-0" />
+            <div>
+              <p className="font-gost-upright font-bold text-[var(--drawing-accent)] uppercase tracking-wider text-[11px] mb-1">
+                Вы регистрируетесь по приглашению
+              </p>
+              <p className="text-[var(--drawing-line-thin)] leading-snug">
+                Код: <strong className="font-mono text-[var(--drawing-line)]">{refCode}</strong>.
+                После регистрации вы&nbsp;и&nbsp;пригласивший получите по&nbsp;<strong>10&nbsp;баллов</strong>.
+              </p>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={onSubmit} className="space-y-5 drawing-frame p-6 md:p-8 bg-[var(--drawing-bg)]">
           <div>
@@ -116,6 +166,53 @@ const Register = () => {
               className="drawing-input"
               minLength={8}
             />
+          </div>
+
+          {/* Реф-код, скрыт под раскрытием */}
+          <details className="text-xs">
+            <summary className="cursor-pointer font-gost uppercase tracking-wider text-[10px] text-[var(--drawing-line-thin)] hover:text-[var(--drawing-accent)]">
+              Есть код приглашения?
+            </summary>
+            <input
+              type="text"
+              value={refCode}
+              onChange={(e) => setRefCode(e.target.value.toUpperCase().slice(0, 16))}
+              className="drawing-input mt-2 font-mono"
+              placeholder="ABCDEFGH"
+              maxLength={16}
+            />
+          </details>
+
+          {/* Согласия */}
+          <div className="space-y-2">
+            <label className="flex items-start gap-2 text-xs cursor-pointer">
+              <input
+                type="checkbox"
+                checked={marketingConsent}
+                onChange={(e) => setMarketingConsent(e.target.checked)}
+                className="mt-0.5 accent-[var(--drawing-accent)]"
+              />
+              <span className="text-[var(--drawing-line-thin)] leading-snug">
+                Хочу получать новости о&nbsp;запуске тарифов и&nbsp;инженерные материалы (отписаться можно в&nbsp;1&nbsp;клик)
+              </span>
+            </label>
+            <label className="flex items-start gap-2 text-xs cursor-pointer border-[1.5px] border-[var(--drawing-accent)] bg-[var(--drawing-accent)]/10 p-2 -mx-1">
+              <input
+                type="checkbox"
+                checked={joinWaitlist}
+                onChange={(e) => setJoinWaitlist(e.target.checked)}
+                className="mt-0.5 accent-[var(--drawing-accent)]"
+              />
+              <span className="leading-snug">
+                <strong className="text-[var(--drawing-accent)] font-gost-upright uppercase tracking-wider text-[11px]">
+                  Лист ожидания приоритетной волны
+                </strong>
+                <br />
+                <span className="text-[var(--drawing-line-thin)]">
+                  Получу полный доступ к&nbsp;CAE первым и&nbsp;лучшие условия после официального старта
+                </span>
+              </span>
+            </label>
           </div>
 
           {msg && (

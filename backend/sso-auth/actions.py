@@ -26,10 +26,19 @@ def action_register(conn, body: dict, ua: str, ip: str) -> dict:
     Регистрация по email + паролю.
     Создаёт пользователя с ролью 'student', отправляет письмо с verify-ссылкой.
     Логин до подтверждения email невозможен.
+
+    Дополнительные поля:
+      - ref_code: реф-код пригласившего (привязывается referred_by_user_id)
+      - marketing_consent: согласие на маркетинговую рассылку
+      - join_waitlist: записать в лист ожидания CAE
+    После создания юзера начисляются стартовые баллы и ачивки.
     """
     email = (body.get('email') or '').strip().lower()
     password = body.get('password') or ''
     full_name = (body.get('full_name') or '').strip()[:200]
+    ref_code = (body.get('ref_code') or '').strip().upper()[:16]
+    marketing_consent = bool(body.get('marketing_consent'))
+    join_waitlist = bool(body.get('join_waitlist'))
 
     if not EMAIL_RE.match(email):
         return json_response(400, {'error': 'invalid_email', 'message': 'Некорректный email'})
@@ -38,6 +47,18 @@ def action_register(conn, body: dict, ua: str, ip: str) -> dict:
     if len(password) > 200:
         return json_response(400, {'error': 'long_password', 'message': 'Пароль слишком длинный'})
 
+    # Определяем реферера по коду (если задан)
+    referrer_id = None
+    if ref_code:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id FROM sso_users WHERE referral_code = %s",
+                (ref_code,),
+            )
+            r = cur.fetchone()
+            if r:
+                referrer_id = int(r[0])
+
     with conn.cursor() as cur:
         cur.execute("SELECT id FROM sso_users WHERE email = %s", (email,))
         if cur.fetchone():
@@ -45,15 +66,75 @@ def action_register(conn, body: dict, ua: str, ip: str) -> dict:
 
         password_hash = hash_password(password)
         cur.execute(
-            "INSERT INTO sso_users (email, password_hash, full_name) "
-            "VALUES (%s, %s, %s) RETURNING id",
-            (email, password_hash, full_name or None),
+            "INSERT INTO sso_users "
+            "(email, password_hash, full_name, referred_by_user_id, marketing_consent) "
+            "VALUES (%s, %s, %s, %s, %s) RETURNING id",
+            (email, password_hash, full_name or None, referrer_id, marketing_consent),
         )
         user_id = cur.fetchone()[0]
         cur.execute(
             "INSERT INTO sso_user_roles (user_id, role) VALUES (%s, 'student')",
             (user_id,),
         )
+
+        # Подключаем к листу ожидания (если согласился)
+        if join_waitlist:
+            cur.execute(
+                "INSERT INTO cae_waitlist (email, full_name, user_id, referral_source) "
+                "VALUES (%s, %s, %s, %s)",
+                (email, full_name or None, user_id,
+                 ('ref:' + ref_code) if ref_code else 'register_form'),
+            )
+
+        # Стартовая запись очков
+        cur.execute(
+            "INSERT INTO user_points (user_id, total_points) VALUES (%s, 0) "
+            "ON CONFLICT (user_id) DO NOTHING",
+            (user_id,),
+        )
+
+        # Ачивка «Ранняя пташка» — без очков, для коллекции
+        cur.execute(
+            "INSERT INTO user_achievements (user_id, achievement_code) "
+            "VALUES (%s, 'early_bird') ON CONFLICT (user_id, achievement_code) DO NOTHING",
+            (user_id,),
+        )
+
+        # +10 баллов новичку (за «Раннюю пташку»)
+        cur.execute(
+            "INSERT INTO user_points_log "
+            "(user_id, points, reason, note, dedup_key) "
+            "VALUES (%s, 10, 'signup_bonus', 'Регистрация', %s) "
+            "ON CONFLICT (dedup_key) DO NOTHING",
+            (user_id, f'signup:{user_id}'),
+        )
+        cur.execute(
+            "UPDATE user_points SET total_points = total_points + 10, updated_at = now() "
+            "WHERE user_id = %s",
+            (user_id,),
+        )
+
+        # +10 баллов рефереру за приведённого друга
+        if referrer_id:
+            cur.execute(
+                "INSERT INTO user_points (user_id, total_points) VALUES (%s, 0) "
+                "ON CONFLICT (user_id) DO NOTHING",
+                (referrer_id,),
+            )
+            cur.execute(
+                "INSERT INTO user_points_log "
+                "(user_id, points, reason, ref_user_id, note, dedup_key) "
+                "VALUES (%s, 10, 'referral_signup', %s, %s, %s) "
+                "ON CONFLICT (dedup_key) DO NOTHING",
+                (referrer_id, user_id, f'Реф-регистрация #{user_id}',
+                 f'ref_signup:{referrer_id}:{user_id}'),
+            )
+            cur.execute(
+                "UPDATE user_points SET total_points = total_points + 10, "
+                "referrals_count = referrals_count + 1, updated_at = now() "
+                "WHERE user_id = %s",
+                (referrer_id,),
+            )
     conn.commit()
 
     raw_token = create_verify_token(conn, user_id)
@@ -63,6 +144,7 @@ def action_register(conn, body: dict, ua: str, ip: str) -> dict:
         'ok': True,
         'email_sent': sent,
         'email': email,
+        'referrer_credited': bool(referrer_id),
         'message': 'Аккаунт создан. Подтвердите email — мы отправили ссылку на ваш адрес.',
     })
 

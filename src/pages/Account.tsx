@@ -1,12 +1,19 @@
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Helmet } from "@/lib/helmet-shim";
 import Icon from "@/components/ui/icon";
 import { useAuth } from "@/contexts/AuthContext";
 import { SITE_URL } from "@/lib/seo";
+import PointsAchievementsBlock from "@/components/account/PointsAchievementsBlock";
+import AdminPanel from "@/components/account/AdminPanel";
+import InviteFriendModal from "@/components/cae/InviteFriendModal";
+import SupportTicketModal from "@/components/SupportTicketModal";
 
 const Account = () => {
   const { user, loading, logout } = useAuth();
   const nav = useNavigate();
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
 
   if (loading) {
     return (
@@ -38,9 +45,23 @@ const Account = () => {
         <p className="font-gost text-[11px] uppercase tracking-[0.3em] text-[var(--drawing-line-thin)] mb-3">
           Личный кабинет · SSO
         </p>
-        <h1 className="font-gost-upright text-2xl md:text-3xl font-black uppercase tracking-wide mb-8">
-          {user.full_name || user.email}
-        </h1>
+        <div className="flex flex-wrap items-center gap-3 mb-8">
+          <h1 className="font-gost-upright text-2xl md:text-3xl font-black uppercase tracking-wide">
+            {user.full_name || user.email}
+          </h1>
+          {user.is_admin && (
+            <span className="inline-flex items-center gap-1 bg-[var(--drawing-accent)] text-white px-2 py-0.5 font-gost text-[10px] uppercase tracking-wider">
+              <Icon name="ShieldCheck" size={11} />
+              Администратор
+            </span>
+          )}
+        </div>
+
+        {/* Админ-панель — только для is_admin */}
+        {user.is_admin && <AdminPanel />}
+
+        {/* Очки и ачивки */}
+        <PointsAchievementsBlock onInvite={() => setInviteOpen(true)} />
 
         <div className="grid gap-5 md:grid-cols-2">
           {/* Профиль */}
@@ -134,12 +155,23 @@ const Account = () => {
           </section>
         </div>
 
-        <div className="mt-8 text-center">
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <button onClick={() => setSupportOpen(true)} className="btn-drawing text-xs inline-flex">
+            <Icon name="LifeBuoy" size={13} className="mr-1.5" />
+            Сообщить о проблеме
+          </button>
           <button onClick={onLogout} className="btn-drawing text-xs">
             Выйти из аккаунта
           </button>
         </div>
       </div>
+
+      <InviteFriendModal open={inviteOpen} onClose={() => setInviteOpen(false)} />
+      <SupportTicketModal
+        open={supportOpen}
+        onClose={() => setSupportOpen(false)}
+        defaultKind="other"
+      />
     </>
   );
 };

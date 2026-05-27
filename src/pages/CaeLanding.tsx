@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Helmet } from "@/lib/helmet-shim";
 import Icon from "@/components/ui/icon";
 import { SITE_URL } from "@/lib/seo";
@@ -9,6 +9,7 @@ import Notify3DForm from "@/components/cae/Notify3DForm";
 import TariffsSection from "@/components/cae/TariffsSection";
 import MentoringCrossSell from "@/components/cae/MentoringCrossSell";
 import AlphaTestBanner from "@/components/AlphaTestBanner";
+import { rememberRefCode } from "@/lib/referrals";
 
 const formatPrice = (kopecks: number) => {
   if (kopecks <= 0) return "0 ₽";
@@ -51,6 +52,7 @@ const FEATURES = [
 
 const CaeLanding = () => {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [tariffs, setTariffs] = useState<CaeTariff[]>([]);
   const [email, setEmail] = useState(user?.email || "");
   const [purpose, setPurpose] = useState("");
@@ -58,6 +60,12 @@ const CaeLanding = () => {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Реф-код из ?ref=ABCDEFGH — запоминаем в localStorage, чтобы он передался в форму регистрации
+  const refCode = (searchParams.get("ref") || "").trim().toUpperCase().slice(0, 16);
+  useEffect(() => {
+    if (refCode) rememberRefCode(refCode);
+  }, [refCode]);
 
   useEffect(() => {
     fetchCaeTariffs()
@@ -100,7 +108,55 @@ const CaeLanding = () => {
 
       <div className="max-w-[1200px] mx-auto px-4 pt-20 md:pt-24 pb-16">
         {/* Альфа-тест */}
-        <AlphaTestBanner className="mb-10" />
+        <AlphaTestBanner className="mb-6" />
+
+        {/* Реферальный баннер — отображается только если в URL пришёл ?ref= */}
+        {refCode && !user && (
+          <div className="border-[2.5px] border-[var(--drawing-accent)] bg-gradient-to-br from-[var(--drawing-accent)]/10 to-[var(--drawing-accent)]/5 p-5 mb-10 relative">
+            <div className="absolute -top-px -left-px w-3 h-3 border-t-[2.5px] border-l-[2.5px] border-[var(--drawing-accent)]" />
+            <div className="absolute -top-px -right-px w-3 h-3 border-t-[2.5px] border-r-[2.5px] border-[var(--drawing-accent)]" />
+            <div className="absolute -bottom-px -left-px w-3 h-3 border-b-[2.5px] border-l-[2.5px] border-[var(--drawing-accent)]" />
+            <div className="absolute -bottom-px -right-px w-3 h-3 border-b-[2.5px] border-r-[2.5px] border-[var(--drawing-accent)]" />
+            <div className="flex flex-col md:flex-row items-start gap-4">
+              <div className="bg-[var(--drawing-accent)] text-white p-3 shrink-0">
+                <Icon name="Gift" size={24} />
+              </div>
+              <div className="flex-1">
+                <p className="font-gost text-[10px] uppercase tracking-[0.25em] text-[var(--drawing-accent)] mb-1">
+                  Вас пригласили в&nbsp;CAE · Код {refCode}
+                </p>
+                <h2 className="font-gost-upright text-xl md:text-2xl font-black uppercase tracking-wide leading-tight mb-3">
+                  Друг приглашает вас попробовать CAE
+                </h2>
+                <ul className="space-y-1.5 text-sm text-[var(--drawing-line)] mb-4">
+                  <li className="flex items-start gap-2">
+                    <Icon name="Check" size={14} className="text-[var(--drawing-accent)] mt-0.5 shrink-0" />
+                    <span><strong>+10 баллов</strong> вам за регистрацию по&nbsp;этой ссылке</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Icon name="Check" size={14} className="text-[var(--drawing-accent)] mt-0.5 shrink-0" />
+                    <span>Бесплатный безлимит на&nbsp;время альфа-теста</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Icon name="Check" size={14} className="text-[var(--drawing-accent)] mt-0.5 shrink-0" />
+                    <span>Место в&nbsp;листе ожидания приоритетной волны</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Icon name="Check" size={14} className="text-[var(--drawing-accent)] mt-0.5 shrink-0" />
+                    <span>Ачивки и&nbsp;рейтинг с&nbsp;лучшими условиями при официальном старте</span>
+                  </li>
+                </ul>
+                <Link
+                  to={`/register?ref=${encodeURIComponent(refCode)}&waitlist=1`}
+                  className="btn-drawing btn-drawing-accent text-sm inline-flex"
+                >
+                  <Icon name="UserPlus" size={15} className="mr-2" />
+                  Зарегистрироваться и получить бонус
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Hero */}
         <section className="text-center mb-16">

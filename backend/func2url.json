@@ -1,4 +1,6 @@
 {
+  "support-api": "https://functions.poehali.dev/23ed1a4f-41fd-4fca-87fc-fe326c8b9f04",
+  "referral-api": "https://functions.poehali.dev/82cd9f7b-ff65-4ddb-9d79-d2924272ba4c",
   "cae-verify": "https://functions.poehali.dev/df6bdc39-8646-4ae6-a74f-f6d589c0cbf3",
   "recovery-log": "https://functions.poehali.dev/4f0c1ef1-4bdf-4603-8d97-63a31cb6f7a1",
   "cae-solver": "https://functions.poehali.dev/b470871c-af29-425e-90ed-8fc6c152ab1e",

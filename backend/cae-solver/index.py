@@ -110,6 +110,82 @@ def _save_run(project_id: int | None, version_id: int | None, owner_id: int,
         print(f'[cae-solver] save_run error: {e!r}')
 
 
+def _award_daily_solve_points(owner_id: int):
+    """Начисляет +1 балл юзеру и +1 баллу его рефереру за активный день.
+    Идемпотентно через dedup_key — повторное успешное начисление за тот же день не происходит.
+    Ошибки не пробрасываем, чтобы не сломать ответ решателю."""
+    try:
+        today = datetime.now().date().isoformat()
+        conn = psycopg2.connect(os.environ['DATABASE_URL'])
+        with conn.cursor() as cur:
+            # Гарантируем строку очков для юзера
+            cur.execute(
+                "INSERT INTO user_points (user_id, total_points) VALUES (%s, 0) "
+                "ON CONFLICT (user_id) DO NOTHING",
+                (owner_id,),
+            )
+            # +1 балл самому юзеру (раз в сутки)
+            try:
+                cur.execute(
+                    "INSERT INTO user_points_log "
+                    "(user_id, points, reason, note, dedup_key) "
+                    "VALUES (%s, 1, 'self_daily_solve', %s, %s)",
+                    (owner_id, f'Активность {today}',
+                     f'self_daily_solve:{owner_id}:{today}'),
+                )
+                cur.execute(
+                    "UPDATE user_points SET total_points = total_points + 1, "
+                    "updated_at = now() WHERE user_id = %s",
+                    (owner_id,),
+                )
+                # Ачивка «Первый расчёт» (без очков)
+                cur.execute(
+                    "INSERT INTO user_achievements (user_id, achievement_code) "
+                    "VALUES (%s, 'first_solve') "
+                    "ON CONFLICT (user_id, achievement_code) DO NOTHING",
+                    (owner_id,),
+                )
+            except Exception:
+                conn.rollback()
+
+            # +1 балл рефереру (если есть и раз в сутки на каждого реф-активного)
+            cur.execute(
+                "SELECT referred_by_user_id FROM sso_users WHERE id = %s",
+                (owner_id,),
+            )
+            r = cur.fetchone()
+            referrer_id = int(r[0]) if r and r[0] else None
+            if referrer_id:
+                cur.execute(
+                    "INSERT INTO user_points (user_id, total_points) VALUES (%s, 0) "
+                    "ON CONFLICT (user_id) DO NOTHING",
+                    (referrer_id,),
+                )
+                try:
+                    cur.execute(
+                        "INSERT INTO user_points_log "
+                        "(user_id, points, reason, ref_user_id, note, dedup_key) "
+                        "VALUES (%s, 1, 'referral_daily_solve', %s, %s, %s)",
+                        (referrer_id, owner_id, f'Реф-актив {today}',
+                         f'ref_daily:{referrer_id}:{owner_id}:{today}'),
+                    )
+                    cur.execute(
+                        "UPDATE user_points SET total_points = total_points + 1, "
+                        "active_referrals_count = ("
+                        "  SELECT COUNT(DISTINCT u.id) FROM sso_users u "
+                        "  JOIN user_points_log l ON l.user_id = u.id "
+                        "  WHERE u.referred_by_user_id = %s AND l.reason = 'self_daily_solve'"
+                        "), updated_at = now() WHERE user_id = %s",
+                        (referrer_id, referrer_id),
+                    )
+                except Exception:
+                    conn.rollback()
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f'[cae-solver] award_daily_points error: {e!r}')
+
+
 def handler(event: dict, context) -> dict:
     method = event.get('httpMethod', 'POST')
     if method == 'OPTIONS':
@@ -182,6 +258,8 @@ def handler(event: dict, context) -> dict:
         duration_ms = int((time.time() - t0) * 1000)
         response['duration_ms'] = duration_ms
         _save_run(project_id, version_id, owner_id, 'ok', payload, response, duration_ms, None)
+        # Начисляем баллы за активный день (юзеру и его рефереру). Не мешает ответу.
+        _award_daily_solve_points(owner_id)
         return _json_response(200, response)
     except Exception as e:
         duration_ms = int((time.time() - t0) * 1000)
