@@ -131,7 +131,7 @@ const Footer = () => {
               &copy; {new Date().getFullYear()} Диплом-Инж.рф&nbsp;&middot; Все права защищены.
             </p>
             <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] opacity-70">
-              ИП [ФИО полностью]&nbsp;&middot; ИНН&nbsp;[ИНН]
+              ИП Кокшаров Сергей Витальевич&nbsp;&middot; ИНН&nbsp;662007143302
             </p>
             <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] opacity-60 max-w-md leading-relaxed">
               Услуги менторского сопровождения являются консультационными и&nbsp;не&nbsp;являются образовательной деятельностью по&nbsp;273-ФЗ.
