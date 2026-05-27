@@ -43,6 +43,11 @@ const CaeDemoEditor = () => {
     canUndo,
     canRedo,
     solveBlocked,
+    solveCount,
+    solveLimit,
+    nodesUsed,
+    nodeLimit,
+    nodesBlocked,
   } = useCaeDemoProject();
 
   const {
@@ -154,12 +159,18 @@ const CaeDemoEditor = () => {
         <link rel="canonical" href={`${SITE_URL}/cae/demo`} />
       </Helmet>
 
-      {/* Баннер альфа-теста */}
+      {/* Баннер демо-режима со счётчиками лимитов */}
       <div className="bg-[var(--drawing-accent)] text-white">
         <div className="max-w-[1400px] mx-auto px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
-          <span className="font-gost uppercase tracking-wider">
-            Альфа-тест · все расчёты бесплатно · лимиты сняты
-          </span>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-gost uppercase tracking-wider">
+            <span className="font-bold">Демо без регистрации</span>
+            <span className={`inline-flex items-center gap-1 ${nodesBlocked ? "bg-red-700" : "bg-white/15"} px-2 py-0.5`}>
+              Узлы: <span className="font-bold">{nodesUsed}/{nodeLimit}</span>
+            </span>
+            <span className={`inline-flex items-center gap-1 ${solveBlocked ? "bg-red-700" : "bg-white/15"} px-2 py-0.5`}>
+              Расчёты: <span className="font-bold">{solveCount}/{solveLimit}</span>
+            </span>
+          </div>
           <div className="flex items-center gap-3">
             <button
               onClick={onReset}
@@ -171,7 +182,7 @@ const CaeDemoEditor = () => {
               to="/register"
               className="font-gost-upright font-bold uppercase tracking-wider bg-white text-[var(--drawing-accent)] px-3 py-1 hover:bg-white/90"
             >
-              Зарегистрироваться
+              Регистрация · безлимит
             </Link>
           </div>
         </div>
@@ -192,7 +203,39 @@ const CaeDemoEditor = () => {
           onSolve={onSolve}
         />
 
-        {/* Баннеры лимитов отключены на время альфа-тестирования */}
+        {/* Уведомление об исчерпании лимита расчётов */}
+        {solveBlocked && (
+          <div className="bg-amber-50 border-b-2 border-amber-700/40">
+            <div className="max-w-[1400px] mx-auto px-3 py-2 flex flex-wrap items-center gap-3 text-xs">
+              <span className="text-amber-900">
+                Лимит демо исчерпан: <strong>{solveLimit} расчётов</strong> использовано.
+              </span>
+              <Link
+                to="/register"
+                className="btn-drawing text-[10px] border-amber-700/60 hover:border-amber-700 inline-flex"
+              >
+                Зарегистрироваться — расчёты без лимита&nbsp;&rarr;
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Уведомление об исчерпании лимита узлов */}
+        {nodesBlocked && !solveBlocked && (
+          <div className="bg-amber-50 border-b-2 border-amber-700/40">
+            <div className="max-w-[1400px] mx-auto px-3 py-2 flex flex-wrap items-center gap-3 text-xs">
+              <span className="text-amber-900">
+                Достигнут лимит <strong>{nodeLimit} узлов</strong> демо. Чтобы продолжить — зарегистрируйтесь.
+              </span>
+              <Link
+                to="/register"
+                className="btn-drawing text-[10px] border-amber-700/60 hover:border-amber-700 inline-flex"
+              >
+                Регистрация · безлимит&nbsp;&rarr;
+              </Link>
+            </div>
+          </div>
+        )}
 
         <div className="max-w-[1400px] mx-auto px-3 py-3 grid gap-3 lg:grid-cols-[260px_1fr_320px]">
           <div className="hidden lg:block">

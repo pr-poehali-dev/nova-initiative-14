@@ -142,8 +142,14 @@ def handler(event: dict, context) -> dict:
                               {'valid': ok, 'message': msg or 'OK'})
 
     if action == 'demo':
-        # Демо-режим: без авторизации, без сохранения в БД.
-        # На время альфа-тестирования лимит элементов снят — все расчёты бесплатны.
+        # Демо-режим без регистрации: лимит 5 узлов в схеме.
+        # Лимит расчётов (5 шт) контролируется на фронтенде через localStorage.
+        # Для зарегистрированных пользователей (альфа-тест) лимиты сняты — они идут через action=solve.
+        if len(payload.get('nodes', [])) > 5:
+            return _json_response(403, {
+                'error': 'demo_node_limit',
+                'message': 'Демо ограничено 5 узлами. Зарегистрируйтесь для расчёта без лимитов.'
+            })
         ok, msg = _validate_payload(payload)
         if not ok:
             return _json_response(400, {'error': 'validation_failed', 'message': msg})

@@ -2,9 +2,10 @@
  * Хук демо-редактора: полный аналог useCaeProject, но без бэкенда.
  * Модель и счётчик расчётов хранятся в localStorage.
  *
- * Режим альфа-тестирования (ALPHA_TEST_MODE):
- *  - лимиты на элементы и расчёты сняты
- *  - демо ведёт себя как полноценный редактор
+ * Демо-лимиты для незарегистрированных пользователей:
+ *  - до 5 узлов в схеме
+ *  - до 5 расчётов (счётчик сбрасывается при «Сбросить»)
+ * После регистрации (альфа-тест) лимиты сняты.
  */
 import { useState, useCallback, useEffect } from "react";
 import { emptyModel, type FrameModel } from "@/lib/cae-model";
@@ -14,9 +15,10 @@ import { useCaeHistory } from "./useCaeHistory";
 const STORAGE_KEY = "cae_demo_model";
 const SOLVE_COUNT_KEY = "cae_demo_solves";
 
-// На время альфа-теста лимиты сняты (большое число вместо реальной квоты)
-export const DEMO_ELEMENT_LIMIT = 9999;
-export const DEMO_SOLVE_LIMIT = 9999;
+// Демо-лимиты (без регистрации). После регистрации — альфа-тест без лимитов.
+export const DEMO_NODE_LIMIT = 5;
+export const DEMO_ELEMENT_LIMIT = 9999; // лимита на элементы как такового нет — ограничены узлы
+export const DEMO_SOLVE_LIMIT = 5;
 
 function loadFromStorage(): FrameModel | null {
   try {
@@ -74,6 +76,9 @@ export function useCaeDemoProject() {
 
   const solvesLeft = Math.max(0, DEMO_SOLVE_LIMIT - solveCount);
   const solveBlocked = solvesLeft <= 0;
+  const nodesUsed = model.nodes.length;
+  const nodesLeft = Math.max(0, DEMO_NODE_LIMIT - nodesUsed);
+  const nodesBlocked = nodesUsed >= DEMO_NODE_LIMIT;
 
   // Автосохранение в localStorage при каждом изменении модели
   useEffect(() => {
@@ -88,10 +93,17 @@ export function useCaeDemoProject() {
 
   const updateModel = useCallback(
     (next: FrameModel) => {
+      // Демо-лимит: не даём добавить больше DEMO_NODE_LIMIT узлов.
+      // Если новых узлов больше лимита, обрезаем модель до текущего состояния
+      // (а если уже было превышение — оставляем как есть).
+      if (next.nodes.length > DEMO_NODE_LIMIT && next.nodes.length > model.nodes.length) {
+        // Игнорируем попытку добавить узел сверх лимита
+        return;
+      }
       pushModel(next);
       setDirty(true);
     },
-    [pushModel],
+    [pushModel, model.nodes.length],
   );
 
   const setModel = useCallback(
@@ -147,8 +159,13 @@ export function useCaeDemoProject() {
     canUndo,
     canRedo,
     elementLimit: DEMO_ELEMENT_LIMIT,
+    nodeLimit: DEMO_NODE_LIMIT,
     solveLimit: DEMO_SOLVE_LIMIT,
+    solveCount,
     solvesLeft,
     solveBlocked,
+    nodesUsed,
+    nodesLeft,
+    nodesBlocked,
   };
 }

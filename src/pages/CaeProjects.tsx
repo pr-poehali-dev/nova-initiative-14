@@ -108,6 +108,40 @@ const CaeProjects = () => {
           </div>
         </div>
 
+        {/* Счётчики использования */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+          <div className="border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] p-3">
+            <p className="font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)] mb-1">
+              Проектов создано
+            </p>
+            <p className="font-gost-upright text-lg font-black flex items-baseline gap-1.5">
+              {projects.length}
+              <span className="font-gost text-[10px] font-normal uppercase tracking-wider text-[var(--drawing-accent)]">
+                / ∞
+              </span>
+            </p>
+          </div>
+          <div className="border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] p-3">
+            <p className="font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)] mb-1">
+              Расчётов в&nbsp;мес.
+            </p>
+            <p className="font-gost-upright text-lg font-black flex items-baseline gap-1.5">
+              <span className="font-gost text-[10px] font-normal uppercase tracking-wider text-[var(--drawing-accent)]">
+                Безлимит
+              </span>
+            </p>
+          </div>
+          <div className="border-2 border-[var(--drawing-accent)] bg-[var(--drawing-accent)]/5 p-3 col-span-2 md:col-span-1">
+            <p className="font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)] mb-1">
+              Тариф
+            </p>
+            <p className="font-gost-upright text-lg font-black flex items-center gap-2 text-[var(--drawing-accent)]">
+              <Icon name="FlaskConical" size={16} />
+              Альфа-тест
+            </p>
+          </div>
+        </div>
+
         {/* Баннер альфа-теста */}
         <div className="border-2 border-[var(--drawing-accent)] bg-[var(--drawing-accent)]/5 p-4 mb-8 flex items-start gap-3">
           <Icon name="FlaskConical" size={18} className="text-[var(--drawing-accent)] mt-0.5 shrink-0" />

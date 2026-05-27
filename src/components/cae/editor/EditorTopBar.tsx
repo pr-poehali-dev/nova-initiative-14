@@ -161,6 +161,29 @@ const EditorTopBar = ({
               : "Сообщить о проблеме"}
         </button>
       </div>
+      {/* Счётчики модели — узлы и элементы. На время альфа-теста лимит безграничный (∞). */}
+      <div className="hidden md:flex items-center gap-2 ml-4">
+        <div className="border border-[var(--drawing-line)] px-2 py-1 leading-tight">
+          <p className="font-gost text-[9px] uppercase tracking-wider text-[var(--drawing-line-thin)]">Узлы</p>
+          <p className="font-gost-upright text-xs font-bold flex items-baseline gap-1">
+            {model.nodes?.length ?? 0}
+            <span className="font-gost text-[9px] font-normal text-[var(--drawing-accent)]">/ ∞</span>
+          </p>
+        </div>
+        <div className="border border-[var(--drawing-line)] px-2 py-1 leading-tight">
+          <p className="font-gost text-[9px] uppercase tracking-wider text-[var(--drawing-line-thin)]">Элементы</p>
+          <p className="font-gost-upright text-xs font-bold flex items-baseline gap-1">
+            {model.elements?.length ?? 0}
+            <span className="font-gost text-[9px] font-normal text-[var(--drawing-accent)]">/ ∞</span>
+          </p>
+        </div>
+        <div className="border border-[var(--drawing-accent)] bg-[var(--drawing-accent)]/5 px-2 py-1 leading-tight">
+          <p className="font-gost text-[9px] uppercase tracking-wider text-[var(--drawing-line-thin)]">Расчёты</p>
+          <p className="font-gost-upright text-xs font-bold text-[var(--drawing-accent)]">
+            Безлимит
+          </p>
+        </div>
+      </div>
       <div className="ml-auto flex flex-wrap gap-2">
         <button
           onClick={onSave}
