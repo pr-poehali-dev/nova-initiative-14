@@ -62,6 +62,33 @@
       "expectedStatus": 200,
       "expectedBody": {"ok": true},
       "bodyMatcher": "partial"
+    },
+    {
+      "name": "Запрос сброса — несуществующий email (всегда 200)",
+      "method": "POST",
+      "path": "/?action=request-reset",
+      "body": {"email": "no-such-user-xyz@example.com"},
+      "expectedStatus": 200,
+      "expectedBody": {"ok": true},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Сброс пароля — невалидный токен",
+      "method": "POST",
+      "path": "/?action=reset-password",
+      "body": {"token": "invalidtoken", "password": "newpassword123"},
+      "expectedStatus": 400,
+      "expectedBody": {"error": "invalid_token"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Сброс пароля — короткий пароль",
+      "method": "POST",
+      "path": "/?action=reset-password",
+      "body": {"token": "sometoken", "password": "short"},
+      "expectedStatus": 400,
+      "expectedBody": {"error": "weak_password"},
+      "bodyMatcher": "partial"
     }
   ]
 }

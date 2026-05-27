@@ -134,12 +134,17 @@ const Login = () => {
             {submitting ? "Входим…" : "Войти"}
           </button>
 
-          <p className="font-gost text-xs text-center text-[var(--drawing-line-thin)]">
-            Нет аккаунта?{" "}
-            <Link to="/register" className="text-[var(--drawing-accent)] hover:underline">
-              Зарегистрироваться
+          <div className="flex items-center justify-between font-gost text-xs text-[var(--drawing-line-thin)]">
+            <span>
+              Нет аккаунта?{" "}
+              <Link to="/register" className="text-[var(--drawing-accent)] hover:underline">
+                Зарегистрироваться
+              </Link>
+            </span>
+            <Link to="/forgot-password" className="text-[var(--drawing-accent)] hover:underline">
+              Забыли пароль?
             </Link>
-          </p>
+          </div>
 
           <OAuthButtons redirectAfter={from} />
         </form>

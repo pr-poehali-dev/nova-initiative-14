@@ -151,6 +151,45 @@ def _verify_email_html(verify_url: str, greet: str) -> str:
 </body></html>"""
 
 
+def send_reset_email(to_email: str, full_name: str, raw_token: str) -> bool:
+    """Письмо со ссылкой сброса пароля /reset-password?token=…"""
+    reset_url = f"{SITE_URL}/reset-password?token={raw_token}"
+    greet = f"Здравствуйте, {full_name}!" if full_name else "Здравствуйте!"
+    subject = "Сброс пароля · Диплом-Инж.рф"
+    html = f"""<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#faf8f0;font-family:Georgia,'Times New Roman',serif;color:#1a1a2e;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#faf8f0;padding:40px 20px;">
+<tr><td align="center">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="560" style="max-width:560px;background:#fdfcf6;border:1.5px solid #1a1a2e;">
+<tr><td style="padding:32px 36px;">
+<p style="margin:0 0 18px;font-family:'Courier New',monospace;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#3a3a5e;">Диплом-Инж.рф · SSO</p>
+<h1 style="margin:0 0 24px;font-size:22px;font-weight:700;color:#1a1a2e;border-bottom:2px solid #1a1a2e;padding-bottom:14px;">Сброс пароля</h1>
+<p style="font-size:15px;line-height:1.55;margin:0 0 14px;">{greet}</p>
+<p style="font-size:15px;line-height:1.55;margin:0 0 22px;">Мы получили запрос на сброс пароля для вашего аккаунта на <strong>Диплом-Инж.рф</strong>. Нажмите кнопку ниже, чтобы задать новый пароль.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px auto;">
+<tr><td style="background:#c0392b;border:2px solid #c0392b;">
+<a href="{reset_url}" target="_blank" style="display:inline-block;padding:14px 28px;font-family:'Courier New',monospace;font-size:13px;letter-spacing:0.15em;text-transform:uppercase;color:#ffffff;text-decoration:none;font-weight:700;">Задать новый пароль</a>
+</td></tr></table>
+<p style="font-size:13px;line-height:1.55;margin:24px 0 8px;color:#3a3a5e;">Если кнопка не открывается, скопируйте ссылку:</p>
+<p style="font-size:12px;line-height:1.55;margin:0 0 24px;word-break:break-all;font-family:'Courier New',monospace;color:#2c3e80;">{reset_url}</p>
+<p style="font-size:12px;line-height:1.55;margin:0 0 6px;color:#3a3a5e;">Ссылка действительна <strong>2 часа</strong>. Если вы не запрашивали сброс — просто проигнорируйте это письмо, пароль останется прежним.</p>
+<hr style="border:none;border-top:1px solid #d9d4be;margin:28px 0 18px;">
+<p style="font-size:11px;line-height:1.5;margin:0;color:#7a7a8e;font-family:'Courier New',monospace;">Это автоматическое письмо. Отвечать на него не нужно.</p>
+</td></tr></table>
+</td></tr></table>
+</body></html>"""
+    text = (
+        f"{greet}\n\n"
+        f"Для сброса пароля на сайте Диплом-Инж.рф перейдите по ссылке:\n"
+        f"{reset_url}\n\n"
+        f"Ссылка действительна 2 часа.\n"
+        f"Если вы не запрашивали сброс — проигнорируйте это письмо.\n\n"
+        f"— Диплом-Инж.рф\n"
+    )
+    return send_email(to_email, subject, html, text)
+
+
 def send_verify_email(to_email: str, full_name: str, raw_token: str) -> bool:
     """Письмо с одноразовой ссылкой на /verify-email?token=…"""
     verify_url = f"{SITE_URL}/verify-email?token={raw_token}"

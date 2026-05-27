@@ -26,6 +26,8 @@ from actions import (
     action_logout,
     action_refresh,
     action_register,
+    action_request_reset,
+    action_reset_password,
     action_resend_verification,
     action_userinfo,
     action_verify_email,
@@ -86,6 +88,10 @@ def handler(event: dict, context) -> dict:
             return action_verify_email(conn, body, ua, ip)
         if action == 'resend-verification' and method == 'POST':
             return action_resend_verification(conn, body)
+        if action == 'request-reset' and method == 'POST':
+            return action_request_reset(conn, body)
+        if action == 'reset-password' and method == 'POST':
+            return action_reset_password(conn, body, ua, ip)
 
         # === OAuth ===
         if action == 'oauth-providers' and method == 'GET':

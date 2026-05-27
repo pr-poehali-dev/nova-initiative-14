@@ -27,6 +27,9 @@ import BlogArticle from "./pages/BlogArticle";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Account from "./pages/Account";
+import VerifyEmail from "./pages/VerifyEmail";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import OAuthCallback from "./pages/OAuthCallback";
 import CaeLanding from "./pages/CaeLanding";
 import CaeProjects from "./pages/CaeProjects";
@@ -126,6 +129,9 @@ const App = () => (
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/account" element={<Account />} />
+                <Route path="/verify-email" element={<VerifyEmail />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/cae" element={<CaeLanding />} />
                 <Route path="/cae/projects" element={<CaeProjects />} />
                 <Route path="/cae/projects/new" element={<CaeNewProject />} />

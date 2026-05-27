@@ -2,11 +2,13 @@
 Action-handlers паролевой авторизации:
   register / login / refresh / userinfo / logout
   verify-email / resend-verification
+  request-reset / reset-password
 
 OAuth-actions вынесены в oauth.py.
 """
 import hashlib
-from datetime import datetime, timezone
+import secrets as _secrets
+from datetime import datetime, timedelta, timezone
 
 from config import EMAIL_RE
 from crypto import hash_password, verify_jwt, verify_password
@@ -18,7 +20,7 @@ from db_helpers import (
     json_response,
     log_attempt,
 )
-from mailer import send_verify_email
+from mailer import send_verify_email, send_reset_email
 
 
 def action_register(conn, body: dict, ua: str, ip: str) -> dict:
@@ -278,6 +280,106 @@ def action_verify_email(conn, body: dict, ua: str, ip: str) -> dict:
 
         cur.execute("UPDATE sso_action_tokens SET used_at = NOW() WHERE id = %s", (token_id,))
         cur.execute("UPDATE sso_users SET email_verified_at = NOW() WHERE id = %s", (user_id,))
+    conn.commit()
+
+    return json_response(200, issue_tokens(conn, user_id, ua, ip))
+
+
+def action_request_reset(conn, body: dict) -> dict:
+    """
+    Запрос сброса пароля — отправляет письмо со ссылкой /reset-password?token=...
+    Намеренно всегда 200: не раскрываем, существует ли email.
+    Rate-limit: один токен за 10 минут для одного email.
+    """
+    email = (body.get('email') or '').strip().lower()
+    if not EMAIL_RE.match(email):
+        return json_response(400, {'error': 'invalid_email'})
+
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT id, full_name, email_verified_at, is_active FROM sso_users WHERE email = %s",
+            (email,),
+        )
+        row = cur.fetchone()
+
+    if not row:
+        return json_response(200, {'ok': True, 'message': 'Если email зарегистрирован, мы отправили ссылку.'})
+
+    user_id, full_name, verified_at, is_active = row
+    if not is_active:
+        return json_response(200, {'ok': True, 'message': 'Если email зарегистрирован, мы отправили ссылку.'})
+
+    # Дедупликация: если уже есть свежий неиспользованный токен — не плодим новые
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT id FROM sso_action_tokens "
+            "WHERE user_id = %s AND purpose = 'reset_password' AND used_at IS NULL "
+            "AND expires_at > now() AND created_at > now() - INTERVAL '10 minutes'",
+            (user_id,),
+        )
+        if cur.fetchone():
+            return json_response(200, {
+                'ok': True,
+                'message': 'Письмо уже отправлено. Если не пришло — подождите 10 минут и попробуйте снова.',
+            })
+
+    raw = _secrets.token_urlsafe(32)
+    h = hashlib.sha256(raw.encode()).hexdigest()
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=2)
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO sso_action_tokens (user_id, purpose, token_hash, expires_at) "
+            "VALUES (%s, 'reset_password', %s, %s)",
+            (user_id, h, expires_at),
+        )
+    conn.commit()
+
+    sent = send_reset_email(email, full_name or '', raw)
+    return json_response(200, {'ok': True, 'email_sent': sent,
+                               'message': 'Если email зарегистрирован, мы отправили ссылку.'})
+
+
+def action_reset_password(conn, body: dict, ua: str, ip: str) -> dict:
+    """
+    Установка нового пароля по одноразовому токену из письма.
+    После успеха токен помечается использованным и пользователь автоматически логинится.
+    """
+    raw = (body.get('token') or '').strip()
+    new_password = body.get('password') or ''
+
+    if not raw:
+        return json_response(400, {'error': 'missing_token'})
+    if len(new_password) < 8:
+        return json_response(400, {'error': 'weak_password',
+                                   'message': 'Пароль должен быть не короче 8 символов'})
+    if len(new_password) > 200:
+        return json_response(400, {'error': 'long_password'})
+
+    h = hashlib.sha256(raw.encode()).hexdigest()
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT id, user_id, expires_at, used_at FROM sso_action_tokens "
+            "WHERE token_hash = %s AND purpose = 'reset_password'",
+            (h,),
+        )
+        row = cur.fetchone()
+
+    if not row:
+        return json_response(400, {'error': 'invalid_token',
+                                   'message': 'Ссылка недействительна или уже использована.'})
+
+    token_id, user_id, expires_at, used_at = row
+    if used_at is not None:
+        return json_response(400, {'error': 'already_used',
+                                   'message': 'Эта ссылка уже была использована.'})
+    if expires_at < datetime.now(timezone.utc):
+        return json_response(400, {'error': 'token_expired',
+                                   'message': 'Ссылка истекла. Запросите новую.'})
+
+    new_hash = hash_password(new_password)
+    with conn.cursor() as cur:
+        cur.execute("UPDATE sso_action_tokens SET used_at = NOW() WHERE id = %s", (token_id,))
+        cur.execute("UPDATE sso_users SET password_hash = %s WHERE id = %s", (new_hash, user_id))
     conn.commit()
 
     return json_response(200, issue_tokens(conn, user_id, ua, ip))
