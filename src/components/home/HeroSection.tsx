@@ -131,12 +131,10 @@ const HeroSection = () => {
             </p>
           </div>
 
-          <div className="md:col-span-5 flex flex-col h-full">
+          <div className="md:col-span-5 flex flex-col">
             <div className="relative w-full aspect-square border-[2px] border-[var(--drawing-line)] hatching-blue overflow-hidden">
               <RobotArmDrawing />
             </div>
-
-            <div className="relative flex-1 w-full border-[2px] border-t-0 border-[var(--drawing-line)] hatching-blue min-h-[80px]" aria-hidden="true" />
           </div>
         </div>
 
