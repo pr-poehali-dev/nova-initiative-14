@@ -13,6 +13,7 @@ const footerLinks = [
   { label: "Вакансии", to: "/vacancies" },
   { label: "FAQ", to: "/faq" },
   { label: "Контакты", to: "/contacts" },
+  { label: "Публичная оферта", to: "/offer" },
   { label: "Политика конфиденциальности", to: "/privacy" },
 ];
 
@@ -125,9 +126,17 @@ const Footer = () => {
         <div className="extension-line-h w-full mb-6" />
 
         <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6">
-          <p className="font-gost-upright text-[10px] text-[var(--drawing-line-thin)] opacity-70">
-            &copy; {new Date().getFullYear()} Диплом-Инж.рф&nbsp;&middot; Все права защищены.
-          </p>
+          <div className="flex flex-col gap-1">
+            <p className="font-gost-upright text-[10px] text-[var(--drawing-line-thin)] opacity-70">
+              &copy; {new Date().getFullYear()} Диплом-Инж.рф&nbsp;&middot; Все права защищены.
+            </p>
+            <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] opacity-70">
+              ИП [ФИО полностью]&nbsp;&middot; ИНН&nbsp;[ИНН]
+            </p>
+            <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] opacity-60 max-w-md leading-relaxed">
+              Услуги менторского сопровождения являются консультационными и&nbsp;не&nbsp;являются образовательной деятельностью по&nbsp;273-ФЗ.
+            </p>
+          </div>
 
           <div className="overflow-x-auto">
             <table className="stamp-table">

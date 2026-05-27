@@ -12,20 +12,20 @@ const Reviews = () => {
           <div className="zone-marker top-2 right-3">Зона IX</div>
 
           <div className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-3">
-            Отзывы и истории учеников&nbsp;&middot; Диплом-Инж.рф
+            Отзывы и истории подопечных&nbsp;&middot; Диплом-Инж.рф
           </div>
           <div className="extension-line-h w-full mb-6" />
 
           <h1 className="font-gost-upright text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight leading-[0.95] mb-6 text-[var(--drawing-line)]">
             <span className="text-[var(--drawing-accent)]">Истории</span>
             <br />
-            учеников
+            подопечных
           </h1>
 
           <div className="extension-line-h w-3/4 my-5" />
 
           <p className="font-gost text-sm md:text-base max-w-2xl text-[var(--drawing-line-thin)] leading-relaxed">
-            Здесь будут отзывы наших учеников и&nbsp;их истории защит&nbsp;&mdash; от&nbsp;первой консультации до&nbsp;диплома в&nbsp;руках.
+            Здесь будут отзывы наших подопечных и&nbsp;их истории защит&nbsp;&mdash; от&nbsp;первой консультации до&nbsp;диплома в&nbsp;руках.
           </p>
         </div>
       </section>
@@ -42,7 +42,7 @@ const Reviews = () => {
           </h2>
           <div className="extension-line-h w-32 mx-auto my-5" />
           <p className="font-gost text-sm text-[var(--drawing-line-thin)] leading-relaxed max-w-md mx-auto mb-6">
-            Мы только начинаем собирать коллекцию отзывов. Каждая успешная защита наших учеников&nbsp;&mdash; это история, которой мы хотим поделиться.
+            Мы только начинаем собирать коллекцию отзывов. Каждая успешная защита наших подопечных&nbsp;&mdash; это история, которой мы хотим поделиться.
           </p>
           <p className="font-gost text-xs text-[var(--drawing-line-thin)] leading-relaxed max-w-md mx-auto mb-8">
             Если вы&nbsp;уже работали с&nbsp;нами и&nbsp;хотите поделиться опытом&nbsp;&mdash; будем благодарны.

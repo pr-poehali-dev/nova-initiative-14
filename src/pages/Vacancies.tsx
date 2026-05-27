@@ -156,9 +156,9 @@ const Vacancies = () => {
 
                   <div>
                     <label className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-1 block">
-                      Опыт в преподавании / наставничестве <span className="text-[var(--drawing-accent)]">*</span>
+                      Опыт в наставничестве / менторстве <span className="text-[var(--drawing-accent)]">*</span>
                     </label>
-                    <textarea className="drawing-input resize-none" rows={2} placeholder="Сколько лет, кому преподавали, есть ли опыт работы со студентами" value={form.experience} onChange={(e) => update("experience", e.target.value)} />
+                    <textarea className="drawing-input resize-none" rows={2} placeholder="Сколько лет наставничества, есть ли опыт работы со студентами" value={form.experience} onChange={(e) => update("experience", e.target.value)} />
                     {errors.experience && <p className="font-gost text-[10px] text-[var(--drawing-accent)] mt-1">{errors.experience}</p>}
                   </div>
 

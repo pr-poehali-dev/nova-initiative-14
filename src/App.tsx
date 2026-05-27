@@ -7,6 +7,7 @@ import { HelmetProvider } from "@/lib/helmet-shim";
 import { useEffect } from "react";
 import Navigation from "./components/Navigation";
 import Footer from "./components/Footer";
+import CookieConsent from "./components/CookieConsent";
 import GlobalSeo from "./components/GlobalSeo";
 import Index from "./pages/Index";
 import Program from "./pages/Program";
@@ -16,6 +17,7 @@ import Experts from "./pages/Experts";
 import Faq from "./pages/Faq";
 import Contacts from "./pages/Contacts";
 import Privacy from "./pages/Privacy";
+import Offer from "./pages/Offer";
 import About from "./pages/About";
 import Reviews from "./pages/Reviews";
 import Vacancies from "./pages/Vacancies";
@@ -113,6 +115,7 @@ const App = () => (
                 <Route path="/faq" element={<Faq />} />
                 <Route path="/contacts" element={<Contacts />} />
                 <Route path="/privacy" element={<Privacy />} />
+                <Route path="/offer" element={<Offer />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/reviews" element={<Reviews />} />
                 <Route path="/vacancies" element={<Vacancies />} />
@@ -131,6 +134,7 @@ const App = () => (
               </Routes>
             </div>
             <Footer />
+            <CookieConsent />
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>

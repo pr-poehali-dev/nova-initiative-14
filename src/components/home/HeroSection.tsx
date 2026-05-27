@@ -144,7 +144,7 @@ const HeroSection = () => {
               Екатеринбург&nbsp;&middot; Машиностроение и&nbsp;механика
             </p>
             <p className="font-gost-upright text-2xl md:text-3xl font-bold tracking-tight leading-tight text-[var(--drawing-line)] pl-3 border-l-2 border-[var(--drawing-accent)]">
-              Инженеры обучают инженеров
+              Инженеры наставляют инженеров
             </p>
           </div>
         </div>

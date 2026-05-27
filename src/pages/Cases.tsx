@@ -135,7 +135,7 @@ const Cases = () => {
           <h1 className="font-gost-upright text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight leading-[0.95] mb-6 text-[var(--drawing-line)]">
             Кейсы наших
             <br />
-            <span className="text-[var(--drawing-accent)]">студентов</span>
+            <span className="text-[var(--drawing-accent)]">подопечных</span>
           </h1>
 
           <div className="extension-line-h w-3/4 my-5" />

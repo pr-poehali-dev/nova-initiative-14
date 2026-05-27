@@ -24,9 +24,9 @@ const renderCellValue = (val: string) => {
 
 const getStaticComparisonRows = (count: number) => [
   { label: "Формат", keys: ["format_short"] },
-  { label: "Кол-во занятий", keys: ["sessions_count"] },
+  { label: "Кол-во консультаций", keys: ["sessions_count"] },
   { label: "Чат 10:00–20:00", values: Array(count).fill("check") },
-  { label: "Проверка глав между занятиями", values: Array(count).fill("check") },
+  { label: "Проверка глав между консультациями", values: Array(count).fill("check") },
   { label: "Работа с замечаниями научрука", values: Array(count).fill("check") },
   { label: "Проверка логики и структуры", values: Array(count).fill("check") },
   { label: "Работа с КД / ЕСКД", values: Array(count).fill("check") },
