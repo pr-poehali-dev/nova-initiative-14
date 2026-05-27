@@ -26,6 +26,8 @@ interface Props {
   toScreenX: (x: number) => number;
   toScreenY: (y: number) => number;
   handleElementClick: (el: ModelElement, e: React.MouseEvent) => void;
+  handleElementContextMenu?: (el: ModelElement, e: React.MouseEvent) => void;
+  handleElementPointerDown?: (el: ModelElement, e: React.PointerEvent) => void;
   fontScale?: number;
   labelOffsets?: LabelOffsetsApi;
   svgRef?: React.RefObject<SVGSVGElement>;
@@ -43,6 +45,8 @@ const CanvasElements = ({
   toScreenX,
   toScreenY,
   handleElementClick,
+  handleElementContextMenu,
+  handleElementPointerDown,
   fontScale = 1,
   labelOffsets,
   svgRef,
@@ -57,6 +61,8 @@ const CanvasElements = ({
         toScreenX={toScreenX}
         toScreenY={toScreenY}
         handleElementClick={handleElementClick}
+        handleElementContextMenu={handleElementContextMenu}
+        handleElementPointerDown={handleElementPointerDown}
       />
 
       <ElementLabels

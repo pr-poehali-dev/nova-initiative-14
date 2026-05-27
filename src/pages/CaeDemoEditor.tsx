@@ -7,6 +7,9 @@ import { Helmet } from "@/lib/helmet-shim";
 import EditorTopBar from "@/components/cae/editor/EditorTopBar";
 import EditorCanvasArea from "@/components/cae/editor/EditorCanvasArea";
 import EditorSidePanels from "@/components/cae/editor/EditorSidePanels";
+import ContextPropertiesPopup, {
+  type ContextTarget,
+} from "@/components/cae/editor/ContextPropertiesPopup";
 import { MaterialPicker, SectionPicker } from "@/components/cae/CatalogPanel";
 import KeyboardHintsDialog from "@/components/cae/editor/KeyboardHintsDialog";
 import EditorTutorial from "@/components/cae/editor/EditorTutorial";
@@ -26,6 +29,7 @@ import { useState } from "react";
 
 const CaeDemoEditor = () => {
   const [limitModalOpen, setLimitModalOpen] = useState(false);
+  const [contextTarget, setContextTarget] = useState<ContextTarget | null>(null);
   const {
     model,
     updateModel,
@@ -225,7 +229,7 @@ const CaeDemoEditor = () => {
           </div>
         )}
 
-        <div className="max-w-[1400px] mx-auto px-3 py-3 grid gap-3 lg:grid-cols-[260px_1fr_320px]">
+        <div className="max-w-[1400px] mx-auto px-3 py-3 grid gap-3 lg:grid-cols-[240px_1fr_300px]">
           <div className="hidden lg:block">
             <EditorLeftPanel
               mode={mode}
@@ -275,6 +279,7 @@ const CaeDemoEditor = () => {
             setDiagramScale={setDiagramScale}
             onFocusNode={(id) => setSelectedNodeIds([id])}
             onFocusElement={(id) => setSelectedElementIds([id])}
+            onRequestContext={(req) => setContextTarget(req)}
           />
 
           <EditorSidePanels
@@ -358,6 +363,41 @@ const CaeDemoEditor = () => {
         usedSolves={solveCount}
         solveLimit={solveLimit}
       />
+
+      {/* Контекстный popup со свойствами узла/элемента.
+          Открывается правым кликом (десктоп) или long-press 500мс (мобиль). */}
+      {contextTarget && (
+        <ContextPropertiesPopup
+          target={contextTarget}
+          onClose={() => setContextTarget(null)}
+          model={model}
+          selectedNode={selectedNode}
+          selectedElementId={selectedElementId}
+          nodeBC={nodeBC}
+          nodeLoad={nodeLoad}
+          bcCustomOpen={bcCustomOpen}
+          setBcCustomOpen={setBcCustomOpen}
+          addBC={addBC}
+          removeBC={removeBC}
+          toggleCustomDof={toggleCustomDof}
+          addNodalLoad={addNodalLoad}
+          setNodalMoment={setNodalMoment}
+          removeLoadOnNode={removeLoadOnNode}
+          setMatPickerOpen={setMatPickerOpen}
+          setSecPickerOpen={setSecPickerOpen}
+          setDistributedLoad={(qy) => {
+            if (selectedElementId) setDistributedLoad(selectedElementId, qy);
+          }}
+          addInSpanPoint={(pos, py) => {
+            if (selectedElementId) addInSpanPoint(selectedElementId, pos, 0, py);
+          }}
+          removeLoadById={removeLoadById}
+          setElementHinge={(end, on) => {
+            if (selectedElementId) setElementHinge(selectedElementId, end, on);
+          }}
+          deleteSelected={deleteSelected}
+        />
+      )}
     </>
   );
 };

@@ -24,6 +24,7 @@ interface Props {
   toScreenY: (y: number) => number;
   handleNodeClick: (n: ModelNode, e: React.MouseEvent) => void;
   handleNodePointerDown?: (n: ModelNode, e: React.PointerEvent) => void;
+  handleNodeContextMenu?: (n: ModelNode, e: React.MouseEvent) => void;
   result: SolverResponse | null;
   showReactions: boolean;
   arrowScale: number;
@@ -42,6 +43,7 @@ const CanvasReactionsAndNodes = ({
   toScreenY,
   handleNodeClick,
   handleNodePointerDown,
+  handleNodeContextMenu,
   result,
   showReactions,
   arrowScale,
@@ -129,6 +131,7 @@ const CanvasReactionsAndNodes = ({
               style={{ cursor: isSel ? "move" : "pointer" }}
               onClick={(e) => handleNodeClick(n, e)}
               onPointerDown={handleNodePointerDown ? (e) => handleNodePointerDown(n, e) : undefined}
+              onContextMenu={handleNodeContextMenu ? (e) => handleNodeContextMenu(n, e) : undefined}
             >
               <circle
                 cx={cx}

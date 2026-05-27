@@ -222,11 +222,12 @@ export default function CanvasFloatingControls({
       {open === "hint" && (
         <Popover onClose={() => setOpen(null)} title="Подсказка">
           <p className="text-xs leading-relaxed text-[var(--drawing-line-thin)]">
-            Выберите узел или элемент, чтобы настроить опору, нагрузку или удалить.
+            Чтобы настроить узел или балку — откройте свойства:
           </p>
           <ul className="mt-2 space-y-1 text-[11px] text-[var(--drawing-line-thin)]">
-            <li className="flex gap-2"><Icon name="MousePointer" size={11} className="mt-0.5 shrink-0" /> Клик по&nbsp;узлу&nbsp;&mdash; редактировать опоры и&nbsp;нагрузки</li>
-            <li className="flex gap-2"><Icon name="MousePointer" size={11} className="mt-0.5 shrink-0" /> Клик по&nbsp;элементу&nbsp;&mdash; сменить материал и&nbsp;сечение</li>
+            <li className="flex gap-2"><Icon name="MousePointer2" size={11} className="mt-0.5 shrink-0" /> <strong>Правый клик</strong> по&nbsp;узлу/балке&nbsp;&mdash; свойства (десктоп)</li>
+            <li className="flex gap-2"><Icon name="Hand" size={11} className="mt-0.5 shrink-0" /> <strong>Удержать палец</strong> на&nbsp;узле/балке ~0.5с&nbsp;&mdash; свойства (мобиль)</li>
+            <li className="flex gap-2"><Icon name="MousePointer" size={11} className="mt-0.5 shrink-0" /> Обычный клик&nbsp;&mdash; выделить</li>
             <li className="flex gap-2"><Icon name="MousePointer" size={11} className="mt-0.5 shrink-0" /> Двойной клик в&nbsp;пустом месте&nbsp;&mdash; новый узел</li>
             <li className="flex gap-2"><Icon name="Keyboard" size={11} className="mt-0.5 shrink-0" /> Delete&nbsp;&mdash; удалить выбранное, Ctrl+Z&nbsp;&mdash; отменить</li>
           </ul>

@@ -18,6 +18,9 @@ import type {
   SolverResponse,
 } from "@/lib/cae-model";
 import type { LabelOffsetsApi } from "@/pages/cae-editor/useLabelOffsets";
+import type { ContextRequest } from "./canvas/useCanvasInteractions";
+
+export type { ContextRequest } from "./canvas/useCanvasInteractions";
 import { BG } from "./canvas/canvas-constants";
 import CanvasGrid from "./canvas/CanvasGrid";
 import CanvasElements from "./canvas/CanvasElements";
@@ -63,6 +66,11 @@ interface Props {
   labelOffsets?: LabelOffsetsApi;
   /** Максимальное число элементов (демо-режим). При достижении лимита новые не создаются. */
   elementLimit?: number;
+  /**
+   * Колбэк открытия контекстного popup'а свойств узла/элемента.
+   * Срабатывает на правый клик (десктоп) или long-press 500мс (мобиль).
+   */
+  onRequestContext?: (req: ContextRequest) => void;
 }
 
 const FrameCanvas = ({
@@ -84,6 +92,7 @@ const FrameCanvas = ({
   fontScale = 1,
   labelOffsets,
   elementLimit,
+  onRequestContext,
 }: Props) => {
   // ── Viewport: размер, view, координатные функции ──
   const { svgRef, size, view, setView, toScreenX, toScreenY, toWorld } =
@@ -116,22 +125,30 @@ const FrameCanvas = ({
   });
 
   // ── Взаимодействие с объектами: выбор, draw-element, drag-start ──
-  const { pendingFirstNodeId, handleNodeClick, handleNodePointerDown, handleElementClick } =
-    useCanvasInteractions({
-      svgRef,
-      model,
-      setModel,
-      mode,
-      selectedNodeIds,
-      selectedElementIds,
-      onSelectNodes,
-      onSelectElements,
-      onMoveNode,
-      pxPerM: view.pxPerM,
-      suppressNextClick,
-      setDraggingNode,
-      elementLimit,
-    });
+  const {
+    pendingFirstNodeId,
+    handleNodeClick,
+    handleNodePointerDown,
+    handleElementClick,
+    handleNodeContextMenu,
+    handleElementContextMenu,
+    handleElementPointerDown,
+  } = useCanvasInteractions({
+    svgRef,
+    model,
+    setModel,
+    mode,
+    selectedNodeIds,
+    selectedElementIds,
+    onSelectNodes,
+    onSelectElements,
+    onMoveNode,
+    pxPerM: view.pxPerM,
+    suppressNextClick,
+    setDraggingNode,
+    elementLimit,
+    onRequestContext,
+  });
 
   return (
     <svg
@@ -182,6 +199,8 @@ const FrameCanvas = ({
         toScreenX={toScreenX}
         toScreenY={toScreenY}
         handleElementClick={handleElementClick}
+        handleElementContextMenu={handleElementContextMenu}
+        handleElementPointerDown={handleElementPointerDown}
         fontScale={fontScale}
         labelOffsets={labelOffsets}
         svgRef={svgRef}
@@ -210,6 +229,7 @@ const FrameCanvas = ({
         toScreenY={toScreenY}
         handleNodeClick={handleNodeClick}
         handleNodePointerDown={handleNodePointerDown}
+        handleNodeContextMenu={handleNodeContextMenu}
         arrowScale={arrowScale}
         fontScale={fontScale}
         labelOffsets={labelOffsets}

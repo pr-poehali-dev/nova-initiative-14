@@ -14,12 +14,16 @@ export default function ElementLines({
   toScreenX,
   toScreenY,
   handleElementClick,
+  handleElementContextMenu,
+  handleElementPointerDown,
 }: {
   model: FrameModel;
   selectedElementIds: string[];
   toScreenX: (x: number) => number;
   toScreenY: (y: number) => number;
   handleElementClick: (el: ModelElement, e: React.MouseEvent) => void;
+  handleElementContextMenu?: (el: ModelElement, e: React.MouseEvent) => void;
+  handleElementPointerDown?: (el: ModelElement, e: React.PointerEvent) => void;
 }) {
   const selSet = new Set(selectedElementIds);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -62,6 +66,8 @@ export default function ElementLines({
               strokeLinecap="round"
               style={{ cursor: "pointer" }}
               onClick={(e) => handleElementClick(el, e)}
+              onContextMenu={handleElementContextMenu ? (e) => handleElementContextMenu(el, e) : undefined}
+              onPointerDown={handleElementPointerDown ? (e) => handleElementPointerDown(el, e) : undefined}
               onPointerEnter={() => setHoveredId(el.id)}
               onPointerLeave={() => setHoveredId((prev) => (prev === el.id ? null : prev))}
             />

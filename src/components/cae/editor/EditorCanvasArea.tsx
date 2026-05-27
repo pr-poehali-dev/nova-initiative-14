@@ -7,7 +7,11 @@
  *  - баннер ошибки решателя/загрузки
  */
 import Icon from "@/components/ui/icon";
-import FrameCanvas, { type EditorMode, type DiagramKind } from "@/components/cae/FrameCanvas";
+import FrameCanvas, {
+  type EditorMode,
+  type DiagramKind,
+  type ContextRequest,
+} from "@/components/cae/FrameCanvas";
 import type { FrameModel, SolverResponse } from "@/lib/cae-model";
 import type { LabelOffsetsApi } from "@/pages/cae-editor/useLabelOffsets";
 import type { ValidationIssue } from "@/lib/cae-validate";
@@ -48,6 +52,9 @@ interface Props {
   setDiagramScale?: (v: number) => void;
   onFocusNode?: (id: string) => void;
   onFocusElement?: (id: string) => void;
+
+  /** Открытие контекстного popup'а свойств (правый клик / long-press). */
+  onRequestContext?: (req: ContextRequest) => void;
 }
 
 const EditorCanvasArea = ({
@@ -83,6 +90,7 @@ const EditorCanvasArea = ({
   setDiagramScale,
   onFocusNode,
   onFocusElement,
+  onRequestContext,
 }: Props) => (
   <div
     className="border-2 border-[var(--drawing-line)] relative h-[75vh] min-h-[420px] lg:h-[70vh] lg:min-h-[480px]"
@@ -153,6 +161,7 @@ const EditorCanvasArea = ({
       fontScale={fontScale}
       labelOffsets={labelOffsets}
       elementLimit={elementLimit}
+      onRequestContext={onRequestContext}
     />
 
     {/* Плавающие иконки правого края: валидация, подсказка, глаз, эпюры.

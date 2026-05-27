@@ -1,8 +1,12 @@
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { Helmet } from "@/lib/helmet-shim";
 import EditorTopBar from "@/components/cae/editor/EditorTopBar";
 import EditorCanvasArea from "@/components/cae/editor/EditorCanvasArea";
 import EditorSidePanels from "@/components/cae/editor/EditorSidePanels";
+import ContextPropertiesPopup, {
+  type ContextTarget,
+} from "@/components/cae/editor/ContextPropertiesPopup";
 import { MaterialPicker, SectionPicker } from "@/components/cae/CatalogPanel";
 import KeyboardHintsDialog from "@/components/cae/editor/KeyboardHintsDialog";
 import EditorTutorial from "@/components/cae/editor/EditorTutorial";
@@ -87,6 +91,10 @@ const CaeEditor = () => {
     setLoadError,
   });
 
+  // Контекстный popup свойств (правый клик / long-press).
+  // null = закрыт. Содержит координаты клика и тип/id объекта.
+  const [contextTarget, setContextTarget] = useState<ContextTarget | null>(null);
+
   // Глобальные настройки отображения (размер стрелок и шрифта подписей).
   // Сохраняются в localStorage между сессиями.
   const viewSettings = useCaeViewSettings();
@@ -167,7 +175,7 @@ const CaeEditor = () => {
           onSolve={onSolve}
         />
 
-        <div className="max-w-[1400px] mx-auto px-3 py-3 grid gap-3 lg:grid-cols-[260px_1fr_320px]">
+        <div className="max-w-[1400px] mx-auto px-3 py-3 grid gap-3 lg:grid-cols-[240px_1fr_300px]">
           {/* Левая панель инструментов — на десктопе сбоку, на мобилке в виде вкладки */}
           <div className="hidden lg:block">
             <EditorLeftPanel
@@ -217,6 +225,7 @@ const CaeEditor = () => {
             setDiagramScale={setDiagramScale}
             onFocusNode={(id) => setSelectedNodeIds([id])}
             onFocusElement={(id) => setSelectedElementIds([id])}
+            onRequestContext={(req) => setContextTarget(req)}
           />
 
           <EditorSidePanels
@@ -299,6 +308,41 @@ const CaeEditor = () => {
         settings={model.analysis_settings ?? DEFAULT_ANALYSIS_SETTINGS}
         onChange={(s) => updateModel({ ...model, analysis_settings: s })}
       />
+
+      {/* Контекстный popup со свойствами узла/элемента.
+          Открывается правым кликом (десктоп) или long-press 500мс (мобиль). */}
+      {contextTarget && (
+        <ContextPropertiesPopup
+          target={contextTarget}
+          onClose={() => setContextTarget(null)}
+          model={model}
+          selectedNode={selectedNode}
+          selectedElementId={selectedElementId}
+          nodeBC={nodeBC}
+          nodeLoad={nodeLoad}
+          bcCustomOpen={bcCustomOpen}
+          setBcCustomOpen={setBcCustomOpen}
+          addBC={addBC}
+          removeBC={removeBC}
+          toggleCustomDof={toggleCustomDof}
+          addNodalLoad={addNodalLoad}
+          setNodalMoment={setNodalMoment}
+          removeLoadOnNode={removeLoadOnNode}
+          setMatPickerOpen={setMatPickerOpen}
+          setSecPickerOpen={setSecPickerOpen}
+          setDistributedLoad={(qy) => {
+            if (selectedElementId) setDistributedLoad(selectedElementId, qy);
+          }}
+          addInSpanPoint={(pos, py) => {
+            if (selectedElementId) addInSpanPoint(selectedElementId, pos, 0, py);
+          }}
+          removeLoadById={removeLoadById}
+          setElementHinge={(end, on) => {
+            if (selectedElementId) setElementHinge(selectedElementId, end, on);
+          }}
+          deleteSelected={deleteSelected}
+        />
+      )}
     </>
   );
 };

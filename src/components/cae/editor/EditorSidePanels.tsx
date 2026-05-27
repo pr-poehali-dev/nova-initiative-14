@@ -8,10 +8,8 @@
  */
 import Icon from "@/components/ui/icon";
 import EditorLeftPanel from "./EditorLeftPanel";
-import EditorRightPanel from "./EditorRightPanel";
 import EditorResultsPanel from "./EditorResultsPanel";
 import EditorChecksPanel from "./EditorChecksPanel";
-import EditorIssuesPanel from "./EditorIssuesPanel";
 import type { EditorMode, DiagramKind } from "@/components/cae/FrameCanvas";
 import type { FrameModel, SolverResponse, BoundaryCondition } from "@/lib/cae-model";
 
@@ -43,8 +41,8 @@ interface Props {
   setSecPickerOpen: (v: boolean) => void;
   setSettingsOpen: (v: boolean) => void;
   // Мобильная вкладка
-  mobileTab: "tools" | "props" | "checks" | "results";
-  setMobileTab: (t: "tools" | "props" | "checks" | "results") => void;
+  mobileTab: "tools" | "checks" | "results";
+  setMobileTab: (t: "tools" | "checks" | "results") => void;
   // Действия над моделью
   addBC: (type: BoundaryCondition["type"]) => void;
   removeBC: () => void;
@@ -118,29 +116,6 @@ const EditorSidePanels = ({
     setSelectedNodeIds([]);
   };
 
-  const rightPanelProps = {
-    model,
-    selectedNode,
-    selectedElementId,
-    nodeBC,
-    nodeLoad,
-    bcCustomOpen,
-    setBcCustomOpen,
-    addBC,
-    removeBC,
-    toggleCustomDof,
-    addNodalLoad,
-    setNodalMoment,
-    removeLoadOnNode,
-    setMatPickerOpen,
-    setSecPickerOpen,
-    setDistributedLoad,
-    addInSpanPoint,
-    removeLoadById,
-    setElementHinge,
-    deleteSelected,
-  };
-
   const resultsPanelProps = {
     result,
     model,
@@ -153,19 +128,14 @@ const EditorSidePanels = ({
   return (
     <>
       {/* Десктоп: правая колонка.
-          Список проблем модели и переключатели эпюр перенесены на канвас —
-          в плавающие иконки CanvasFloatingControls, чтобы не отвлекать
-          от схемы и не загромождать боковую колонку.
+          Свойства узлов/балок переехали в контекстный popup
+          (правый клик по объекту), список проблем модели и переключатели
+          эпюр — в плавающие иконки CanvasFloatingControls.
 
           Здесь остаются только:
-           - свойства выбранного узла/элемента (EditorRightPanel)
            - проверки прочности по нормам (EditorChecksPanel)
            - таблицы результатов: реакции/прогибы/напряжения (EditorResultsPanel) */}
       <aside className="hidden lg:block space-y-3 text-[12px]">
-        <div data-tutorial="props">
-          <EditorRightPanel {...rightPanelProps} />
-        </div>
-
         <EditorChecksPanel
           model={model}
           result={result}
@@ -178,12 +148,13 @@ const EditorSidePanels = ({
         </div>
       </aside>
 
-      {/* Мобильная раскладка — вкладки с инструментами/свойствами/проверками/результатами */}
+      {/* Мобильная раскладка — 3 вкладки: Чертить / Проверки / Эпюры.
+          Свойства узла/балки открываются long-press'ом по объекту
+          (контекстный popup), отдельной вкладки больше нет. */}
       <div className="lg:hidden col-span-full">
-        <div className="grid grid-cols-4 gap-0 border-2 border-[var(--drawing-line)] border-b-0 bg-[var(--drawing-bg)] sticky top-16 z-20">
+        <div className="grid grid-cols-3 gap-0 border-2 border-[var(--drawing-line)] border-b-0 bg-[var(--drawing-bg)] sticky top-16 z-20">
           {([
             { key: "tools", label: "Чертить", icon: "Pencil" },
-            { key: "props", label: "Свойства", icon: "Sliders" },
             { key: "checks", label: "Проверки", icon: "ShieldCheck" },
             { key: "results", label: "Эпюры", icon: "BarChart3" },
           ] as const).map((t) => {
@@ -222,16 +193,6 @@ const EditorSidePanels = ({
               setGridStep={setGridStep}
               onStartTutorial={onStartTutorial}
             />
-          )}
-          {mobileTab === "props" && (
-            <>
-              <EditorIssuesPanel
-                issues={issues}
-                onFocusNode={focusNode}
-                onFocusElement={focusElement}
-              />
-              <EditorRightPanel {...rightPanelProps} />
-            </>
           )}
           {mobileTab === "checks" && (
             <EditorChecksPanel

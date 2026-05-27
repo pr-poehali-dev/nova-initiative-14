@@ -52,9 +52,10 @@ export interface CaeEditorStateResult {
   setWelcomeOpen: (v: boolean) => void;
   settingsOpen: boolean;
   setSettingsOpen: (v: boolean) => void;
-  // Мобильная раскладка
-  mobileTab: "tools" | "props" | "checks" | "results";
-  setMobileTab: (t: "tools" | "props" | "checks" | "results") => void;
+  // Мобильная раскладка (вкладка "props" удалена — свойства открываются
+  // через контекстный popup по long-press, отдельной вкладки больше нет).
+  mobileTab: "tools" | "checks" | "results";
+  setMobileTab: (t: "tools" | "checks" | "results") => void;
   // Fit-to-content
   fitRequestId: number;
   setFitRequestId: (fn: (x: number) => number) => void;
@@ -89,7 +90,7 @@ export function useCaeEditorState({
   const [settingsOpen, setSettingsOpen] = useState(false);
   // Мобильная раскладка: одна активная вкладка снизу под канвасом.
   // Не показывается на десктопе (lg-брейкпоинт и выше) — там обычные две колонки.
-  const [mobileTab, setMobileTab] = useState<"tools" | "props" | "checks" | "results">("tools");
+  const [mobileTab, setMobileTab] = useState<"tools" | "checks" | "results">("tools");
   // Триггер ручной «подгонки масштаба» канвы — кнопка-лупа.
   const [fitRequestId, setFitRequestId] = useState(0);
 

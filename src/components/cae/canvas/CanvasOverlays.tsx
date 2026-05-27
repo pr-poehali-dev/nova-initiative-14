@@ -32,6 +32,7 @@ interface Props {
   toScreenY: (y: number) => number;
   handleNodeClick: (n: ModelNode, e: React.MouseEvent) => void;
   handleNodePointerDown?: (n: ModelNode, e: React.PointerEvent) => void;
+  handleNodeContextMenu?: (n: ModelNode, e: React.MouseEvent) => void;
   result: SolverResponse | null;
   showReactions?: boolean;
   arrowScale?: number;
@@ -51,6 +52,7 @@ const CanvasOverlays = ({
   toScreenY,
   handleNodeClick,
   handleNodePointerDown,
+  handleNodeContextMenu,
   result,
   showReactions = true,
   arrowScale = 1,
@@ -92,6 +94,7 @@ const CanvasOverlays = ({
         toScreenY={toScreenY}
         handleNodeClick={handleNodeClick}
         handleNodePointerDown={handleNodePointerDown}
+        handleNodeContextMenu={handleNodeContextMenu}
         result={result}
         showReactions={showReactions}
         arrowScale={arrowScale}

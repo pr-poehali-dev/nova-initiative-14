@@ -1,13 +1,23 @@
 /**
  * Хук: логика взаимодействия с объектами на канве.
  * Содержит: nodeAt (поиск узла под курсором), handleNodeClick (выбор / draw-element),
- * handleNodePointerDown (старт drag), handleElementClick (выбор элемента),
+ * handleNodePointerDown (старт drag + long-press для контекста),
+ * handleElementClick (выбор элемента), handleNodeContextMenu / handleElementContextMenu
+ * (правый клик / long-press → открывает popup со свойствами),
  * pendingFirstNodeId (для режима draw-element).
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FrameModel, ModelNode, ModelElement } from "@/lib/cae-model";
 import type { EditorMode } from "@/components/cae/FrameCanvas";
 import { NODE_R } from "./canvas-constants";
+
+/** Цель открытия контекстного popup'а свойств. */
+export interface ContextRequest {
+  kind: "node" | "element";
+  id: string;
+  clientX: number;
+  clientY: number;
+}
 
 interface Params {
   svgRef: React.RefObject<SVGSVGElement>;
@@ -23,6 +33,11 @@ interface Params {
   suppressNextClick: React.MutableRefObject<boolean>;
   setDraggingNode: React.Dispatch<React.SetStateAction<{ id: string; movedPx: number } | null>>;
   elementLimit?: number;
+  /**
+   * Запрос на открытие контекстного popup'а со свойствами.
+   * Срабатывает на правый клик (desktop) или long-press 500мс (mobile).
+   */
+  onRequestContext?: (req: ContextRequest) => void;
 }
 
 export interface CanvasInteractionsResult {
@@ -31,7 +46,15 @@ export interface CanvasInteractionsResult {
   handleNodeClick: (n: ModelNode, e: React.MouseEvent) => void;
   handleNodePointerDown: (n: ModelNode, e: React.PointerEvent) => void;
   handleElementClick: (el: ModelElement, e: React.MouseEvent) => void;
+  handleNodeContextMenu: (n: ModelNode, e: React.MouseEvent) => void;
+  handleElementContextMenu: (el: ModelElement, e: React.MouseEvent) => void;
+  handleElementPointerDown: (el: ModelElement, e: React.PointerEvent) => void;
 }
+
+/** Длительность long-press для открытия контекстного попапа на мобиле. */
+const LONG_PRESS_MS = 500;
+/** Допустимый сдвиг пальца, при котором long-press ещё считается «удержанием». */
+const LONG_PRESS_TOLERANCE_PX = 8;
 
 export function useCanvasInteractions({
   svgRef,
@@ -47,8 +70,69 @@ export function useCanvasInteractions({
   suppressNextClick,
   setDraggingNode,
   elementLimit,
+  onRequestContext,
 }: Params): CanvasInteractionsResult {
   const [pendingFirstNodeId, setPendingFirstNodeId] = useState<string | null>(null);
+
+  /**
+   * Long-press для мобилы: при нажатии пальцем на узел/элемент стартуем таймер,
+   * если за 500мс палец не двинулся и не отпущен — открываем контекстный popup.
+   * Хранится в ref'е чтобы можно было отменить из move/up хендлеров.
+   */
+  const longPressTimer = useRef<number | null>(null);
+  const longPressStart = useRef<{ x: number; y: number } | null>(null);
+
+  const cancelLongPress = () => {
+    if (longPressTimer.current !== null) {
+      window.clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    longPressStart.current = null;
+  };
+
+  const startLongPress = (
+    kind: "node" | "element",
+    id: string,
+    clientX: number,
+    clientY: number,
+  ) => {
+    cancelLongPress();
+    longPressStart.current = { x: clientX, y: clientY };
+    longPressTimer.current = window.setTimeout(() => {
+      // Сбрасываем drag и подавляем последующий click — пользователь
+      // удержал палец, чтобы открыть свойства, а не выделить/нарисовать.
+      setDraggingNode(null);
+      suppressNextClick.current = true;
+      onRequestContext?.({ kind, id, clientX, clientY });
+      longPressTimer.current = null;
+    }, LONG_PRESS_MS);
+  };
+
+  /**
+   * Глобально слушаем pointermove/pointerup чтобы отменять long-press
+   * если палец сдвинулся (значит юзер хочет pan'нуть или перетащить узел).
+   */
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      if (!longPressStart.current) return;
+      const dx = Math.abs(e.clientX - longPressStart.current.x);
+      const dy = Math.abs(e.clientY - longPressStart.current.y);
+      if (dx + dy > LONG_PRESS_TOLERANCE_PX) {
+        cancelLongPress();
+      }
+    };
+    const onUp = () => cancelLongPress();
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    };
+  }, []);
+
+
 
   // === Поиск узла под курсором (для draw-element / select) ===
   const nodeAt = (worldX: number, worldY: number): ModelNode | null => {
@@ -106,8 +190,16 @@ export function useCanvasInteractions({
     suppressNextClick.current = true;
   };
 
-  /** Старт drag узла: pointer-down на узле в режиме select без Shift */
+  /** Старт drag узла: pointer-down на узле в режиме select без Shift.
+   *  Также стартует таймер long-press для touch — через 500мс откроется
+   *  контекстный popup со свойствами узла. */
   const handleNodePointerDown = (n: ModelNode, e: React.PointerEvent) => {
+    // Long-press для тача — работает в ЛЮБОМ режиме, чтобы пользователь мог
+    // открыть свойства узла даже находясь в режиме рисования.
+    if (e.pointerType === "touch" && onRequestContext) {
+      startLongPress("node", n.id, e.clientX, e.clientY);
+    }
+
     if (mode !== "select" || e.shiftKey || e.button !== 0) return;
     if (!onMoveNode) return;
     e.stopPropagation();
@@ -122,6 +214,35 @@ export function useCanvasInteractions({
     } catch {
       /* ignore */
     }
+  };
+
+  /** Touch-pointerdown на элементе — стартует long-press, чтобы открыть
+   *  контекстный popup. Сам выбор элемента отрабатывает в onClick. */
+  const handleElementPointerDown = (el: ModelElement, e: React.PointerEvent) => {
+    if (e.pointerType === "touch" && onRequestContext) {
+      startLongPress("element", el.id, e.clientX, e.clientY);
+    }
+  };
+
+  /** Правый клик / context-menu по узлу. */
+  const handleNodeContextMenu = (n: ModelNode, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!onRequestContext) return;
+    // Выделяем узел, чтобы EditorRightPanel в popup'е получил selectedNode.
+    onSelectNodes([n.id]);
+    onSelectElements([]);
+    onRequestContext({ kind: "node", id: n.id, clientX: e.clientX, clientY: e.clientY });
+  };
+
+  /** Правый клик / context-menu по элементу. */
+  const handleElementContextMenu = (el: ModelElement, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!onRequestContext) return;
+    onSelectElements([el.id]);
+    onSelectNodes([]);
+    onRequestContext({ kind: "element", id: el.id, clientX: e.clientX, clientY: e.clientY });
   };
 
   const handleElementClick = (el: ModelElement, e: React.MouseEvent) => {
@@ -146,5 +267,8 @@ export function useCanvasInteractions({
     handleNodeClick,
     handleNodePointerDown,
     handleElementClick,
+    handleNodeContextMenu,
+    handleElementContextMenu,
+    handleElementPointerDown,
   };
 }
