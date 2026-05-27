@@ -90,13 +90,22 @@ const Account = () => {
                 <p className="font-gost text-[var(--drawing-line-thin)] text-xs uppercase tracking-wider mb-1">
                   CAE-калькулятор
                 </p>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="inline-flex items-center gap-1 bg-[var(--drawing-accent)] text-white px-2 py-0.5 font-gost text-[10px] uppercase tracking-wider">
+                    <Icon name="FlaskConical" size={10} />
+                    Альфа-тест
+                  </span>
+                  <span className="font-gost text-xs text-[var(--drawing-line)]">
+                    расчёты бесплатно
+                  </span>
+                </div>
                 <p>
                   <Link to="/cae/projects" className="text-[var(--drawing-accent)] hover:underline">
                     Мои проекты &rarr;
                   </Link>
                 </p>
                 <p className="text-[var(--drawing-line-thin)] text-xs mt-1">
-                  Каркас доступен. Редактор и&nbsp;решатель — скоро.
+                  Все функции открыты на&nbsp;время альфа-тестирования.
                 </p>
               </div>
             </div>

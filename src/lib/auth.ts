@@ -11,6 +11,31 @@ export interface SsoUser {
   is_active: boolean;
   roles: string[];
   created_at: string | null;
+  is_alpha_tester?: boolean;
+  cae_plan?: string;
+}
+
+/**
+ * Глобальный флаг альфа-теста CAE-сервиса.
+ * Пока true — любой зарегистрированный пользователь считается альфа-тестером:
+ * - все расчёты бесплатны
+ * - лимиты на проекты и элементы сняты
+ * - подписка отображается как «Альфа-тест»
+ */
+export const ALPHA_TEST_MODE = true;
+
+/**
+ * Возвращает план пользователя для отображения и логики гейтов.
+ * В режиме ALPHA_TEST_MODE всегда возвращает "alpha".
+ */
+export function getUserPlan(user: SsoUser | null): string {
+  if (!user) return "guest";
+  if (ALPHA_TEST_MODE) return "alpha";
+  return user.cae_plan || "free";
+}
+
+export function isAlphaTester(user: SsoUser | null): boolean {
+  return Boolean(user) && ALPHA_TEST_MODE;
 }
 
 export interface TokenPair {

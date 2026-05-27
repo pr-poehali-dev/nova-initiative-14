@@ -77,8 +77,12 @@ const CaeProjects = () => {
             <p className="font-gost text-[11px] uppercase tracking-[0.3em] text-[var(--drawing-line-thin)] mb-2">
               CAE · Личный кабинет проектов
             </p>
-            <h1 className="font-gost-upright text-2xl md:text-3xl font-black uppercase tracking-wide">
+            <h1 className="font-gost-upright text-2xl md:text-3xl font-black uppercase tracking-wide flex flex-wrap items-center gap-3">
               Мои проекты
+              <span className="inline-flex items-center gap-1 bg-[var(--drawing-accent)] text-white px-2 py-0.5 font-gost text-[10px] uppercase tracking-wider font-normal">
+                <Icon name="FlaskConical" size={10} />
+                Альфа-тест · бесплатно
+              </span>
             </h1>
             <p className="text-sm text-[var(--drawing-line-thin)] mt-2">
               2D-редактор с&nbsp;каталогом ГОСТ-профилей и&nbsp;конечно-элементным решателем. Создайте проект из&nbsp;шаблона или с&nbsp;нуля.
@@ -104,7 +108,25 @@ const CaeProjects = () => {
           </div>
         </div>
 
-        {/* Banner */}
+        {/* Баннер альфа-теста */}
+        <div className="border-2 border-[var(--drawing-accent)] bg-[var(--drawing-accent)]/5 p-4 mb-8 flex items-start gap-3">
+          <Icon name="FlaskConical" size={18} className="text-[var(--drawing-accent)] mt-0.5 shrink-0" />
+          <div className="text-sm flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="inline-flex items-center bg-[var(--drawing-accent)] text-white px-2 py-0.5 font-gost text-[10px] uppercase tracking-wider">
+                Альфа-тест
+              </span>
+              <p className="font-gost-upright font-bold">
+                Все расчёты бесплатно
+              </p>
+            </div>
+            <p className="text-[var(--drawing-line-thin)]">
+              Сервис в&nbsp;режиме альфа-тестирования. Лимиты на&nbsp;проекты, элементы и&nbsp;количество расчётов сняты&nbsp;&mdash; все функции открыты бесплатно. Помогите нам улучшить сервис&nbsp;&mdash; присылайте обратную связь в&nbsp;Telegram.
+            </p>
+          </div>
+        </div>
+
+        {/* Banner — каталоги */}
         <div className="border border-[var(--drawing-accent)] bg-[var(--drawing-bg)] p-4 mb-8 flex items-start gap-3">
           <Icon name="Sparkles" size={18} className="text-[var(--drawing-accent)] mt-0.5 shrink-0" />
           <div className="text-sm">

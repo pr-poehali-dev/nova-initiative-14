@@ -142,10 +142,8 @@ def handler(event: dict, context) -> dict:
                               {'valid': ok, 'message': msg or 'OK'})
 
     if action == 'demo':
-        # Демо-режим: без авторизации, без сохранения в БД, лимит 10 элементов
-        if len(payload.get('elements', [])) > 10:
-            return _json_response(403, {'error': 'demo_limit',
-                                        'message': 'Демо ограничено 10 элементами. Войдите для полного расчёта.'})
+        # Демо-режим: без авторизации, без сохранения в БД.
+        # На время альфа-тестирования лимит элементов снят — все расчёты бесплатны.
         ok, msg = _validate_payload(payload)
         if not ok:
             return _json_response(400, {'error': 'validation_failed', 'message': msg})

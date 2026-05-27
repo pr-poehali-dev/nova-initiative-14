@@ -21,8 +21,10 @@ from auth import json_response
 from utils import project_to_dict, slugify
 
 
-# Квота активных проектов на пользователя для базового тарифа.
-DEFAULT_PROJECT_QUOTA = 5
+# Квота активных проектов на пользователя.
+# На время альфа-тестирования квота поднята до 1000 — все пользователи считаются альфа-тестерами,
+# подписка не проверяется, расчёты бесплатны.
+DEFAULT_PROJECT_QUOTA = 1000
 
 
 def action_list_projects(conn, user: dict) -> dict:

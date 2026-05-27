@@ -2,9 +2,9 @@
  * Хук демо-редактора: полный аналог useCaeProject, но без бэкенда.
  * Модель и счётчик расчётов хранятся в localStorage.
  *
- * Лимиты демо-режима:
- *  - до 5 элементов
- *  - 1 бесплатный расчёт (сбрасывается при onReset или вручную)
+ * Режим альфа-тестирования (ALPHA_TEST_MODE):
+ *  - лимиты на элементы и расчёты сняты
+ *  - демо ведёт себя как полноценный редактор
  */
 import { useState, useCallback, useEffect } from "react";
 import { emptyModel, type FrameModel } from "@/lib/cae-model";
@@ -14,8 +14,9 @@ import { useCaeHistory } from "./useCaeHistory";
 const STORAGE_KEY = "cae_demo_model";
 const SOLVE_COUNT_KEY = "cae_demo_solves";
 
-export const DEMO_ELEMENT_LIMIT = 5;
-export const DEMO_SOLVE_LIMIT = 1;
+// На время альфа-теста лимиты сняты (большое число вместо реальной квоты)
+export const DEMO_ELEMENT_LIMIT = 9999;
+export const DEMO_SOLVE_LIMIT = 9999;
 
 function loadFromStorage(): FrameModel | null {
   try {
