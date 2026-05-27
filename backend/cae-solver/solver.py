@@ -393,13 +393,23 @@ class FrameSolver:
             ux_arr_local: list[float] = []
 
             for x in xs:
-                # Усилия в сечении x:
-                #   N(x) = -N_a (растяжение/сжатие)
-                #   M_z(x) = M_z_a − Qy_a·x (правило знаков)
+                # Усилия в сечении x. Конвенция знаков:
+                #   f_end = k_local·u_local − f_eq_local — узловые усилия элемента
+                #   в локальной СК (силы/моменты, которыми элемент действует на узлы).
+                #
+                # Для согласованности эпюр M и Q должно выполняться dM/dx = Q.
+                # Формула момента: M_z(x) = −f_end[2] + f_end[1]·x + (нагрузки),
+                # её производная по x: dM_z/dx = f_end[1] + (нагрузки)′ = Q_y(x).
+                # Поэтому Q_y_a берётся БЕЗ инверсии знака: Qya = +f_end[1].
+                # (Аналогично для 3D: Q_y = +f_end[1], Q_z = +f_end[2].)
+                # Раньше тут стоял минус — это приводило к рассогласованию Q и M
+                # на элементах с распределённой нагрузкой: эпюра Q «уезжала»
+                # на постоянную составляющую 2·R (двойную реакцию), а на свободных
+                # от нагрузки элементах ошибка проявлялась только как зеркало знака.
                 if self.dim == '3d':
                     Na = -f_end[0]
-                    Qya = -f_end[1]
-                    Qza = -f_end[2]
+                    Qya = f_end[1]
+                    Qza = f_end[2]
                     Tx = -f_end[3]
                     Mya_at_x = -f_end[4] + f_end[2] * x   # M_y(x) = M_y_a + Qz_a·x
                     Mza_at_x = -f_end[5] + f_end[1] * x   # M_z(x) = M_z_a + Qy_a·x
@@ -430,7 +440,7 @@ class FrameSolver:
                     Mz_arr.append(float(Mza_at_x))
                 else:
                     Na = -f_end[0]
-                    Qya = -f_end[1]
+                    Qya = f_end[1]
                     Mza_at_x = -f_end[2] + f_end[1] * x
                     for ld in self.loads:
                         if ld.element_id != el.id:
