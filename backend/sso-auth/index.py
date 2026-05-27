@@ -93,6 +93,30 @@ def handler(event: dict, context) -> dict:
         if action == 'reset-password' and method == 'POST':
             return action_reset_password(conn, body, ua, ip)
 
+        # === DEV: ручная проверка отправки писем ===
+        # Используется владельцем проекта для диагностики SMTP.
+        # Body: {"to": "..."}. Subject и тело — как у verify-email.
+        if action == 'dev-test-email' and method == 'POST':
+            from mailer import send_email
+            to_addr = (body.get('to') or '').strip()
+            subj = body.get('subject') or 'ТЕСТ алгоритма подтверждения'
+            text = (
+                'Это тестовое письмо от Диплом-Инж.рф.\n\n'
+                'Если вы его получили — SMTP работает корректно.\n'
+                'Заголовок: ТЕСТ алгоритма подтверждения.\n\n'
+                '— Диплом-Инж.рф\n'
+            )
+            html = (
+                '<!DOCTYPE html><html lang="ru"><body style="font-family:Georgia,serif;color:#1a1a2e;">'
+                '<h1 style="border-bottom:2px solid #1a1a2e;padding-bottom:8px;">ТЕСТ алгоритма подтверждения</h1>'
+                '<p>Это <strong>тестовое письмо</strong> от Диплом-Инж.рф.</p>'
+                '<p>Если вы его получили — SMTP работает корректно.</p>'
+                '<p style="color:#7a7a8e;font-size:12px;margin-top:24px;">— Диплом-Инж.рф</p>'
+                '</body></html>'
+            )
+            ok = send_email(to_addr, subj, html, text)
+            return json_response(200, {'ok': ok, 'to': to_addr})
+
         # === OAuth ===
         if action == 'oauth-providers' and method == 'GET':
             return action_oauth_providers(conn)

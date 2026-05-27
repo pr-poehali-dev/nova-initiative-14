@@ -127,9 +127,13 @@ const ContextPropertiesPopup = ({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // Блокируем скролл body, пока popup открыт. На мобиле особенно важно:
-  // иначе при свайпе по подложке/попапу страница сайта прокручивается под ним.
+  // Блокируем скролл body ТОЛЬКО на мобиле — там popup занимает весь экран
+  // и фон не должен проскальзывать. На десктопе popup компактный (300×520),
+  // блокировать скролл нельзя: исчезает scroll-bar и страница «прыгает» по ширине.
   useEffect(() => {
+    if (!window.matchMedia("(max-width: 767px)").matches) {
+      return; // десктоп — ничего не делаем
+    }
     const prevOverflow = document.body.style.overflow;
     const prevTouchAction = document.body.style.touchAction;
     document.body.style.overflow = "hidden";

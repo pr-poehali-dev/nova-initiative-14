@@ -89,6 +89,15 @@
       "expectedStatus": 400,
       "expectedBody": {"error": "weak_password"},
       "bodyMatcher": "partial"
+    },
+    {
+      "name": "DEV: тестовое письмо на 97sega97@gmail.com",
+      "method": "POST",
+      "path": "/?action=dev-test-email",
+      "body": {"to": "97sega97@gmail.com", "subject": "ТЕСТ алгоритма подтверждения"},
+      "expectedStatus": 200,
+      "expectedBody": {"to": "97sega97@gmail.com"},
+      "bodyMatcher": "partial"
     }
   ]
 }
