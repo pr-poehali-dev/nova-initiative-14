@@ -11,6 +11,7 @@ import EditorLeftPanel from "./EditorLeftPanel";
 import EditorRightPanel from "./EditorRightPanel";
 import EditorResultsPanel from "./EditorResultsPanel";
 import EditorChecksPanel from "./EditorChecksPanel";
+import EditorIssuesPanel from "./EditorIssuesPanel";
 import type { EditorMode, DiagramKind } from "@/components/cae/FrameCanvas";
 import type { FrameModel, SolverResponse, BoundaryCondition } from "@/lib/cae-model";
 

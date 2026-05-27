@@ -85,7 +85,7 @@ const EditorCanvasArea = ({
   onFocusElement,
 }: Props) => (
   <div
-    className="border-2 border-[var(--drawing-line)] relative h-[58vh] min-h-[360px] lg:h-[70vh] lg:min-h-[480px]"
+    className="border-2 border-[var(--drawing-line)] relative h-[75vh] min-h-[420px] lg:h-[70vh] lg:min-h-[480px]"
     data-tutorial="canvas"
   >
     {/* Плавающая панель инструментов — кнопки 44×44 на мобилке, компактные на десктопе */}
@@ -156,20 +156,19 @@ const EditorCanvasArea = ({
     />
 
     {/* Плавающие иконки правого края: валидация, подсказка, глаз, эпюры.
-        Это десктоп-улучшение — на мобильных вкладках остаётся свой UX. */}
+        Показываем и на мобиле — это самые частые действия, чтобы не
+        переключаться между вкладками. */}
     {issues && setShowDiagram && setDiagramScale && onFocusNode && onFocusElement && (
-      <div className="hidden md:contents">
-        <CanvasFloatingControls
-          issues={issues}
-          onFocusNode={onFocusNode}
-          onFocusElement={onFocusElement}
-          hasResult={!!result}
-          showDiagram={showDiagram}
-          setShowDiagram={setShowDiagram}
-          diagramScale={diagramScale}
-          setDiagramScale={setDiagramScale}
-        />
-      </div>
+      <CanvasFloatingControls
+        issues={issues}
+        onFocusNode={onFocusNode}
+        onFocusElement={onFocusElement}
+        hasResult={!!result}
+        showDiagram={showDiagram}
+        setShowDiagram={setShowDiagram}
+        diagramScale={diagramScale}
+        setDiagramScale={setDiagramScale}
+      />
     )}
 
     {displayError && (

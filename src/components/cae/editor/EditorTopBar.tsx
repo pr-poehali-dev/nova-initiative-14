@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import type { FrameModel, SolverResponse } from "@/lib/cae-model";
@@ -36,6 +36,20 @@ const EditorTopBar = ({
 }: Props) => {
   const [pdfBusy, setPdfBusy] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Закрываем выпадающее меню «Ещё» при клике мимо
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [menuOpen]);
 
   // Подготовка тех. блока для предзаполнения тикета в техподдержку.
   // Тикет создаётся через support-api, ответ придёт на email пользователя.
@@ -128,7 +142,12 @@ const EditorTopBar = ({
           className="mt-1 inline-flex items-center gap-1 font-gost text-[10px] uppercase tracking-[0.15em] text-[var(--drawing-line-thin)] hover:text-[var(--drawing-accent)] transition-colors"
         >
           <Icon name="LifeBuoy" size={11} />
-          {projectId ? `Сообщить о проблеме · ID #${projectId}` : "Сообщить о проблеме"}
+          <span className="hidden sm:inline">
+            {projectId ? `Сообщить о проблеме · ID #${projectId}` : "Сообщить о проблеме"}
+          </span>
+          <span className="sm:hidden">
+            {projectId ? `Поддержка · #${projectId}` : "Поддержка"}
+          </span>
         </button>
       </div>
       {/* Счётчики модели — узлы и элементы. На время альфа-теста лимит безграничный (∞). */}
@@ -154,7 +173,7 @@ const EditorTopBar = ({
           </p>
         </div>
       </div>
-      <div className="ml-auto flex flex-wrap gap-2">
+      <div className="ml-auto flex flex-wrap gap-2 items-center">
         <button
           onClick={onSave}
           disabled={saving || !dirty}
@@ -176,10 +195,12 @@ const EditorTopBar = ({
           <Icon name={blocked ? "CircleX" : "Play"} size={12} className="mr-1" />
           {solving ? "Считаем…" : blocked ? "Есть ошибки" : "Посчитать"}
         </button>
+
+        {/* Десктоп: PDF и JSON отдельными кнопками */}
         <button
           onClick={handlePdf}
           disabled={!result || pdfBusy}
-          className="btn-drawing text-[11px] disabled:opacity-40"
+          className="btn-drawing text-[11px] disabled:opacity-40 hidden md:inline-flex"
           title="Скачать PDF-отчёт с эпюрами и реакциями опор"
         >
           <Icon name="FileDown" size={12} className="mr-1" />
@@ -187,12 +208,43 @@ const EditorTopBar = ({
         </button>
         <button
           onClick={handleExportJson}
-          className="btn-drawing text-[11px]"
+          className="btn-drawing text-[11px] hidden md:inline-flex"
           title="Экспорт модели в JSON — для импорта в другой проект или резервной копии"
         >
           <Icon name="Braces" size={12} className="mr-1" />
           JSON
         </button>
+
+        {/* Мобила: PDF и JSON свёрнуты в выпадающее меню «Ещё» */}
+        <div ref={menuRef} className="md:hidden relative">
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            className="btn-drawing text-[11px] !min-w-[44px] !min-h-[36px]"
+            aria-label="Дополнительные действия"
+            aria-expanded={menuOpen}
+          >
+            <Icon name="MoreVertical" size={14} />
+          </button>
+          {menuOpen && (
+            <div className="absolute right-0 top-full mt-1 z-30 w-44 bg-[var(--drawing-bg)] border-2 border-[var(--drawing-line)] shadow-lg">
+              <button
+                onClick={() => { setMenuOpen(false); handlePdf(); }}
+                disabled={!result || pdfBusy}
+                className="w-full px-3 py-2.5 text-left text-[12px] font-gost flex items-center gap-2 hover:bg-[var(--drawing-paper)] disabled:opacity-40 disabled:cursor-not-allowed border-b border-[var(--drawing-line)]"
+              >
+                <Icon name="FileDown" size={14} />
+                {pdfBusy ? "Готовим PDF…" : "Скачать PDF-отчёт"}
+              </button>
+              <button
+                onClick={() => { setMenuOpen(false); handleExportJson(); }}
+                className="w-full px-3 py-2.5 text-left text-[12px] font-gost flex items-center gap-2 hover:bg-[var(--drawing-paper)]"
+              >
+                <Icon name="Braces" size={14} />
+                Экспорт JSON
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
 
