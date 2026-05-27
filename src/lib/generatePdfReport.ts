@@ -597,6 +597,9 @@ function drawDiagramOverScheme(
     len: number;
     a: { coords: [number, number, number] };
     dx: number; dy: number;
+    // Точка локального |max| — заполняется при отрисовке, используется
+    // для подписи каждого стержня его собственным экстремумом.
+    localPeak?: { val: number; sx: number; sy: number };
   }
   const list: ElDiag[] = [];
   let globalMax = -Infinity, globalMin = Infinity;
@@ -635,19 +638,33 @@ function drawDiagramOverScheme(
   }
   if (list.length === 0) return;
 
-  // Масштаб эпюры — ГЛОБАЛЬНЫЙ: самый большой элемент занимает не более offsetPdf мм.
-  // Это предотвращает перекрытие эпюр соседних стержней и выход за границы схемы.
-  // offsetPdf ограничен сверху: не больше 30% от меньшего из размеров схемы.
+  // Масштаб эпюры — ГЛОБАЛЬНЫЙ с защитой минимальной высоты ("floor").
+  // Самый большой элемент занимает offsetPdf мм. Каждый стержень рисуется
+  // пропорционально своему |max| / globalMaxAbs — поэтому 200 Н на фоне
+  // 50 кН будут визуально в 250 раз меньше (это правильное восприятие порядка).
+  // НО чтобы крошечные эпюры не исчезали в 0.04 мм и оставались читаемыми,
+  // вводим floor: каждый элемент гарантированно не меньше MIN_FRACTION
+  // от offsetPdf. Это компромисс между честным масштабом и UX.
   const schemeSize = Math.min(boxW - 36, boxH - 44); // эффективный размер в мм
   const rawOffset = schemeSize * 0.22; // 22% от размера схемы
   const offsetPdf = Math.min(rawOffset, 14); // не больше 14 мм
+  const MIN_FRACTION = 0.08; // минимум 8% — мелкие эпюры остаются видимыми
   const globalMaxAbs = Math.max(1e-12, ...list.flatMap((d) => d.vals.map((v) => Math.abs(v))));
 
   // Рисуем для каждого стержня
   for (const d of list) {
-    const k = offsetPdf / globalMaxAbs;
+    // Локальный |max| этого стержня
+    const elMaxAbs = Math.max(1e-12, ...d.vals.map((v) => Math.abs(v)));
+    // Целевая высота эпюры этого стержня в мм:
+    //   - честная доля от globalMaxAbs (elMaxAbs / globalMaxAbs)
+    //   - но не меньше MIN_FRACTION (чтобы мелкие не исчезли)
+    const targetHeightMm = offsetPdf * Math.max(elMaxAbs / globalMaxAbs, MIN_FRACTION);
+    // Коэффициент перевода значения эпюры в мм для этого стержня.
+    // Внутри элемента форма эпюры сохраняется (все точки умножаются на k).
+    const k = targetHeightMm / elMaxAbs;
     const sx_arr: number[] = [];
     const sy_arr: number[] = [];
+    let iLocalMax = 0;
     for (let i = 0; i < d.xs.length; i++) {
       const t = d.xs[i] / d.len;
       const wx = d.a.coords[0] + d.dx * t;
@@ -658,6 +675,7 @@ function drawDiagramOverScheme(
       const sy = toY(wy) - d.ny * dist; // - потому что мировая y вверх, экранная вниз
       sx_arr.push(sx);
       sy_arr.push(sy);
+      if (Math.abs(d.vals[i]) > Math.abs(d.vals[iLocalMax])) iLocalMax = i;
       if (d.vals[i] === globalMax && maxRef === null) {
         maxRef = { val: globalMax, sxRel: sx, syRel: sy, elId: d.el.id };
       }
@@ -665,6 +683,12 @@ function drawDiagramOverScheme(
         minRef = { val: globalMin, sxRel: sx, syRel: sy, elId: d.el.id };
       }
     }
+    // Запоминаем точку локального |max| для последующих подписей.
+    d.localPeak = {
+      val: d.vals[iLocalMax],
+      sx: sx_arr[iLocalMax],
+      sy: sy_arr[iLocalMax],
+    };
 
     // Полигон-заливка: вершины [aX,aY] → все точки эпюры → [bX,bY] → замыкание на aX,aY
     const polyX = [d.aX, ...sx_arr, d.bX];
@@ -688,52 +712,75 @@ function drawDiagramOverScheme(
     }
   }
 
-  // Подписи max/min — с детектом коллизий. Если плашки накладываются друг
-  // на друга — раздвигаем их по нормали стержня в обе стороны или по
-  // диагоналям, пока не найдём свободную позицию.
+  // Подписи: КАЖДЫЙ стержень помечается своим локальным экстремумом —
+  // это даёт пользователю числовое значение даже на визуально мелкой эпюре.
+  // Глобальные max и min выделяются жирным шрифтом и контрастной плашкой.
+  // Детект коллизий: если плашки накладываются — ищем альтернативную позицию.
   interface LblRect { x: number; y: number; w: number; h: number }
   const placedLbls: LblRect[] = [];
   const lblOverlaps = (a: LblRect, b: LblRect) =>
     !(a.x + a.w < b.x || b.x + b.w < a.x || a.y + a.h < b.y || b.y + b.h < a.y);
 
-  const drawValueLabel = (pt: { val: number; sxRel: number; syRel: number; elId: string }) => {
-    if (Math.abs(pt.val) < 1e-9) return;
+  // Форматирование значения в "человекочитаемых" единицах
+  // (Н/кН/МН для сил, Н·м/кН·м/МН·м для моментов, мм для прогиба).
+  const formatVal = (v: number): string => {
+    if (kind === "Mz") return formatMoment(v);
+    if (kind === "uy") return `${v.toFixed(2)} мм`;
+    return formatForce(v); // N и Qy
+  };
+
+  // Глобальный |max| (используется для решения «значимости» — какие подписи
+  // показывать жирно). Эпюры со значениями < 1% от глобального не подписываем
+  // вовсе — это шум численного решения.
+  const globalAbs = Math.max(globalMax, -globalMin, 1e-12);
+  const SIGNIFICANCE = 0.01; // 1% от глобального max — порог отображения подписи
+
+  const drawValueLabel = (
+    pt: { val: number; sxRel: number; syRel: number; elId: string },
+    isGlobalExtremum: boolean,
+  ) => {
+    if (Math.abs(pt.val) < globalAbs * SIGNIFICANCE) return;
     const d = list.find((x) => x.el.id === pt.elId);
     const sign = pt.val >= 0 ? 1 : -1;
-    // Маркер
+    // Маркер: для глобальных экстремумов крупнее
     doc.setFillColor(...color);
-    doc.circle(pt.sxRel, pt.syRel, 0.9, "F");
+    doc.circle(pt.sxRel, pt.syRel, isGlobalExtremum ? 1.2 : 0.7, "F");
     // Подпись
-    const txt = `${fmtNum(pt.val)} ${unit}`;
-    doc.setFont(fontState.name, "bold");
-    doc.setFontSize(7);
+    const txt = formatVal(pt.val);
+    if (isGlobalExtremum) {
+      doc.setFont(fontState.name, "bold");
+      doc.setFontSize(7.5);
+    } else {
+      doc.setFont(fontState.name, "normal");
+      doc.setFontSize(6);
+    }
     const tw = doc.getTextWidth(txt) + 2;
-    const th = 2.8;
+    const th = isGlobalExtremum ? 3 : 2.4;
 
-    // Кандидаты позиций для плашки: от ближайшей к точке до сдвинутых на 8/12/16 мм
+    // Кандидаты позиций для плашки: от ближайшей к точке до сдвинутых
     const candidates: Array<{ x: number; y: number }> = [];
-    for (const offText of [3.5, 7, 11, 15]) {
+    for (const offText of [3, 5.5, 8.5, 12]) {
       const nx = d?.nx ?? 0;
       const ny = d?.ny ?? 0;
       // По нормали в текущую сторону (sign)
       candidates.push({
         x: pt.sxRel + nx * sign * offText - tw / 2,
-        y: pt.syRel - ny * sign * offText - 1.6,
+        y: pt.syRel - ny * sign * offText - th / 2,
       });
       // По нормали в противоположную сторону
       candidates.push({
         x: pt.sxRel - nx * sign * offText - tw / 2,
-        y: pt.syRel + ny * sign * offText - 1.6,
+        y: pt.syRel + ny * sign * offText - th / 2,
       });
       // По диагоналям (вдоль стержня + нормаль)
       const ex = ny, ey = -nx; // вектор вдоль стержня (90° от нормали)
       candidates.push({
         x: pt.sxRel + ex * offText + nx * sign * offText - tw / 2,
-        y: pt.syRel - ey * offText - ny * sign * offText - 1.6,
+        y: pt.syRel - ey * offText - ny * sign * offText - th / 2,
       });
       candidates.push({
         x: pt.sxRel - ex * offText + nx * sign * offText - tw / 2,
-        y: pt.syRel - (-ey) * offText - ny * sign * offText - 1.6,
+        y: pt.syRel + ey * offText - ny * sign * offText - th / 2,
       });
     }
 
@@ -749,27 +796,60 @@ function drawDiagramOverScheme(
     }
     placedLbls.push({ x: chosen.x, y: chosen.y, w: tw, h: th });
 
-    // Выноска от точки к центру плашки
-    doc.setDrawColor(...color);
-    doc.setLineWidth(0.3);
-    doc.line(pt.sxRel, pt.syRel, chosen.x + tw / 2, chosen.y + th / 2);
+    // Выноска от точки к центру плашки — только если плашка отъехала далеко.
+    const dxLine = chosen.x + tw / 2 - pt.sxRel;
+    const dyLine = chosen.y + th / 2 - pt.syRel;
+    if (Math.hypot(dxLine, dyLine) > 2.5) {
+      doc.setDrawColor(...color);
+      doc.setLineWidth(0.2);
+      doc.line(pt.sxRel, pt.syRel, chosen.x + tw / 2, chosen.y + th / 2);
+    }
 
     // Плашка
-    doc.setFillColor(255, 255, 255);
-    doc.rect(chosen.x, chosen.y, tw, th, "F");
-    doc.setTextColor(...color);
-    doc.text(txt, chosen.x + tw / 2, chosen.y + 2, { align: "center" });
+    if (isGlobalExtremum) {
+      // Цветная заливка для глобальных — выделяемся среди локальных подписей
+      doc.setFillColor(255, 255, 255);
+      doc.rect(chosen.x, chosen.y, tw, th, "F");
+      doc.setDrawColor(...color);
+      doc.setLineWidth(0.3);
+      doc.rect(chosen.x, chosen.y, tw, th);
+      doc.setTextColor(...color);
+    } else {
+      // Полупрозрачная белая плашка для локальных
+      doc.setGState(doc.GState({ opacity: 0.88 }));
+      doc.setFillColor(255, 255, 255);
+      doc.rect(chosen.x, chosen.y, tw, th, "F");
+      doc.setGState(doc.GState({ opacity: 1 }));
+      doc.setTextColor(...C.ink);
+    }
+    doc.text(txt, chosen.x + tw / 2, chosen.y + th - 0.7, { align: "center" });
     doc.setFont(fontState.name, "normal");
   };
-  if (maxRef) drawValueLabel(maxRef);
-  if (minRef && minRef.val !== (maxRef?.val ?? Infinity)) drawValueLabel(minRef);
 
-  // Легенда внизу справа
+  // Сначала рисуем глобальные max и min — их позиции "застолбят" место,
+  // и локальные подписи будут подстраиваться вокруг них.
+  if (maxRef) drawValueLabel(maxRef, true);
+  if (minRef && minRef.val !== (maxRef?.val ?? Infinity)) drawValueLabel(minRef, true);
+
+  // Затем — локальные пики каждого стержня (кроме тех, что совпадают
+  // с глобальными — чтобы не дублировать подпись).
+  for (const d of list) {
+    if (!d.localPeak) continue;
+    const isGlobalMax = maxRef !== null && d.el.id === maxRef.elId && d.localPeak.val === maxRef.val;
+    const isGlobalMin = minRef !== null && d.el.id === minRef.elId && d.localPeak.val === minRef.val;
+    if (isGlobalMax || isGlobalMin) continue;
+    drawValueLabel(
+      { val: d.localPeak.val, sxRel: d.localPeak.sx, syRel: d.localPeak.sy, elId: d.el.id },
+      false,
+    );
+  }
+
+  // Легенда внизу справа: честно описываем масштаб (глобальный с floor 8%).
   doc.setFont(fontState.name, "normal");
   doc.setFontSize(6.5);
   doc.setTextColor(...C.thin);
   doc.text(
-    `Эпюра построена в нормалях стержней · масштаб per-element (каждый стержень = 18 мм) · ед. ${unit}`,
+    `Эпюра в нормалях стержней · глобальный масштаб (|max| = ${formatVal(globalAbs)}, floor 8%) · подписи — пиковые значения по каждому стержню`,
     ox + boxW - 3,
     oy + boxH - 2,
     { align: "right" },
@@ -1015,7 +1095,10 @@ function drawSingleElementUnfolded(
       doc.setFillColor(...color);
       doc.circle(px, py, 1.2, "F");
 
-      const valTxt = `${fmtNum(vals[i])} ${unit}`;
+      // Используем человекочитаемые единицы (Н/кН/МН, Н·м/кН·м/МН·м).
+      // unit/title здесь — ярлык типа эпюры ("N"/"Qy"/"Mz"), не строка единиц,
+      // поэтому единицы зашиты в formatForce/formatMoment.
+      const valTxt = unit === "Н·м" ? formatMoment(vals[i]) : formatForce(vals[i]);
       const coordTxt = `x = ${xs[i].toFixed(2)} м`;
       doc.setFont(fontState.name, "bold");
       doc.setFontSize(8);
@@ -1100,12 +1183,13 @@ function drawSingleElementUnfolded(
     drawCallout(iMax);
     if (iMin !== iMax) drawCallout(iMin);
 
-    // Подписи vMin/vMax на левой оси
+    // Подписи vMin/vMax на левой оси — в крупных единицах (кН, кН·м).
     doc.setFont(fontState.name, "normal");
     doc.setFontSize(6.5);
     doc.setTextColor(...C.thin);
-    if (vMax > 0) doc.text(fmtNum(vMax), plotX - 1, toPxY(vMax) + 1, { align: "right" });
-    if (vMin < 0) doc.text(fmtNum(vMin), plotX - 1, toPxY(vMin) + 1, { align: "right" });
+    const fmtAxis = (v: number) => (unit === "Н·м" ? formatMoment(v) : formatForce(v));
+    if (vMax > 0) doc.text(fmtAxis(vMax), plotX - 1, toPxY(vMax) + 1, { align: "right" });
+    if (vMin < 0) doc.text(fmtAxis(vMin), plotX - 1, toPxY(vMin) + 1, { align: "right" });
     doc.text("0", plotX - 1, yZero + 1, { align: "right" });
   };
 
@@ -1115,20 +1199,6 @@ function drawSingleElementUnfolded(
     [26, 138, 90], "Qy", "Н", "— поперечная сила");
   drawBigEpy(epyTop + (epyH + gap) * 2, epyH, er.diagrams.Mz, er.diagrams.x,
     [192, 57, 43], "Mz", "Н·м", "— изгибающий момент");
-}
-
-function fmtNum(v: number): string {
-  const a = Math.abs(v);
-  if (a === 0) return "0";
-  if (a >= 1e6) return `${(v / 1e6).toFixed(2)} M`;
-  if (a >= 1e3) return `${(v / 1e3).toFixed(2)} k`;
-  if (a >= 1) return v.toFixed(2);
-  if (a >= 0.01) return v.toFixed(3);
-  if (a >= 0.001) return v.toFixed(4);
-  // Очень малые числа: записываем как "N.NN x 10^-P" без спецсимволов
-  const exp = Math.floor(Math.log10(a));
-  const mantissa = v / Math.pow(10, exp);
-  return `${mantissa.toFixed(2)}x10^${exp}`;
 }
 
 // Старая функция drawDiagram (графики X–Y по длине балки) удалена.
