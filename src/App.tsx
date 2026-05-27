@@ -9,6 +9,7 @@ import Navigation from "./components/Navigation";
 import Footer from "./components/Footer";
 import CookieConsent from "./components/CookieConsent";
 import GlobalSeo from "./components/GlobalSeo";
+import AlphaTestStrip from "./components/AlphaTestStrip";
 import Index from "./pages/Index";
 import Program from "./pages/Program";
 import Pricing from "./pages/Pricing";
@@ -105,6 +106,7 @@ const App = () => (
             <VisitorTracker />
             <GlobalSeo />
             <Navigation />
+            <AlphaTestStrip />
             <div>
               <Routes>
                 <Route path="/" element={<Index />} />
