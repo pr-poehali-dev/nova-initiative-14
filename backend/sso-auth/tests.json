@@ -55,10 +55,10 @@
       "expectedStatus": 400
     },
     {
-      "name": "Повторная отправка письма — test-адрес",
+      "name": "Повторная отправка — несуществующий email (всегда 200)",
       "method": "POST",
       "path": "/?action=resend-verification",
-      "body": {"email": "97sega97@gmail.com"},
+      "body": {"email": "no-such-user-xyz@example.com"},
       "expectedStatus": 200,
       "expectedBody": {"ok": true},
       "bodyMatcher": "partial"
