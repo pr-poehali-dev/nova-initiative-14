@@ -89,3 +89,10 @@ export async function runSolver(
   };
   return authCall<SolverResponse>(`${CAE_SOLVER}?action=solve`, "POST", payload);
 }
+
+/** Демо-расчёт без авторизации (action=demo). Не требует токена. */
+export async function runDemoSolver(
+  model: FrameModel,
+): Promise<ApiResult<SolverResponse>> {
+  return authCall<SolverResponse>(`${CAE_SOLVER}?action=demo`, "POST", model);
+}

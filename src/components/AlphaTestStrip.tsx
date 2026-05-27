@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import { ALPHA_TEST_MODE } from "@/lib/auth";
+import { useAuth } from "@/contexts/AuthContext";
 
 const DISMISS_KEY = "alpha_test_strip_dismissed_v1";
 
@@ -17,6 +18,7 @@ const DISMISS_KEY = "alpha_test_strip_dismissed_v1";
  */
 export default function AlphaTestStrip() {
   const { pathname } = useLocation();
+  const { user } = useAuth();
   const [dismissed, setDismissed] = useState<boolean>(() => {
     try {
       return localStorage.getItem(DISMISS_KEY) === "1";
@@ -60,10 +62,10 @@ export default function AlphaTestStrip() {
           <span className="font-bold">Альфа-тест:</span>{" "}
           <span className="opacity-90">CAE-расчёты открыты бесплатно, лимиты сняты.</span>{" "}
           <Link
-            to="/cae/demo"
+            to={user ? "/cae/projects" : "/cae/demo"}
             className="underline underline-offset-2 font-bold hover:no-underline whitespace-nowrap"
           >
-            Попробовать&nbsp;&rarr;
+            {user ? "Мои проекты" : "Попробовать"}&nbsp;&rarr;
           </Link>
         </p>
         <button

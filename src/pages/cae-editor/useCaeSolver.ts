@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { runSolver, type FrameModel, type SolverResponse } from "@/lib/cae-model";
+import { runDemoSolver } from "@/lib/cae/api";
 import type { DiagramKind } from "@/components/cae/FrameCanvas";
 import { validateModel, hasBlockingErrors } from "@/lib/cae-validate";
 
@@ -7,7 +8,9 @@ export function useCaeSolver(
   model: FrameModel,
   projectId: number,
   versionId: number | null,
+  options?: { demo?: boolean },
 ) {
+  const isDemo = options?.demo === true;
   const [result, setResult] = useState<SolverResponse | null>(null);
   const [solverError, setSolverError] = useState<string | null>(null);
   const [solving, setSolving] = useState(false);
@@ -33,7 +36,9 @@ export function useCaeSolver(
     }
 
     setSolving(true);
-    const r = await runSolver(model, projectId, versionId ?? undefined);
+    const r = isDemo
+      ? await runDemoSolver(model)
+      : await runSolver(model, projectId, versionId ?? undefined);
     setSolving(false);
     if (r.ok && r.data && r.data.status === "ok") {
       setResult(r.data);

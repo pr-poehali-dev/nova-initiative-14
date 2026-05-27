@@ -48,7 +48,7 @@
       "expectedStatus": 200
     },
     {
-      "name": "Demo: 12 узлов — лимит узлов (5) превышен",
+      "name": "Demo: 12 узлов — рассчитывается без лимита узлов",
       "method": "POST",
       "path": "/?action=demo",
       "body": {
@@ -77,7 +77,7 @@
         "boundary_conditions": [{"node_id":"n1","constrained_dofs":["ux","uy","rz"]}],
         "loads": []
       },
-      "expectedStatus": 403
+      "expectedStatus": 200
     },
     {
       "name": "Авторизованный без токена — 401",

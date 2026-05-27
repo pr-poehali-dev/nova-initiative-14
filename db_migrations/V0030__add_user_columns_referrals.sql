@@ -1,0 +1,2 @@
+ALTER TABLE t_p28138419_nova_initiative_14.sso_users
+    ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE;

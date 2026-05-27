@@ -3,8 +3,8 @@
  * Модель и счётчик расчётов хранятся в localStorage.
  *
  * Демо-лимиты для незарегистрированных пользователей:
- *  - до 5 узлов в схеме
- *  - до 5 расчётов (счётчик сбрасывается при «Сбросить»)
+ *  - до 2 расчётов — после исчерпания показываем модалку регистрации
+ *  - количество узлов не ограничено (можно рисовать любую модель)
  * После регистрации (альфа-тест) лимиты сняты.
  */
 import { useState, useCallback, useEffect } from "react";
@@ -16,9 +16,11 @@ const STORAGE_KEY = "cae_demo_model";
 const SOLVE_COUNT_KEY = "cae_demo_solves";
 
 // Демо-лимиты (без регистрации). После регистрации — альфа-тест без лимитов.
-export const DEMO_NODE_LIMIT = 5;
-export const DEMO_ELEMENT_LIMIT = 9999; // лимита на элементы как такового нет — ограничены узлы
-export const DEMO_SOLVE_LIMIT = 5;
+// Узлы не ограничиваем — рисовать модель можно любую.
+// Лимит расчётов жёсткий: 2 пробных, дальше модалка регистрации.
+export const DEMO_NODE_LIMIT = 9999;
+export const DEMO_ELEMENT_LIMIT = 9999;
+export const DEMO_SOLVE_LIMIT = 2;
 
 function loadFromStorage(): FrameModel | null {
   try {
@@ -93,17 +95,10 @@ export function useCaeDemoProject() {
 
   const updateModel = useCallback(
     (next: FrameModel) => {
-      // Демо-лимит: не даём добавить больше DEMO_NODE_LIMIT узлов.
-      // Если новых узлов больше лимита, обрезаем модель до текущего состояния
-      // (а если уже было превышение — оставляем как есть).
-      if (next.nodes.length > DEMO_NODE_LIMIT && next.nodes.length > model.nodes.length) {
-        // Игнорируем попытку добавить узел сверх лимита
-        return;
-      }
       pushModel(next);
       setDirty(true);
     },
-    [pushModel, model.nodes.length],
+    [pushModel],
   );
 
   const setModel = useCallback(
