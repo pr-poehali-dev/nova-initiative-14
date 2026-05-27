@@ -7,10 +7,13 @@ import { Link } from "react-router-dom";
  * → плечо (link 1) ↗ → локоть (J2) → предплечье (link 2) ↗ → запястье (J3) → угловой схват.
  */
 const RobotArmDrawing = () => {
-  const STROKE = 5.5;
+  // viewBox с большим запасом по всем сторонам — манипулятор гарантированно
+  // помещается целиком в квадрат, не обрезаясь. Сама фигура занимает примерно
+  // верхние две трети, чтобы не перекрывать текст в нижнем левом углу.
+  const STROKE = 3.2;
   return (
     <svg
-      viewBox="0 0 120 140"
+      viewBox="0 0 200 200"
       preserveAspectRatio="xMidYMid meet"
       className="absolute inset-0 w-full h-full"
       aria-hidden="true"
@@ -18,46 +21,42 @@ const RobotArmDrawing = () => {
       <g
         fill="none"
         stroke="var(--drawing-line)"
+        strokeOpacity="0.22"
         strokeWidth={STROKE}
         strokeLinejoin="round"
         strokeLinecap="round"
+        transform="translate(40 6)"
       >
         {/* Плита основания */}
-        <rect x="18" y="124" width="68" height="10" rx="1.5" />
+        <rect x="18" y="148" width="68" height="10" rx="1.5" />
 
         {/* Трапециевидная станина */}
-        <path d="M 28 124 L 38 92 L 66 92 L 76 124 Z" />
+        <path d="M 28 148 L 38 116 L 66 116 L 76 148 Z" />
 
         {/* Плечевой шарнир J1 — большая двойная окружность */}
-        <circle cx="52" cy="86" r="16" />
-        <circle cx="52" cy="86" r="6" />
-        <circle cx="52" cy="86" r="1.6" fill="var(--drawing-line)" stroke="none" />
+        <circle cx="52" cy="110" r="16" />
+        <circle cx="52" cy="110" r="6" />
+        <circle cx="52" cy="110" r="1.6" fill="var(--drawing-line)" fillOpacity="0.22" stroke="none" />
 
-        {/* Звено 1 (плечо) — контурный прямоугольник от J1 (52,86) к J2 (88,40).
-            Длина ≈ 58, угол ≈ -52°. Поворачиваем прямоугольник вокруг центра J1. */}
-        <g transform="rotate(-52 52 86)">
-          <rect x="52" y="76" width="58" height="20" rx="2" />
+        {/* Звено 1 (плечо) — контурный прямоугольник от J1 (52,110) к J2 (88,64).
+            Длина ≈ 58, угол ≈ -52°. */}
+        <g transform="rotate(-52 52 110)">
+          <rect x="52" y="100" width="58" height="20" rx="2" />
         </g>
 
         {/* Локтевой шарнир J2 — двойная окружность поменьше */}
-        <circle cx="88" cy="40" r="10" />
-        <circle cx="88" cy="40" r="3.5" />
+        <circle cx="88" cy="64" r="10" />
+        <circle cx="88" cy="64" r="3.5" />
 
-        {/* Звено 2 (предплечье) — короче и тоньше, от J2 (88,40) к запястью (110,22).
-            Длина ≈ 28, угол ≈ -39°. */}
-        <g transform="rotate(-39 88 40)">
-          <rect x="88" y="33" width="30" height="14" rx="2" />
+        {/* Звено 2 (предплечье) — от J2 (88,64) с углом ≈ -39°. */}
+        <g transform="rotate(-39 88 64)">
+          <rect x="88" y="57" width="30" height="14" rx="2" />
         </g>
 
-        {/* Запястье + угловой схват из двух «галочек», как на референсе.
-            База схвата на конце предплечья ≈ (115, 18). Локально оси: x — вдоль предплечья,
-            y — поперёк. Поворачиваем всё на угол предплечья (-39°). */}
-        <g transform="translate(115 18) rotate(-39)">
-          {/* монтажный фланец */}
+        {/* Запястье + угловой схват из двух «галочек». База ≈ (115, 42). */}
+        <g transform="translate(115 42) rotate(-39)">
           <rect x="-4" y="-9" width="8" height="18" rx="1" />
-          {/* верхний палец-«галочка» */}
           <path d="M 4 -8 L 14 -14 L 22 -10 L 16 -4" />
-          {/* нижний палец-«галочка» */}
           <path d="M 4 8 L 14 14 L 22 10 L 16 4" />
         </g>
       </g>
