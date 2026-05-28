@@ -166,20 +166,39 @@ export default function SupportTicketModal({
               <div className="space-y-3">
                 <div>
                   <label className="font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)] block mb-1">
-                    Тип обращения
+                    Тип обращения <span className="text-[var(--drawing-accent)]">*</span>
                   </label>
-                  <div className="grid grid-cols-4 gap-1">
-                    {(Object.keys(KIND_LABELS) as TicketKind[]).map((k) => (
-                      <button
-                        key={k}
-                        type="button"
-                        onClick={() => setKind(k)}
-                        className={`btn-drawing text-[10px] ${kind === k ? "border-[var(--drawing-accent)] text-[var(--drawing-accent)] bg-[var(--drawing-accent)]/5" : ""}`}
-                      >
-                        {KIND_LABELS[k]}
-                      </button>
-                    ))}
+                  <div className="grid grid-cols-4 gap-1" role="radiogroup" aria-label="Тип обращения">
+                    {(Object.keys(KIND_LABELS) as TicketKind[]).map((k) => {
+                      const selected = kind === k;
+                      return (
+                        <button
+                          key={k}
+                          type="button"
+                          role="radio"
+                          aria-checked={selected}
+                          onClick={() => setKind(k)}
+                          className={`btn-drawing text-[10px] relative transition-all ${
+                            selected
+                              ? "!bg-[var(--drawing-accent)] !text-white !border-[var(--drawing-accent)] shadow-[0_0_0_2px_var(--drawing-accent)] font-bold"
+                              : "hover:border-[var(--drawing-accent)]/50"
+                          }`}
+                        >
+                          {selected && (
+                            <Icon
+                              name="Check"
+                              size={10}
+                              className="inline-block mr-0.5 -mt-px"
+                            />
+                          )}
+                          {KIND_LABELS[k]}
+                        </button>
+                      );
+                    })}
                   </div>
+                  <p className="font-gost text-[9px] uppercase tracking-wider text-[var(--drawing-line-thin)] mt-1 opacity-80">
+                    Выбрано: <span className="text-[var(--drawing-accent)] font-bold">{KIND_LABELS[kind]}</span>
+                  </p>
                 </div>
 
                 <div>
@@ -214,22 +233,38 @@ export default function SupportTicketModal({
 
                 <div>
                   <label className="font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)] block mb-1">
-                    Как сами оцениваете важность
+                    Как сами оцениваете важность <span className="text-[var(--drawing-accent)]">*</span>
                   </label>
-                  <div className="grid grid-cols-4 gap-1">
-                    {(Object.keys(IMPORTANCE_LABELS) as TicketImportance[]).map((i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => setImportance(i)}
-                        className={`btn-drawing text-[10px] ${importance === i ? "border-[var(--drawing-accent)] text-[var(--drawing-accent)] bg-[var(--drawing-accent)]/5" : ""}`}
-                      >
-                        {IMPORTANCE_LABELS[i]}
-                      </button>
-                    ))}
+                  <div className="grid grid-cols-4 gap-1" role="radiogroup" aria-label="Оценка важности">
+                    {(Object.keys(IMPORTANCE_LABELS) as TicketImportance[]).map((i) => {
+                      const selected = importance === i;
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          role="radio"
+                          aria-checked={selected}
+                          onClick={() => setImportance(i)}
+                          className={`btn-drawing text-[10px] relative transition-all ${
+                            selected
+                              ? "!bg-[var(--drawing-accent)] !text-white !border-[var(--drawing-accent)] shadow-[0_0_0_2px_var(--drawing-accent)] font-bold"
+                              : "hover:border-[var(--drawing-accent)]/50"
+                          }`}
+                        >
+                          {selected && (
+                            <Icon
+                              name="Check"
+                              size={10}
+                              className="inline-block mr-0.5 -mt-px"
+                            />
+                          )}
+                          {IMPORTANCE_LABELS[i]}
+                        </button>
+                      );
+                    })}
                   </div>
-                  <p className="font-gost text-[9px] uppercase tracking-wider text-[var(--drawing-line-thin)] mt-1.5 opacity-80">
-                    Финальную оценку поставит администратор после проверки
+                  <p className="font-gost text-[9px] uppercase tracking-wider text-[var(--drawing-line-thin)] mt-1 opacity-80">
+                    Выбрано: <span className="text-[var(--drawing-accent)] font-bold">{IMPORTANCE_LABELS[importance]}</span> · финальную оценку поставит администратор
                   </p>
                 </div>
 
