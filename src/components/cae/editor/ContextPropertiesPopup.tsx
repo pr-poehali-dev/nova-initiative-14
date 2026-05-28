@@ -14,7 +14,7 @@
  *
  * Содержимое реюзает EditorRightPanel (роутер по типу выбранного объекта).
  */
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Icon from "@/components/ui/icon";
 import EditorRightPanel from "./EditorRightPanel";
 import type {
@@ -117,6 +117,18 @@ const ContextPropertiesPopup = ({
   deleteSelected,
 }: Props) => {
   const popupRef = useRef<HTMLDivElement>(null);
+
+  // На мобиле после long-press палец ещё нажат в момент открытия popup.
+  // Блокируем pointer-events на содержимое ~400мс, чтобы первый click
+  // по пальцу не срабатывал на кнопки внутри (например «Удалить»).
+  const [contentBlocked, setContentBlocked] = useState(
+    () => window.matchMedia("(max-width: 767px)").matches,
+  );
+  useEffect(() => {
+    if (!contentBlocked) return;
+    const t = window.setTimeout(() => setContentBlocked(false), 400);
+    return () => window.clearTimeout(t);
+  }, []);
 
   // Esc — закрыть
   useEffect(() => {
@@ -236,7 +248,10 @@ const ContextPropertiesPopup = ({
         </div>
 
         {/* Содержимое скроллится, шапка зафиксирована */}
-        <div className="overflow-y-auto flex-1 p-0">
+        <div
+          className="overflow-y-auto flex-1 p-0"
+          style={contentBlocked ? { pointerEvents: "none", userSelect: "none" } : undefined}
+        >
           {/* EditorRightPanel сам обрамляется border + p-3, поэтому никаких доп. обёрток. */}
           <EditorRightPanel
             model={model}
