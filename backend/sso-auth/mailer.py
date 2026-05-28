@@ -53,8 +53,8 @@ def send_email(to: str, subject: str, html_body: str, text_body: str) -> bool:
       - обычный:    info@диплом-инж.рф
       - технический (общий ящик): домен/login/shared  — для Яндекс 360
     """
-    smtp_login_raw = os.environ.get('YANDEX_SMTP_USER') or os.environ.get('SSO_SMTP_USER')
-    smtp_password = os.environ.get('YANDEX_SMTP_PASSWORD') or os.environ.get('SSO_SMTP_PASSWORD')
+    smtp_login_raw = os.environ.get('SSO_SMTP_USER') or os.environ.get('YANDEX_SMTP_USER')
+    smtp_password = os.environ.get('SSO_SMTP_PASSWORD') or os.environ.get('YANDEX_SMTP_PASSWORD')
     # From-заголовок: отдельный секрет или берём из логина (только если это email, а не слэш-формат)
     smtp_from_raw = os.environ.get('SSO_SMTP_FROM') or os.environ.get('SSO_SMTP_USER')
 
