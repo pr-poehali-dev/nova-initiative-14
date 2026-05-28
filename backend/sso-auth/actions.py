@@ -137,6 +137,39 @@ def action_register(conn, body: dict, ua: str, ip: str) -> dict:
                 "WHERE user_id = %s",
                 (referrer_id,),
             )
+
+            # Ачивка «Первое приглашение» рефереру — выдаём по факту регистрации
+            # первого реферала, не дожидаясь его «активности» (расчёта).
+            # Юзер ожидает ачивку как только друг зарегистрировался по его коду.
+            # ON CONFLICT гарантирует идемпотентность для повторных рефералов.
+            cur.execute(
+                "INSERT INTO user_achievements (user_id, achievement_code) "
+                "VALUES (%s, 'first_invite') "
+                "ON CONFLICT (user_id, achievement_code) DO NOTHING "
+                "RETURNING id",
+                (referrer_id,),
+            )
+            if cur.fetchone():
+                # Ачивка реально выдана впервые — начисляем её очки (20)
+                cur.execute(
+                    "SELECT points FROM achievement_types WHERE code = 'first_invite'",
+                )
+                pts_row = cur.fetchone()
+                pts = int(pts_row[0]) if pts_row else 0
+                if pts > 0:
+                    cur.execute(
+                        "INSERT INTO user_points_log "
+                        "(user_id, points, reason, note, dedup_key) "
+                        "VALUES (%s, %s, 'achievement:first_invite', "
+                        "'Ачивка: Первое приглашение', %s) "
+                        "ON CONFLICT (dedup_key) DO NOTHING",
+                        (referrer_id, pts, f'ach:{referrer_id}:first_invite'),
+                    )
+                    cur.execute(
+                        "UPDATE user_points SET total_points = total_points + %s, "
+                        "updated_at = now() WHERE user_id = %s",
+                        (pts, referrer_id),
+                    )
     conn.commit()
 
     raw_token = create_verify_token(conn, user_id)
