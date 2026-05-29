@@ -10,6 +10,7 @@ import Footer from "./components/Footer";
 import CookieConsent from "./components/CookieConsent";
 import GlobalSeo from "./components/GlobalSeo";
 import AlphaTestStrip from "./components/AlphaTestStrip";
+import MobileStickyCta from "./components/MobileStickyCta";
 import Index from "./pages/Index";
 import Program from "./pages/Program";
 import Pricing from "./pages/Pricing";
@@ -147,6 +148,7 @@ const App = () => (
             </div>
             <Footer />
             <CookieConsent />
+            <MobileStickyCta />
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>

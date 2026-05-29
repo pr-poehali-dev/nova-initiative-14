@@ -18,8 +18,21 @@ const PricingMentorsSection = () => {
           <div className="extension-line-h w-48 mb-10 opacity-20" />
 
           {loading ? (
-            <div className="py-10 text-center">
-              <span className="font-gost text-sm text-[var(--drawing-bg)] opacity-50">Загрузка тарифов...</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              {[0, 1].map((i) => (
+                <div key={i} className="border border-[var(--drawing-bg)]/20 p-0">
+                  <div className="px-6 py-3 flex justify-between items-center border-b border-[var(--drawing-bg)]/20">
+                    <span className="h-3 w-20 bg-[var(--drawing-bg)]/15 animate-pulse" />
+                    <span className="h-3 w-16 bg-[var(--drawing-bg)]/15 animate-pulse" />
+                  </div>
+                  <div className="p-6 space-y-3">
+                    <span className="block h-5 w-2/3 bg-[var(--drawing-bg)]/15 animate-pulse" />
+                    <span className="block h-3 w-1/2 bg-[var(--drawing-bg)]/15 animate-pulse" />
+                    <span className="block h-7 w-1/3 bg-[var(--drawing-bg)]/15 animate-pulse" />
+                    <span className="block h-9 w-full bg-[var(--drawing-bg)]/15 animate-pulse mt-4" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : tariffs.length === 0 ? (
             <div className="py-10 text-center border border-[var(--drawing-bg)]/20">

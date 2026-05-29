@@ -6,6 +6,7 @@ import BlogTeaserSection from "@/components/home/BlogTeaserSection";
 import CaeTeaserSection from "@/components/home/CaeTeaserSection";
 import FaqCtaSection from "@/components/home/FaqCtaSection";
 import Seo from "@/components/Seo";
+import Reveal from "@/components/Reveal";
 import { SITE_NAME, SITE_URL } from "@/lib/seo";
 
 const Index = () => {
@@ -23,12 +24,24 @@ const Index = () => {
     <main className="min-h-screen grid-bg">
       <Seo jsonLd={serviceLd} />
       <HeroSection />
-      <AboutSection />
-      <ProcessSection />
-      <PricingMentorsSection />
-      <BlogTeaserSection />
-      <CaeTeaserSection />
-      <FaqCtaSection />
+      <Reveal>
+        <AboutSection />
+      </Reveal>
+      <Reveal>
+        <ProcessSection />
+      </Reveal>
+      <Reveal>
+        <PricingMentorsSection />
+      </Reveal>
+      <Reveal>
+        <BlogTeaserSection />
+      </Reveal>
+      <Reveal>
+        <CaeTeaserSection />
+      </Reveal>
+      <Reveal>
+        <FaqCtaSection />
+      </Reveal>
     </main>
   );
 };

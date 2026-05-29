@@ -203,7 +203,23 @@ const CaeProjects = () => {
         </div>
 
         {loading ? (
-          <p className="text-center font-gost text-[var(--drawing-line-thin)] py-10">Загружаем…</p>
+          <div className="grid gap-4 md:grid-cols-2">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="border-2 border-[var(--drawing-line-thin)]/30 bg-[var(--drawing-bg)] p-5">
+                <div className="flex items-start justify-between mb-2">
+                  <span className="block h-5 w-1/2 bg-[var(--drawing-line-thin)]/20 animate-pulse" />
+                  <span className="block h-4 w-4 bg-[var(--drawing-line-thin)]/20 animate-pulse" />
+                </div>
+                <span className="block h-3 w-full bg-[var(--drawing-line-thin)]/20 animate-pulse mb-1.5" />
+                <span className="block h-3 w-2/3 bg-[var(--drawing-line-thin)]/20 animate-pulse" />
+                <div className="extension-line-h w-full my-3" />
+                <div className="flex items-center justify-between">
+                  <span className="block h-2.5 w-16 bg-[var(--drawing-line-thin)]/20 animate-pulse" />
+                  <span className="block h-2.5 w-16 bg-[var(--drawing-line-thin)]/20 animate-pulse" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : error ? (
           <p className="text-center text-[var(--drawing-accent)] py-10">{error}</p>
         ) : projects.length === 0 ? (
@@ -214,13 +230,20 @@ const CaeProjects = () => {
               className="mx-auto text-[var(--drawing-line-thin)] opacity-50 mb-3"
             />
             <p className="font-gost-upright font-bold mb-2">Проектов пока нет</p>
-            <p className="text-sm text-[var(--drawing-line-thin)] mb-5">
-              Создайте первый проект, чтобы попробовать CAE.
+            <p className="text-sm text-[var(--drawing-line-thin)] mb-5 max-w-md mx-auto leading-relaxed">
+              Создайте первый проект из&nbsp;шаблона или с&nbsp;нуля&nbsp;&mdash; либо
+              сначала попробуйте демо без&nbsp;сохранения.
             </p>
-            <Link to="/cae/projects/new" className="btn-drawing btn-drawing-accent text-xs inline-flex">
-              <Icon name="Plus" size={14} className="mr-1.5" />
-              Создать проект
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-2 justify-center">
+              <Link to="/cae/projects/new" className="btn-drawing btn-drawing-accent text-xs inline-flex">
+                <Icon name="Plus" size={14} className="mr-1.5" />
+                Создать проект
+              </Link>
+              <Link to="/cae/demo" className="btn-drawing text-xs inline-flex">
+                <Icon name="Play" size={14} className="mr-1.5" />
+                Открыть демо
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">

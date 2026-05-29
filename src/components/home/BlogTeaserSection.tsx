@@ -43,9 +43,22 @@ const BlogTeaserSection = () => {
         <div className="extension-line-h w-full mb-6" />
 
         {loading && (
-          <p className="font-gost text-[var(--drawing-line-thin)] text-center py-6">
-            Загружаем последние статьи…
-          </p>
+          <div className="grid gap-4 md:gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="border border-[var(--drawing-line-thin)]/30 p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="h-2.5 w-16 bg-[var(--drawing-line-thin)]/20 animate-pulse" />
+                  <span className="h-2.5 w-12 bg-[var(--drawing-line-thin)]/20 animate-pulse" />
+                </div>
+                <span className="block h-5 w-5/6 bg-[var(--drawing-line-thin)]/20 animate-pulse mb-2" />
+                <span className="block h-3 w-full bg-[var(--drawing-line-thin)]/20 animate-pulse mb-1.5" />
+                <span className="block h-3 w-full bg-[var(--drawing-line-thin)]/20 animate-pulse mb-1.5" />
+                <span className="block h-3 w-2/3 bg-[var(--drawing-line-thin)]/20 animate-pulse" />
+                <div className="extension-line-h w-full my-4" />
+                <span className="block h-2.5 w-20 bg-[var(--drawing-line-thin)]/20 animate-pulse" />
+              </div>
+            ))}
+          </div>
         )}
 
         <div className="grid gap-4 md:gap-5 md:grid-cols-2 lg:grid-cols-3">
