@@ -19,14 +19,14 @@ const About = () => {
           <div className="extension-line-h w-full mb-6" />
 
           <h1 className="font-gost-upright text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight leading-[0.95] mb-6 text-[var(--drawing-line)]">
-            Почему <span className="text-[var(--drawing-accent)]">мы</span>,
-            <br />а не кто-то ещё
+            Команда, которая
+            <br />делает <span className="text-[var(--drawing-accent)]">сама</span>
           </h1>
 
           <div className="extension-line-h w-3/4 my-5" />
 
           <p className="font-gost text-sm md:text-base max-w-2xl text-[var(--drawing-line-thin)] leading-relaxed">
-            Здесь о&nbsp;том, как мы начинались, во&nbsp;что верим и&nbsp;почему делаем то, что делаем.
+            Как мы&nbsp;начинались, во&nbsp;что верим и&nbsp;почему собрали команду инженеров, которые любят работать руками.
           </p>
         </div>
       </section>
