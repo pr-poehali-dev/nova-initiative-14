@@ -241,18 +241,6 @@ def action_get_profile(conn, user: dict) -> dict:
             (user_id,),
         )
         ach_rows = cur.fetchall()
-        achievements = [
-            {
-                'code': r['code'],
-                'title': r['title'],
-                'description': r['description'],
-                'icon': r['icon'],
-                'points': r['points'],
-                'awarded': r['awarded_at'] is not None,
-                'awarded_at': r['awarded_at'].isoformat() if r['awarded_at'] else None,
-            }
-            for r in ach_rows
-        ]
 
     # Обновим агрегат referrals_count/active
     with conn.cursor() as cur:
@@ -263,6 +251,35 @@ def action_get_profile(conn, user: dict) -> dict:
         )
     conn.commit()
     _check_inviter_achievements(conn, user_id, active_count)
+
+    # Прогресс по ачивкам с числовым порогом. Для бинарных progress=None.
+    # target — нужное значение метрики, current — текущее значение пользователя.
+    ach_targets = {
+        'first_invite': (ref_count, 1),
+        'inviter_5': (active_count, 5),
+        'inviter_15': (active_count, 15),
+        'inviter_50': (active_count, 50),
+    }
+    achievements = []
+    for r in ach_rows:
+        awarded = r['awarded_at'] is not None
+        progress = None
+        if r['code'] in ach_targets:
+            current, target = ach_targets[r['code']]
+            progress = {
+                'current': min(int(current), int(target)) if awarded else int(current),
+                'target': int(target),
+            }
+        achievements.append({
+            'code': r['code'],
+            'title': r['title'],
+            'description': r['description'],
+            'icon': r['icon'],
+            'points': r['points'],
+            'awarded': awarded,
+            'awarded_at': r['awarded_at'].isoformat() if r['awarded_at'] else None,
+            'progress': progress,
+        })
 
     return _json_response(200, {
         'referral_code': ref_code,

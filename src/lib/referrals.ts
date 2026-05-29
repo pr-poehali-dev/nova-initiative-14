@@ -7,6 +7,11 @@ import { getAccessToken } from "@/lib/auth";
 
 const API = (func2url as Record<string, string>)["referral-api"];
 
+export interface AchievementProgress {
+  current: number;
+  target: number;
+}
+
 export interface Achievement {
   code: string;
   title: string;
@@ -15,6 +20,8 @@ export interface Achievement {
   points: number;
   awarded: boolean;
   awarded_at: string | null;
+  /** Прогресс для ачивок с числовым порогом. null — бинарная ачивка. */
+  progress: AchievementProgress | null;
 }
 
 export interface ReferralProfile {

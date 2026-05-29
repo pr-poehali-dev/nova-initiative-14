@@ -132,15 +132,16 @@ const LoginMethodsBlock = () => {
                   key={id.provider}
                   className="flex items-center justify-between gap-3 border border-[var(--drawing-line-thin)] px-3 py-2"
                 >
-                  <span className="flex items-center gap-2 text-sm">
+                  <span className="flex items-center gap-2 text-sm min-w-0">
                     <Icon
                       name={PROVIDER_ICONS[id.provider] || "Link"}
                       fallback="Link"
                       size={16}
+                      className="shrink-0"
                     />
-                    {PROVIDER_LABELS[id.provider] || id.provider}
+                    <span className="shrink-0">{PROVIDER_LABELS[id.provider] || id.provider}</span>
                     {id.email && (
-                      <span className="font-mono text-xs text-[var(--drawing-line-thin)]">
+                      <span className="font-mono text-xs text-[var(--drawing-line-thin)] truncate">
                         {id.email}
                       </span>
                     )}
@@ -148,7 +149,7 @@ const LoginMethodsBlock = () => {
                   <button
                     onClick={() => onUnlink(id.provider)}
                     disabled={busy === id.provider}
-                    className="font-gost text-[11px] uppercase tracking-wider text-[var(--drawing-accent)] hover:underline disabled:opacity-50"
+                    className="font-gost text-[11px] uppercase tracking-wider text-[var(--drawing-accent)] hover:underline disabled:opacity-50 shrink-0"
                   >
                     {busy === id.provider ? "…" : "Отвязать"}
                   </button>

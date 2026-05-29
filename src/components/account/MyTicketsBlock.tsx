@@ -106,7 +106,7 @@ export default function MyTicketsBlock({ onNewTicket }: Props) {
                   className="w-full text-left p-3 hover:bg-[var(--drawing-line)]/5 transition-colors"
                 >
                   <div className="flex items-center justify-between gap-3 mb-1">
-                    <span className="font-gost-upright font-bold text-sm truncate flex-1">
+                    <span className="font-gost-upright font-bold text-sm truncate flex-1 min-w-0">
                       #{t.id} · {t.title}
                     </span>
                     <span

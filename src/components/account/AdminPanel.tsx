@@ -180,8 +180,9 @@ function TicketRow({
   saving: boolean;
 }) {
   const [note, setNote] = useState(ticket.admin_note || "");
-  const [points, setPoints] = useState(0);
+  const [points, setPoints] = useState<string>("1");
   const [status, setStatus] = useState<TicketStatus>(ticket.status);
+  const pointsNum = Number(points) || 0;
 
   const importanceColor = {
     low: "text-[var(--drawing-line-thin)]",
@@ -261,7 +262,8 @@ function TicketRow({
                 min={0}
                 max={500}
                 value={points}
-                onChange={(e) => setPoints(Number(e.target.value) || 0)}
+                onChange={(e) => setPoints(e.target.value)}
+                onFocus={(e) => e.target.select()}
                 className="drawing-input text-xs"
                 disabled={!ticket.user_id}
               />
@@ -287,7 +289,7 @@ function TicketRow({
                 onUpdate(ticket.id, {
                   status,
                   admin_note: note || undefined,
-                  award_points: points > 0 ? points : undefined,
+                  award_points: pointsNum > 0 ? pointsNum : undefined,
                 })
               }
               className="btn-drawing btn-drawing-accent text-[10px] disabled:opacity-50"

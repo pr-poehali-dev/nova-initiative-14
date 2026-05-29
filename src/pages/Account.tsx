@@ -43,7 +43,7 @@ const Account = () => {
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
 
-      <div className="max-w-[900px] mx-auto px-4 pt-20 md:pt-24 pb-12">
+      <div className="max-w-[900px] mx-auto px-4 pt-20 md:pt-24 pb-12 overflow-x-hidden">
         <p className="font-gost text-[11px] uppercase tracking-[0.3em] text-[var(--drawing-line-thin)] mb-3">
           Личный кабинет · SSO
         </p>
@@ -68,7 +68,7 @@ const Account = () => {
         {/* Мои обращения в техподдержку */}
         <MyTicketsBlock onNewTicket={() => setSupportOpen(true)} />
 
-        <div className="grid gap-5 md:grid-cols-2">
+        <div className="grid gap-5 md:grid-cols-2 [&>*]:min-w-0">
           {/* Профиль */}
           <section className="drawing-frame p-6 bg-[var(--drawing-bg)]">
             <div className="flex items-center gap-2 mb-4">
