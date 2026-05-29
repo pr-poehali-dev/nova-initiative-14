@@ -79,12 +79,21 @@ img {
 .drawing-frame::before {
   content: "";
   position: absolute;
-  top: -10px;
-  right: -10px;
-  bottom: -10px;
-  left: -22px;
+  inset: -10px;
   border: 1px solid var(--drawing-line);
   pointer-events: none;
+}
+
+/* На узких экранах убираем выносные декоративные обводки,
+   чтобы рамки не вылезали за край и не вызывали горизонтальную прокрутку */
+@media (max-width: 640px) {
+  .drawing-frame {
+    outline: none;
+    outline-offset: 0;
+  }
+  .drawing-frame::before {
+    inset: -5px;
+  }
 }
 
 .hatching {

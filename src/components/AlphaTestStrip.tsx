@@ -1,43 +1,22 @@
-import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import { ALPHA_TEST_MODE } from "@/lib/auth";
 import { useAuth } from "@/contexts/AuthContext";
 
-const DISMISS_KEY = "alpha_test_strip_dismissed_v1";
-
 /**
- * Тонкая глобальная полоса под навигацией.
+ * Тонкая глобальная полоса под навигацией — постоянная часть интерфейса.
  * Показывает посетителям сайта, что CAE-сервис открыт бесплатно
- * на время альфа-тестирования. Закрывается крестиком (запоминается в localStorage).
+ * на время альфа-тестирования. Не закрывается (это не всплывающее окно).
  *
  * Не рендерится:
  *  - в режиме редактора CAE и на демо-редакторе (там уже свой баннер)
- *  - после закрытия пользователем
  *  - если ALPHA_TEST_MODE === false
  */
 export default function AlphaTestStrip() {
   const { pathname } = useLocation();
   const { user } = useAuth();
-  const [dismissed, setDismissed] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem(DISMISS_KEY) === "1";
-    } catch {
-      return false;
-    }
-  });
-
-  useEffect(() => {
-    if (!dismissed) return;
-    try {
-      localStorage.setItem(DISMISS_KEY, "1");
-    } catch {
-      /* localStorage недоступен — игнорируем */
-    }
-  }, [dismissed]);
 
   if (!ALPHA_TEST_MODE) return null;
-  if (dismissed) return null;
 
   // На страницах с собственным баннером альфа-теста скрываем полосу,
   // чтобы не дублировать сообщение.
@@ -56,7 +35,7 @@ export default function AlphaTestStrip() {
       className="fixed top-14 left-0 right-0 z-40 bg-[var(--drawing-accent)] text-white border-b border-black/10"
       role="status"
     >
-      <div className="max-w-[1200px] mx-auto pl-4 pr-1 py-1 flex items-center gap-2 text-[11px]">
+      <div className="max-w-[1200px] mx-auto px-4 py-1 flex items-center text-[11px]">
         <Link
           to={user ? "/cae/projects" : "/cae/demo"}
           className="flex items-center gap-2 flex-1 min-w-0 py-1 group"
@@ -70,14 +49,6 @@ export default function AlphaTestStrip() {
             </span>
           </span>
         </Link>
-        <button
-          type="button"
-          onClick={() => setDismissed(true)}
-          aria-label="Скрыть уведомление"
-          className="shrink-0 hover:bg-white/15 p-2 transition-colors"
-        >
-          <Icon name="X" size={16} />
-        </button>
       </div>
     </div>
   );
