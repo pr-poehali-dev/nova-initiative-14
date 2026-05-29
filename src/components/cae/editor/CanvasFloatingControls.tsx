@@ -67,6 +67,43 @@ export default function CanvasFloatingControls({
 }: Props) {
   const [open, setOpen] = useState<Panel>(null);
 
+  // Позиция перетаскиваемой панели эпюр (px относительно канваса).
+  // null → панель «прилеплена» к правому краю (поведение по умолчанию).
+  const [diagPos, setDiagPos] = useState<{ left: number; top: number } | null>(null);
+
+  // Сбрасываем позицию при закрытии панели — следующий раз откроется у края.
+  useEffect(() => {
+    if (open !== "diagrams") setDiagPos(null);
+  }, [open]);
+
+  // Старт перетаскивания за шапку панели эпюр (только десктоп).
+  const onDiagDragStart = (e: React.PointerEvent) => {
+    if (!window.matchMedia("(min-width: 768px)").matches) return;
+    if (e.button !== 0) return;
+    const panel = (e.currentTarget as HTMLElement).parentElement;
+    const container = panel?.offsetParent as HTMLElement | null;
+    if (!panel || !container) return;
+    const panelRect = panel.getBoundingClientRect();
+    const contRect = container.getBoundingClientRect();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const baseLeft = panelRect.left - contRect.left;
+    const baseTop = panelRect.top - contRect.top;
+    const maxLeft = container.clientWidth - panel.offsetWidth - 4;
+    const maxTop = container.clientHeight - 40;
+    const onMove = (ev: PointerEvent) => {
+      const left = Math.min(maxLeft, Math.max(4, baseLeft + (ev.clientX - startX)));
+      const top = Math.min(maxTop, Math.max(4, baseTop + (ev.clientY - startY)));
+      setDiagPos({ left, top });
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  };
+
   const errors = issues.filter((i) => i.level === "error");
   const warnings = issues.filter((i) => i.level === "warning");
   const isValid = errors.length === 0;
@@ -234,11 +271,23 @@ export default function CanvasFloatingControls({
         </Popover>
       )}
 
-      {/* ── Выдвижная панель эпюр ── */}
+      {/* ── Выдвижная панель эпюр (перетаскиваемая на ПК) ── */}
       {open === "diagrams" && (
-        <div className="absolute top-2 right-[52px] z-30 w-[260px] max-w-[calc(100vw-72px)] bg-[var(--drawing-bg)] border-[1.5px] border-[var(--drawing-accent)] shadow-lg">
-          <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--drawing-accent)]/40 bg-[var(--drawing-accent)]/5">
-            <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-accent)]">
+        <div
+          className="absolute z-30 w-[260px] max-w-[calc(100vw-72px)] bg-[var(--drawing-bg)] border-[1.5px] border-[var(--drawing-accent)] shadow-lg"
+          style={
+            diagPos
+              ? { left: diagPos.left, top: diagPos.top }
+              : { top: 8, right: 52 }
+          }
+        >
+          <div
+            onPointerDown={onDiagDragStart}
+            className="flex items-center justify-between px-3 py-2 border-b border-[var(--drawing-accent)]/40 bg-[var(--drawing-accent)]/5 md:cursor-grab md:active:cursor-grabbing select-none"
+            style={{ touchAction: "none" }}
+          >
+            <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-accent)] flex items-center gap-1.5">
+              <Icon name="GripVertical" size={12} className="hidden md:inline opacity-50" />
               Эпюры
             </p>
             <button
