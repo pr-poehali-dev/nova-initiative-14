@@ -182,11 +182,39 @@ def login_or_register_by_identity(
         tokens = issue_tokens(conn, user_id, ua, ip)
         return json_response(200, {**tokens, 'redirect_after': redirect_after})
 
+    email_verified = bool(profile.get('email_verified'))
+
     if email:
         with conn.cursor() as cur:
             cur.execute("SELECT id FROM sso_users WHERE email = %s", (email,))
             existing_user = cur.fetchone()
         if existing_user:
+            existing_uid = existing_user[0]
+            # Авто-привязка: провайдер подтвердил владение email (email_verified),
+            # значит это тот же человек — безопасно привязать identity и войти.
+            if email_verified:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "INSERT INTO sso_user_identities "
+                        "(user_id, provider, provider_user_id, email, raw_profile) "
+                        "VALUES (%s, %s, %s, %s, %s) "
+                        "ON CONFLICT (provider, provider_user_id) DO UPDATE "
+                        "SET last_login_at = NOW(), email = EXCLUDED.email, "
+                        "raw_profile = EXCLUDED.raw_profile",
+                        (existing_uid, provider, provider_user_id, email,
+                         json.dumps(profile.get('raw') or {}, ensure_ascii=False)),
+                    )
+                    # Если email ещё не был подтверждён в аккаунте — подтверждаем.
+                    cur.execute(
+                        "UPDATE sso_users SET email_verified_at = COALESCE(email_verified_at, NOW()) "
+                        "WHERE id = %s",
+                        (existing_uid,),
+                    )
+                conn.commit()
+                tokens = issue_tokens(conn, existing_uid, ua, ip)
+                return json_response(200, {**tokens, 'redirect_after': redirect_after})
+
+            # Email не верифицирован провайдером — требуем вход паролем.
             return json_response(409, {
                 'error': 'email_taken',
                 'message': f'Аккаунт с таким email уже существует. Войдите паролем — в личном кабинете вы сможете привязать вход через {provider}.',
