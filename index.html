@@ -13,6 +13,18 @@
     </script>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <!-- Применяем тему до загрузки React, чтобы не было вспышки светлого фона. -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("site-theme");
+          if (!t) {
+            t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          }
+          if (t === "dark") document.documentElement.classList.add("dark");
+        } catch (e) { /* ignore */ }
+      })();
+    </script>
     <!-- Запрещаем браузеру и промежуточным кэшам сохранять index.html.
          Это критично: если HTML закэшируется, он будет ссылаться на старые
          JS-чанки, которых уже нет — пользователь увидит "пустой фон". -->

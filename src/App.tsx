@@ -40,6 +40,7 @@ import AdGenerator from "./pages/AdGenerator";
 import NotFound from "./pages/NotFound";
 import { useVisitorTracking, getVisitorData } from "./hooks/useVisitorTracking";
 import { AuthProvider } from "./contexts/AuthContext";
+import { ThemeProvider } from "./hooks/use-theme";
 import func2url from "../backend/func2url.json";
 
 const queryClient = new QueryClient();
@@ -99,6 +100,7 @@ function VisitorTracker() {
 
 const App = () => (
   <HelmetProvider>
+    <ThemeProvider>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
@@ -149,6 +151,7 @@ const App = () => (
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
+    </ThemeProvider>
   </HelmetProvider>
 );
 

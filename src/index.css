@@ -17,6 +17,30 @@
   --drawing-paper: #f5f3e8;
 }
 
+/* Тёмная тема: переопределяем фирменные переменные «чертежа».
+   Светлая бумага → тёмная синь, тёмные линии → светлый шрифт. */
+html.dark {
+  --foreground-rgb: 255, 255, 255;
+  --background-rgb: 18, 18, 30;
+  --drawing-bg: #14141f;
+  --drawing-line: #e8e6da;
+  --drawing-line-thin: #9a9ab8;
+  --drawing-accent: #e35a4b;
+  --drawing-blue: #6d8ad6;
+  --drawing-grid: rgba(232, 230, 218, 0.07);
+  --drawing-paper: #1e1e2e;
+}
+
+/* Плавная смена темы для фона/текста/границ. */
+html.theme-ready body,
+html.theme-ready body * {
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease,
+    fill 0.25s ease;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -68,8 +92,8 @@ img {
     45deg,
     transparent,
     transparent 4px,
-    rgba(26, 26, 46, 0.07) 4px,
-    rgba(26, 26, 46, 0.07) 5px
+    var(--drawing-grid) 4px,
+    var(--drawing-grid) 5px
   );
 }
 
@@ -78,8 +102,8 @@ img {
     45deg,
     transparent,
     transparent 2px,
-    rgba(26, 26, 46, 0.1) 2px,
-    rgba(26, 26, 46, 0.1) 3px
+    var(--drawing-grid) 2px,
+    var(--drawing-grid) 3px
   );
 }
 

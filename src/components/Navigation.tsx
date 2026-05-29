@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import { useAuth } from "@/contexts/AuthContext";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const navLinks = [
   { label: "Программа", to: "/program" },
@@ -44,6 +45,7 @@ const Navigation = () => {
         </div>
 
         <div className="hidden md:flex items-center gap-3 ml-auto">
+          <ThemeToggle />
           {user ? (
             <Link
               to="/account"
@@ -70,13 +72,16 @@ const Navigation = () => {
           </Link>
         </div>
 
-        <button
-          className="md:hidden flex items-center justify-center min-w-[44px] min-h-[44px]"
-          onClick={() => setMenuOpen(true)}
-          aria-label="Открыть меню"
-        >
-          <Icon name="Menu" size={24} />
-        </button>
+        <div className="md:hidden flex items-center gap-1 ml-auto">
+          <ThemeToggle />
+          <button
+            className="flex items-center justify-center min-w-[44px] min-h-[44px]"
+            onClick={() => setMenuOpen(true)}
+            aria-label="Открыть меню"
+          >
+            <Icon name="Menu" size={24} />
+          </button>
+        </div>
       </div>
 
       {menuOpen && (
