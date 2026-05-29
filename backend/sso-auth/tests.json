@@ -91,13 +91,17 @@
       "bodyMatcher": "partial"
     },
     {
-      "name": "DEV: тестовое письмо на 97sega97@gmail.com",
+      "name": "Список способов входа без токена",
+      "method": "GET",
+      "path": "/?action=identities",
+      "expectedStatus": 401
+    },
+    {
+      "name": "Отвязка способа входа без токена",
       "method": "POST",
-      "path": "/?action=dev-test-email",
-      "body": {"to": "97sega97@gmail.com", "subject": "ТЕСТ алгоритма подтверждения"},
-      "expectedStatus": 200,
-      "expectedBody": {"to": "97sega97@gmail.com"},
-      "bodyMatcher": "partial"
+      "path": "/?action=identity-unlink",
+      "body": {"provider": "google"},
+      "expectedStatus": 401
     }
   ]
 }

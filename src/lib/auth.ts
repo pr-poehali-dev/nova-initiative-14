@@ -220,3 +220,44 @@ export async function oauthCallback(code: string, state: string) {
     { code, state },
   );
 }
+
+export interface LinkedIdentity {
+  provider: OAuthProvider;
+  email: string | null;
+  created_at: string | null;
+  last_login_at: string | null;
+}
+
+export interface IdentitiesResp {
+  identities: LinkedIdentity[];
+  has_password: boolean;
+  available_providers: OAuthProvider[];
+}
+
+/** Список привязанных способов входа текущего пользователя. */
+export async function fetchIdentities(accessToken: string) {
+  return call<IdentitiesResp>("identities", "GET", undefined, accessToken);
+}
+
+/** Отвязать провайдера от аккаунта. */
+export async function unlinkIdentity(accessToken: string, provider: OAuthProvider) {
+  return call<{ unlinked: boolean; provider: string }>(
+    "identity-unlink",
+    "POST",
+    { provider },
+    accessToken,
+  );
+}
+
+/**
+ * Запуск привязки нового провайдера из ЛК.
+ * link=1 + Bearer-токен → backend привяжет провайдера к текущему аккаунту.
+ */
+export async function oauthStartLink(provider: OAuthProvider, accessToken: string, redirectAfter = "/account") {
+  const url = `${API}?action=oauth-start&link=1&provider=${provider}&redirect_after=${encodeURIComponent(redirectAfter)}`;
+  const res = await fetch(url, {
+    headers: { Accept: "application/json", "X-Authorization": `Bearer ${accessToken}` },
+  });
+  if (!res.ok) throw new Error(`oauth-start ${res.status}`);
+  return (await res.json()) as { authorize_url: string; provider: OAuthProvider };
+}

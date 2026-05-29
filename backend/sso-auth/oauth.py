@@ -263,10 +263,13 @@ def action_oauth_providers(conn) -> dict:
     })
 
 
-def action_oauth_start(conn, params: dict, ip: str) -> dict:
+def action_oauth_start(conn, params: dict, ip: str, link_user_id: int | None = None) -> dict:
     """
     Подготавливает Authorization URL: создаёт одноразовый state (10 мин),
     для VK ID — PKCE pair. Возвращает authorize_url для редиректа.
+
+    Если передан link_user_id (запрос от авторизованного пользователя из ЛК) —
+    это режим привязки: после callback провайдер привяжется к этому аккаунту.
     """
     provider = (params.get('provider') or '').strip().lower()
     if provider not in OAUTH_PROVIDERS:
@@ -288,9 +291,10 @@ def action_oauth_start(conn, params: dict, ip: str) -> dict:
     expires_at = datetime.now(timezone.utc) + timedelta(seconds=OAUTH_STATE_TTL)
     with conn.cursor() as cur:
         cur.execute(
-            "INSERT INTO sso_oauth_states (state_hash, provider, code_verifier, redirect_after, ip, expires_at) "
-            "VALUES (%s, %s, %s, %s, %s, %s)",
-            (state_hash, provider, code_verifier, redirect_after, ip[:64], expires_at),
+            "INSERT INTO sso_oauth_states "
+            "(state_hash, provider, code_verifier, redirect_after, ip, expires_at, link_user_id) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            (state_hash, provider, code_verifier, redirect_after, ip[:64], expires_at, link_user_id),
         )
     conn.commit()
 
@@ -327,14 +331,14 @@ def action_oauth_callback(conn, body: dict, ua: str, ip: str) -> dict:
     state_hash = hashlib.sha256(raw_state.encode()).hexdigest()
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT id, provider, code_verifier, redirect_after, expires_at, used_at "
+            "SELECT id, provider, code_verifier, redirect_after, expires_at, used_at, link_user_id "
             "FROM sso_oauth_states WHERE state_hash = %s",
             (state_hash,),
         )
         row = cur.fetchone()
         if not row:
             return json_response(400, {'error': 'invalid_state'})
-        state_id, provider, code_verifier, redirect_after, expires_at, used_at = row
+        state_id, provider, code_verifier, redirect_after, expires_at, used_at, link_user_id = row
         if used_at is not None:
             return json_response(400, {'error': 'state_already_used'})
         if expires_at < datetime.now(timezone.utc):
@@ -357,6 +361,9 @@ def action_oauth_callback(conn, body: dict, ua: str, ip: str) -> dict:
     except Exception as e:
         print(f'[sso-auth] OAuth userinfo failed for {provider}: {e!r}')
         return json_response(502, {'error': 'userinfo_failed', 'message': str(e)[:200]})
+
+    if link_user_id:
+        return link_identity_to_user(conn, link_user_id, provider, profile, ua, ip, redirect_after)
 
     return login_or_register_by_identity(conn, provider, profile, ua, ip, redirect_after)
 
@@ -413,3 +420,111 @@ def action_oauth_vk_sdk(conn, body: dict, ua: str, ip: str) -> dict:
         'raw': u,
     }
     return login_or_register_by_identity(conn, provider, profile, ua, ip, redirect_after)
+
+
+# === Привязка / отвязка способов входа (личный кабинет) ===
+
+def link_identity_to_user(
+    conn, user_id: int, provider: str, profile: dict, ua: str, ip: str, redirect_after: str
+) -> dict:
+    """
+    Привязывает identity провайдера к уже авторизованному пользователю (из ЛК).
+    Ошибка, если этот аккаунт провайдера уже привязан к ДРУГОМУ пользователю.
+    """
+    provider_user_id = profile.get('provider_user_id')
+    if not provider_user_id:
+        return json_response(502, {'error': 'no_provider_user_id'})
+
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT user_id FROM sso_user_identities WHERE provider = %s AND provider_user_id = %s",
+            (provider, provider_user_id),
+        )
+        owner = cur.fetchone()
+
+    if owner and owner[0] != user_id:
+        return json_response(409, {
+            'error': 'identity_taken',
+            'message': f'Этот аккаунт {provider} уже привязан к другому пользователю.',
+        })
+
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO sso_user_identities "
+            "(user_id, provider, provider_user_id, email, raw_profile) "
+            "VALUES (%s, %s, %s, %s, %s) "
+            "ON CONFLICT (provider, provider_user_id) DO UPDATE "
+            "SET last_login_at = NOW(), email = EXCLUDED.email, raw_profile = EXCLUDED.raw_profile",
+            (user_id, provider, provider_user_id, profile.get('email'),
+             json.dumps(profile.get('raw') or {}, ensure_ascii=False)),
+        )
+    conn.commit()
+    return json_response(200, {'linked': True, 'provider': provider, 'redirect_after': redirect_after})
+
+
+def action_list_identities(conn, user_id: int) -> dict:
+    """Список привязанных способов входа текущего пользователя + есть ли пароль."""
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT provider, email, created_at, last_login_at "
+            "FROM sso_user_identities WHERE user_id = %s ORDER BY created_at",
+            (user_id,),
+        )
+        rows = cur.fetchall()
+        cur.execute(
+            "SELECT password_hash IS NOT NULL AND password_hash <> '' FROM sso_users WHERE id = %s",
+            (user_id,),
+        )
+        pwd_row = cur.fetchone()
+
+    identities = [
+        {
+            'provider': r[0],
+            'email': r[1],
+            'created_at': r[2].isoformat() if r[2] else None,
+            'last_login_at': r[3].isoformat() if r[3] else None,
+        }
+        for r in rows
+    ]
+    available = [p for p in OAUTH_PROVIDERS if oauth_provider_enabled(p)]
+    if os.environ.get('OAUTH_VK_CLIENT_ID') and 'vk' not in available:
+        available.append('vk')
+    return json_response(200, {
+        'identities': identities,
+        'has_password': bool(pwd_row and pwd_row[0]),
+        'available_providers': available,
+    })
+
+
+def action_unlink_identity(conn, user_id: int, body: dict) -> dict:
+    """
+    Отвязывает провайдера. Запрет, если это единственный способ входа
+    (нет пароля и нет других привязок) — иначе пользователь потеряет доступ.
+    """
+    provider = (body.get('provider') or '').strip().lower()
+    if not provider:
+        return json_response(400, {'error': 'missing_provider'})
+
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT password_hash IS NOT NULL AND password_hash <> '' FROM sso_users WHERE id = %s",
+            (user_id,),
+        )
+        pwd_row = cur.fetchone()
+        has_password = bool(pwd_row and pwd_row[0])
+        cur.execute("SELECT COUNT(*) FROM sso_user_identities WHERE user_id = %s", (user_id,))
+        total = cur.fetchone()[0]
+
+    if not has_password and total <= 1:
+        return json_response(409, {
+            'error': 'last_login_method',
+            'message': 'Это единственный способ входа. Сначала задайте пароль через «Восстановление пароля».',
+        })
+
+    with conn.cursor() as cur:
+        cur.execute(
+            "DELETE FROM sso_user_identities WHERE user_id = %s AND provider = %s",
+            (user_id, provider),
+        )
+    conn.commit()
+    return json_response(200, {'unlinked': True, 'provider': provider})

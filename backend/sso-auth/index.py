@@ -33,12 +33,14 @@ from actions import (
     action_verify_email,
 )
 from config import CORS
-from db_helpers import client_ip, json_response, user_agent
+from db_helpers import client_ip, current_user_id, json_response, user_agent
 from oauth import (
+    action_list_identities,
     action_oauth_callback,
     action_oauth_providers,
     action_oauth_start,
     action_oauth_vk_sdk,
+    action_unlink_identity,
 )
 
 
@@ -121,11 +123,25 @@ def handler(event: dict, context) -> dict:
         if action == 'oauth-providers' and method == 'GET':
             return action_oauth_providers(conn)
         if action == 'oauth-start' and method == 'GET':
-            return action_oauth_start(conn, params, ip)
+            # Если запрос авторизован (есть токен) — режим привязки в ЛК.
+            link_uid = current_user_id(event) if params.get('link') == '1' else None
+            return action_oauth_start(conn, params, ip, link_user_id=link_uid)
         if action == 'oauth-callback' and method == 'POST':
             return action_oauth_callback(conn, body, ua, ip)
         if action == 'oauth-vk-sdk' and method == 'POST':
             return action_oauth_vk_sdk(conn, body, ua, ip)
+
+        # === Способы входа (личный кабинет, требуют Bearer-токен) ===
+        if action == 'identities' and method == 'GET':
+            uid = current_user_id(event)
+            if not uid:
+                return json_response(401, {'error': 'unauthorized'})
+            return action_list_identities(conn, uid)
+        if action == 'identity-unlink' and method == 'POST':
+            uid = current_user_id(event)
+            if not uid:
+                return json_response(401, {'error': 'unauthorized'})
+            return action_unlink_identity(conn, uid, body)
 
         return json_response(404, {'error': 'unknown_action'})
     except Exception as e:

@@ -30,11 +30,18 @@ const OAuthCallback = () => {
 
     oauthCallback(code, state)
       .then((res) => {
-        if (res.ok && res.data) {
-          saveTokens(res.data);
+        const payload = res.data as
+          | { linked?: boolean; access_token?: string; redirect_after?: string }
+          | null;
+        if (res.ok && payload?.linked) {
+          // Режим привязки из ЛК — токены не меняются, просто обновляем профиль.
           refreshUser().then(() => {
-            const after = res.data?.redirect_after || "/account";
-            nav(after, { replace: true });
+            nav(`${payload.redirect_after || "/account"}?linked=1`, { replace: true });
+          });
+        } else if (res.ok && payload?.access_token) {
+          saveTokens(res.data!);
+          refreshUser().then(() => {
+            nav(res.data?.redirect_after || "/account", { replace: true });
           });
         } else {
           setStatus("error");

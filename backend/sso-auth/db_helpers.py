@@ -22,7 +22,22 @@ from config import (
     REFRESH_TOKEN_TTL,
     VERIFY_TOKEN_TTL,
 )
-from crypto import generate_refresh_token, sign_jwt
+from crypto import generate_refresh_token, sign_jwt, verify_jwt
+
+
+def current_user_id(event: dict) -> int | None:
+    """user_id из access-токена (Bearer в X-Authorization/Authorization) или None."""
+    headers = event.get('headers') or {}
+    auth = headers.get('X-Authorization') or headers.get('Authorization') or ''
+    if not auth.startswith('Bearer '):
+        return None
+    payload = verify_jwt(auth[7:].strip())
+    if not payload:
+        return None
+    try:
+        return int(payload['sub'])
+    except (KeyError, ValueError, TypeError):
+        return None
 
 
 def json_response(status: int, body: dict) -> dict:
