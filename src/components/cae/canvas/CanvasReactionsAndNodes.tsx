@@ -167,18 +167,6 @@ const CanvasReactionsAndNodes = ({
           {`x=${cursorWorld.x.toFixed(2)} м,  y=${cursorWorld.y.toFixed(2)} м   ·   масштаб ${pxPerM.toFixed(0)} px/м`}
         </text>
       )}
-
-      {/* Легенда: показывается, если есть результат */}
-      {showReactions && result && result.reactions.length > 0 && (
-        <g pointerEvents="none">
-          <rect x={size.w - 130} y={10} width={120} height={32} fill={BG} fillOpacity={0.85} stroke={THIN} strokeWidth={0.5} />
-          <line x1={size.w - 122} y1={22} x2={size.w - 104} y2={22} stroke={REACTION} strokeWidth={2} />
-          <polygon points={`${size.w - 104},${22} ${size.w - 109},${19} ${size.w - 109},${25}`} fill={REACTION} />
-          <text x={size.w - 98} y={26} fontSize={10} fill={REACTION} fontFamily="monospace">
-            реакция опоры
-          </text>
-        </g>
-      )}
     </>
   );
 };
