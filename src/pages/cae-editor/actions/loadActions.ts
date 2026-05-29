@@ -140,6 +140,26 @@ export function addInSpanPoint(
   return { ...model, loads };
 }
 
+/**
+ * Изменить уже добавленную точечную силу в пролёте по её id:
+ * новую позицию pos (0…1) и величину py. Безопасно для NaN.
+ */
+export function updateInSpanPoint(
+  model: FrameModel,
+  loadId: string,
+  pos: number,
+  py: number,
+): FrameModel {
+  return {
+    ...model,
+    loads: model.loads.map((l) =>
+      l.id === loadId && l.type === "in_span_point"
+        ? { ...l, force: [0, num(py), 0], position_ratio: clampPos(pos) }
+        : l,
+    ),
+  };
+}
+
 /** Удалить нагрузку по id. */
 export function removeLoadById(model: FrameModel, loadId: string): FrameModel {
   return { ...model, loads: model.loads.filter((l) => l.id !== loadId) };

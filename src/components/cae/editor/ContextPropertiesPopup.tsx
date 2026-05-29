@@ -57,6 +57,7 @@ interface Props {
   setSecPickerOpen: (v: boolean) => void;
   setDistributedLoad: (qy: number) => void;
   addInSpanPoint: (pos: number, py: number) => void;
+  updateInSpanPoint: (loadId: string, pos: number, py: number) => void;
   removeLoadById: (loadId: string) => void;
   setElementHinge: (end: "start" | "end", on: boolean) => void;
   deleteSelected: () => void;
@@ -112,6 +113,7 @@ const ContextPropertiesPopup = ({
   setSecPickerOpen,
   setDistributedLoad,
   addInSpanPoint,
+  updateInSpanPoint,
   removeLoadById,
   setElementHinge,
   deleteSelected,
@@ -311,6 +313,7 @@ const ContextPropertiesPopup = ({
             setSecPickerOpen={setSecPickerOpen}
             setDistributedLoad={setDistributedLoad}
             addInSpanPoint={addInSpanPoint}
+            updateInSpanPoint={updateInSpanPoint}
             removeLoadById={removeLoadById}
             setElementHinge={setElementHinge}
             deleteSelected={deleteSelected}

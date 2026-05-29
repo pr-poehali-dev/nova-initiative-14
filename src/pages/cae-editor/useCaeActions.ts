@@ -35,6 +35,7 @@ import {
   setNodalMoment as setNodalMomentPure,
   setDistributedLoad as setDistributedLoadPure,
   addInSpanPoint as addInSpanPointPure,
+  updateInSpanPoint as updateInSpanPointPure,
   removeLoadById as removeLoadByIdPure,
 } from "./actions/loadActions";
 import {
@@ -165,6 +166,10 @@ export function useCaeActions(
     updateModel(addInSpanPointPure(model, selectedElementId, pos, py));
   };
 
+  const updateInSpanPoint = (loadId: string, pos: number, py: number) => {
+    updateModel(updateInSpanPointPure(model, loadId, pos, py));
+  };
+
   const removeLoadById = (loadId: string) => {
     updateModel(removeLoadByIdPure(model, loadId));
   };
@@ -191,6 +196,7 @@ export function useCaeActions(
     pickSectionForElement,
     setDistributedLoad,
     addInSpanPoint,
+    updateInSpanPoint,
     removeLoadById,
     setElementHinge,
   };

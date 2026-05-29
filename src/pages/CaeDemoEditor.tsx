@@ -151,6 +151,7 @@ const CaeDemoEditor = () => {
     pickSectionForElement,
     setDistributedLoad,
     addInSpanPoint,
+    updateInSpanPoint,
     removeLoadById,
     setElementHinge,
   } = useCaeActions(
@@ -300,7 +301,19 @@ const CaeDemoEditor = () => {
             setDiagramScale={setDiagramScale}
             onFocusNode={(id) => setSelectedNodeIds([id])}
             onFocusElement={(id) => setSelectedElementIds([id])}
-            onRequestContext={(req) => setContextTarget(req)}
+            onRequestContext={(req) => {
+              // Синхронизируем выделение с объектом popup'а — иначе действия,
+              // привязанные к selectedElementId/Node (нагрузки, шарниры),
+              // применятся к старому или пустому выделению.
+              if (req.kind === "element") {
+                setSelectedElementIds([req.id]);
+                setSelectedNodeIds([]);
+              } else {
+                setSelectedNodeIds([req.id]);
+                setSelectedElementIds([]);
+              }
+              setContextTarget(req);
+            }}
           />
 
           <EditorSidePanels
@@ -413,16 +426,11 @@ const CaeDemoEditor = () => {
           removeLoadOnNode={removeLoadOnNode}
           setMatPickerOpen={setMatPickerOpen}
           setSecPickerOpen={setSecPickerOpen}
-          setDistributedLoad={(qy) => {
-            if (selectedElementId) setDistributedLoad(selectedElementId, qy);
-          }}
-          addInSpanPoint={(pos, py) => {
-            if (selectedElementId) addInSpanPoint(selectedElementId, pos, 0, py);
-          }}
+          setDistributedLoad={setDistributedLoad}
+          addInSpanPoint={addInSpanPoint}
+          updateInSpanPoint={updateInSpanPoint}
           removeLoadById={removeLoadById}
-          setElementHinge={(end, on) => {
-            if (selectedElementId) setElementHinge(selectedElementId, end, on);
-          }}
+          setElementHinge={setElementHinge}
           deleteSelected={deleteSelected}
         />
       )}

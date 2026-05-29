@@ -38,6 +38,7 @@ interface Props {
   setSecPickerOpen: (v: boolean) => void;
   setDistributedLoad: (qy: number) => void;
   addInSpanPoint: (pos: number, py: number) => void;
+  updateInSpanPoint: (loadId: string, pos: number, py: number) => void;
   removeLoadById: (loadId: string) => void;
   /** Переключение шарнира на конце элемента (Mz=0). */
   setElementHinge: (end: "start" | "end", on: boolean) => void;
@@ -62,6 +63,7 @@ const EditorRightPanel = ({
   setSecPickerOpen,
   setDistributedLoad,
   addInSpanPoint,
+  updateInSpanPoint,
   removeLoadById,
   setElementHinge,
   deleteSelected,
@@ -95,6 +97,7 @@ const EditorRightPanel = ({
         setElementHinge={setElementHinge}
         setDistributedLoad={setDistributedLoad}
         addInSpanPoint={addInSpanPoint}
+        updateInSpanPoint={updateInSpanPoint}
         removeLoadById={removeLoadById}
         deleteSelected={deleteSelected}
       />

@@ -1,7 +1,8 @@
 import Icon from "@/components/ui/icon";
 import type { FrameModel } from "@/lib/cae-model";
-import NumericInput from "./NumericInput";
 import InSpanForm from "./InSpanForm";
+import DistributedForm from "./DistributedForm";
+import LoadListItem from "./LoadListItem";
 
 /**
  * Правая панель свойств ЭЛЕМЕНТА (стержня):
@@ -19,6 +20,7 @@ export default function ElementPropertiesPanel({
   setElementHinge,
   setDistributedLoad,
   addInSpanPoint,
+  updateInSpanPoint,
   removeLoadById,
   deleteSelected,
 }: {
@@ -29,6 +31,7 @@ export default function ElementPropertiesPanel({
   setElementHinge: (end: "start" | "end", on: boolean) => void;
   setDistributedLoad: (qy: number) => void;
   addInSpanPoint: (pos: number, py: number) => void;
+  updateInSpanPoint: (loadId: string, pos: number, py: number) => void;
   removeLoadById: (loadId: string) => void;
   deleteSelected: () => void;
 }) {
@@ -114,18 +117,12 @@ export default function ElementPropertiesPanel({
       <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-1">
         Распределённая q (по локальной y), Н/м
       </p>
-      <NumericInput
-        value={distLoad?.load_local_per_length?.[1] ?? 0}
-        step={100}
-        onCommit={(v) => setDistributedLoad(v)}
-        placeholder="0 (нет нагрузки)"
-        className="drawing-input mb-3 font-mono text-[11px]"
-      />
-      {distLoad && (
-        <p className="font-gost text-[10px] text-[var(--drawing-accent)] -mt-2 mb-3">
-          ✓ q&nbsp;=&nbsp;{(distLoad.load_local_per_length?.[1] ?? 0).toFixed(0)} Н/м применена
-        </p>
-      )}
+      <div className="mb-3">
+        <DistributedForm
+          current={distLoad?.load_local_per_length?.[1] ?? 0}
+          onApply={setDistributedLoad}
+        />
+      </div>
 
       <details className="mb-3 text-[11px]">
         <summary className="cursor-pointer font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)]">
@@ -140,34 +137,16 @@ export default function ElementPropertiesPanel({
             Нагрузки ({elementLoads.length})
           </p>
           <ul className="space-y-1">
-            {elementLoads.map((ld) => {
-              let label = "";
-              if (ld.type === "distributed_uniform") {
-                const q = ld.load_local_per_length?.[1] ?? 0;
-                label = `q = ${q.toFixed(0)} Н/м (равномерная)`;
-              } else if (ld.type === "in_span_point") {
-                const p = ld.force?.[1] ?? 0;
-                const pos = ld.position_ratio ?? 0;
-                label = `P = ${p.toFixed(0)} Н в x = ${(pos * len).toFixed(2)} м (${(pos * 100).toFixed(0)}%)`;
-              } else {
-                label = ld.type;
-              }
-              return (
-                <li
-                  key={ld.id}
-                  className="flex items-center justify-between gap-2 text-[10px] font-mono bg-[var(--drawing-paper)] border border-[var(--drawing-line-thin)] px-2 py-1"
-                >
-                  <span className="truncate">{label}</span>
-                  <button
-                    onClick={() => removeLoadById(ld.id)}
-                    className="text-[var(--drawing-accent)] hover:underline shrink-0"
-                    title="Удалить"
-                  >
-                    <Icon name="X" size={11} />
-                  </button>
-                </li>
-              );
-            })}
+            {elementLoads.map((ld) => (
+              <LoadListItem
+                key={ld.id}
+                load={ld}
+                length={len}
+                onUpdateDistributed={(qy) => setDistributedLoad(qy)}
+                onUpdateInSpan={(pos, py) => updateInSpanPoint(ld.id, pos, py)}
+                onRemove={() => removeLoadById(ld.id)}
+              />
+            ))}
           </ul>
         </div>
       )}
