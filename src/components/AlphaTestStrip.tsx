@@ -56,25 +56,27 @@ export default function AlphaTestStrip() {
       className="fixed top-14 left-0 right-0 z-40 bg-[var(--drawing-accent)] text-white border-b border-black/10"
       role="status"
     >
-      <div className="max-w-[1200px] mx-auto px-4 py-1.5 flex items-center gap-3 text-[11px]">
-        <Icon name="FlaskConical" size={12} className="shrink-0" />
-        <p className="font-gost uppercase tracking-wider leading-tight flex-1 min-w-0 truncate">
-          <span className="font-bold">Альфа-тест:</span>{" "}
-          <span className="opacity-90">CAE-расчёты открыты бесплатно, лимиты сняты.</span>{" "}
-          <Link
-            to={user ? "/cae/projects" : "/cae/demo"}
-            className="underline underline-offset-2 font-bold hover:no-underline whitespace-nowrap"
-          >
-            {user ? "Мои проекты" : "Попробовать"}&nbsp;&rarr;
-          </Link>
-        </p>
+      <div className="max-w-[1200px] mx-auto pl-4 pr-1 py-1 flex items-center gap-2 text-[11px]">
+        <Link
+          to={user ? "/cae/projects" : "/cae/demo"}
+          className="flex items-center gap-2 flex-1 min-w-0 py-1 group"
+        >
+          <Icon name="FlaskConical" size={12} className="shrink-0" />
+          <span className="font-gost uppercase tracking-wider leading-tight truncate">
+            <span className="font-bold">Альфа-тест:</span>{" "}
+            <span className="opacity-90">CAE-расчёты бесплатно, лимиты сняты.</span>{" "}
+            <span className="underline underline-offset-2 font-bold group-hover:no-underline whitespace-nowrap">
+              {user ? "Мои проекты" : "Попробовать"}&nbsp;&rarr;
+            </span>
+          </span>
+        </Link>
         <button
           type="button"
           onClick={() => setDismissed(true)}
           aria-label="Скрыть уведомление"
-          className="shrink-0 hover:bg-white/15 p-1 -mr-1 transition-colors"
+          className="shrink-0 hover:bg-white/15 p-2 transition-colors"
         >
-          <Icon name="X" size={12} />
+          <Icon name="X" size={16} />
         </button>
       </div>
     </div>
