@@ -12,13 +12,18 @@ import type { jsPDF } from "jspdf";
 import { C } from "./palette";
 import { fontState } from "./font-loader";
 
-/** Компактный формат числа с суффиксом k/M/G. d = знаков после запятой для |v|<1000. */
+/**
+ * Компактный формат числа с приставкой кратности по системе СИ (к/М/Г).
+ * Приставка прижата к числу без пробела, чтобы при добавлении единицы
+ * получалось корректное обозначение (например «12.0к» + «Н» = «12.0кН»).
+ * d = знаков после запятой для |v|<1000.
+ */
 export function fmt(v: number, d = 2): string {
   if (!isFinite(v)) return "—";
   const a = Math.abs(v);
-  if (a >= 1e9) return `${(v / 1e9).toFixed(1)} G`;
-  if (a >= 1e6) return `${(v / 1e6).toFixed(2)} M`;
-  if (a >= 1e3) return `${(v / 1e3).toFixed(2)} k`;
+  if (a >= 1e9) return `${(v / 1e9).toFixed(1)}Г`;
+  if (a >= 1e6) return `${(v / 1e6).toFixed(2)}М`;
+  if (a >= 1e3) return `${(v / 1e3).toFixed(2)}к`;
   return v.toFixed(d);
 }
 

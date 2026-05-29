@@ -1658,8 +1658,8 @@ export async function generatePdfReport(
     ["Узлов", String(s.n_nodes)],
     ["Элементов", String(s.n_elements)],
     ["Степеней свободы", String(s.n_dofs)],
-    ["Макс. прогиб", `${fmt(s.max_displacement * 1000, 3)} мм`],
-    ["Макс. σ Мизес", `${fmt(s.max_sigma_vm / 1e6, 1)} МПа`],
+    ["Макс. прогиб", `${(s.max_displacement * 1000).toFixed(3)} мм`],
+    ["Макс. σ Мизес", `${(s.max_sigma_vm / 1e6).toFixed(1)} МПа`],
     ["Запас прочности", s.min_safety_factor && s.min_safety_factor < 1e5 ? s.min_safety_factor.toFixed(2) : "∞"],
   ];
 

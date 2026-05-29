@@ -1,12 +1,21 @@
 /**
  * Лёгкое анимированное демо CAE: балка на двух опорах под распределённой
- * нагрузкой, её прогиб и эпюра изгибающего момента.
- * Чистый SVG + CSS-анимации (без решателя) — показывает продукт «в движении».
- * Бесконечный цикл 6 с: схема → нагрузка → деформация → эпюра → результат.
+ * нагрузкой, реакции опор, прогиб и эпюра изгибающего момента.
+ * Стиль повторяет реальный редактор Диплом-Инж.CAE (узлы, опоры по ГОСТ,
+ * реакции R, эпюра-заливка с точкой максимума).
+ * Чистый SVG + CSS-анимации (без решателя). Бесконечный цикл 6 с.
+ * Все значения — по системе СИ (кН, кН·м).
  */
 export default function CaeDemoAnimation() {
-  // Стрелки распределённой нагрузки — внутри пролёта (70…410), не на опорах
-  const arrows = Array.from({ length: 9 }, (_, i) => 70 + i * 42.5);
+  const NL = 92;
+  const NR = 388;
+  const BY = 150; // уровень балки
+  // Стрелки распределённой нагрузки — внутри пролёта
+  const arrows = Array.from({ length: 7 }, (_, i) => NL + 24 + i * ((NR - NL - 48) / 6));
+
+  const blue = "var(--drawing-blue)";
+  const accent = "var(--drawing-accent)";
+  const green = "#1a8a5a";
 
   return (
     <div className="relative w-full border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] overflow-hidden">
@@ -22,128 +31,112 @@ export default function CaeDemoAnimation() {
       </div>
 
       <svg
-        viewBox="0 0 460 300"
+        viewBox="0 0 480 320"
         className="w-full h-auto block"
         role="img"
-        aria-label="Анимация расчёта балки под распределённой нагрузкой"
+        aria-label="Расчётная схема балки: распределённая нагрузка, реакции опор и эпюра момента"
       >
-        {/* Сетка */}
         <defs>
-          <pattern id="caeGrid" width="20" height="20" patternUnits="userSpaceOnUse">
-            <path
-              d="M20 0H0V20"
-              fill="none"
-              stroke="var(--drawing-line-thin)"
-              strokeWidth="0.4"
-              opacity="0.25"
-            />
+          <pattern id="caeGrid" width="24" height="24" patternUnits="userSpaceOnUse">
+            <path d="M24 0H0V24" fill="none" stroke="var(--drawing-line-thin)" strokeWidth="0.4" opacity="0.22" />
           </pattern>
+          <marker id="caeDown" markerWidth="7" markerHeight="7" refX="3.5" refY="6" orient="auto">
+            <path d="M0 0 L3.5 6 L7 0 Z" fill={accent} />
+          </marker>
+          <marker id="caeUp" markerWidth="9" markerHeight="9" refX="4.5" refY="0" orient="auto">
+            <path d="M0 9 L4.5 0 L9 9 Z" fill={green} />
+          </marker>
         </defs>
-        <rect width="460" height="300" fill="url(#caeGrid)" />
+        <rect width="480" height="320" fill="url(#caeGrid)" />
 
-        {/* Распределённая нагрузка q (стрелки) */}
-        <g
-          className="cae-demo-loop"
-          style={{ animationName: "caeLoadArrows" }}
-        >
-          <line x1="62" y1="70" x2="418" y2="70" stroke="var(--drawing-accent)" strokeWidth="1.5" />
-          {arrows.map((x) => (
-            <line
-              key={x}
-              x1={x}
-              y1="70"
-              x2={x}
-              y2="108"
-              stroke="var(--drawing-accent)"
-              strokeWidth="1.5"
-              markerEnd="url(#caeArrow)"
-            />
+        {/* Реакции опор R (зелёные стрелки вверх) */}
+        <g className="cae-demo-loop" style={{ animationName: "caeResultBadge" }}>
+          {[NL, NR].map((x) => (
+            <line key={x} x1={x} y1={BY - 18} x2={x} y2={BY - 78} stroke={green} strokeWidth="2.2" markerEnd="url(#caeUp)" />
           ))}
-          <text
-            x="240"
-            y="60"
-            textAnchor="middle"
-            fill="var(--drawing-accent)"
-            fontFamily="'Roboto Mono', monospace"
-            fontSize="12"
-            fontStyle="italic"
-          >
-            q = 12 кН/м
+          <text x={NL} y={BY - 86} textAnchor="middle" fill={green} fontFamily="'Roboto Mono', monospace" fontSize="12">
+            R = 20.0 кН
           </text>
-          <defs>
-            <marker id="caeArrow" markerWidth="6" markerHeight="6" refX="3" refY="5" orient="auto">
-              <path d="M0 0 L3 5 L6 0 Z" fill="var(--drawing-accent)" />
-            </marker>
-          </defs>
+          <text x={NR} y={BY - 86} textAnchor="middle" fill={green} fontFamily="'Roboto Mono', monospace" fontSize="12">
+            R = 20.0 кН
+          </text>
         </g>
 
-        {/* Исходная балка */}
-        <line x1="60" y1="120" x2="420" y2="120" stroke="var(--drawing-line)" strokeWidth="3" />
+        {/* Распределённая нагрузка q */}
+        <g className="cae-demo-loop" style={{ animationName: "caeLoadArrows" }}>
+          <line x1={NL} y1={BY - 50} x2={NR} y2={BY - 50} stroke={accent} strokeWidth="1.5" />
+          {arrows.map((x) => (
+            <line key={x} x1={x} y1={BY - 50} x2={x} y2={BY - 8} stroke={accent} strokeWidth="1.5" markerEnd="url(#caeDown)" />
+          ))}
+          <text x={240} y={BY - 58} textAnchor="middle" fill={accent} fontFamily="'Roboto Mono', monospace" fontSize="12">
+            q = 10.0 кН/м
+          </text>
+        </g>
 
-        {/* Прогиб балки (проявляется) */}
-        <path
-          className="cae-demo-loop"
-          style={{ animationName: "caeDeflect" }}
-          d="M60 120 Q240 165 420 120"
-          fill="none"
-          stroke="var(--drawing-line)"
-          strokeWidth="2"
-          strokeDasharray="5 4"
-          opacity="0"
-        />
+        {/* Балка */}
+        <line x1={NL} y1={BY} x2={NR} y2={BY} stroke="var(--drawing-line)" strokeWidth="3.5" />
 
-        {/* Левая опора — шарнирно-неподвижная (ГОСТ): треугольник + штриховка основания */}
+        {/* Метки узлов */}
+        <text x={NL + 8} y={BY - 8} fill="var(--drawing-line-thin)" fontFamily="'Roboto Mono', monospace" fontSize="12">n2</text>
+        <text x={NR - 24} y={BY - 8} fill="var(--drawing-line-thin)" fontFamily="'Roboto Mono', monospace" fontSize="12">n3</text>
+
+        {/* Узлы (кружки) */}
+        <circle cx={NL} cy={BY} r="6" fill="var(--drawing-bg)" stroke="var(--drawing-line)" strokeWidth="2.2" />
+        <circle cx={NR} cy={BY} r="6" fill="var(--drawing-bg)" stroke="var(--drawing-line)" strokeWidth="2.2" />
+
+        {/* Левая опора — шарнирно-неподвижная (треугольник + штриховка) */}
         <g stroke="var(--drawing-line)" strokeWidth="1.6">
-          <path d="M60 120 L48 142 L72 142 Z" fill="none" />
-          <line x1="44" y1="142" x2="76" y2="142" />
-          {[48, 55, 62, 69].map((x) => (
-            <line key={x} x1={x} y1="142" x2={x - 6} y2="150" strokeWidth="1.2" />
+          <path d={`M${NL} ${BY + 6} L${NL - 11} ${BY + 24} L${NL + 11} ${BY + 24} Z`} fill="none" />
+          <line x1={NL - 14} y1={BY + 24} x2={NL + 14} y2={BY + 24} />
+          {[-9, -2, 5, 12].map((d) => (
+            <line key={d} x1={NL + d} y1={BY + 24} x2={NL + d - 6} y2={BY + 32} strokeWidth="1.2" />
           ))}
         </g>
 
-        {/* Правая опора — шарнирно-подвижная (ГОСТ): треугольник + катки + опорная линия */}
+        {/* Правая опора — шарнирно-подвижная (треугольник + катки) */}
         <g stroke="var(--drawing-line)" strokeWidth="1.6">
-          <path d="M420 120 L408 140 L432 140 Z" fill="none" />
-          <circle cx="412" cy="145" r="3.5" fill="var(--drawing-bg)" />
-          <circle cx="420" cy="145" r="3.5" fill="var(--drawing-bg)" />
-          <circle cx="428" cy="145" r="3.5" fill="var(--drawing-bg)" />
-          <line x1="404" y1="150" x2="436" y2="150" />
-          {[408, 415, 422, 429, 436].map((x) => (
-            <line key={x} x1={x} y1="150" x2={x - 5} y2="157" strokeWidth="1.2" />
-          ))}
+          <path d={`M${NR} ${BY + 6} L${NR - 11} ${BY + 22} L${NR + 11} ${BY + 22} Z`} fill="none" />
+          <circle cx={NR - 8} cy={BY + 27} r="3.5" fill="var(--drawing-bg)" />
+          <circle cx={NR} cy={BY + 27} r="3.5" fill="var(--drawing-bg)" />
+          <circle cx={NR + 8} cy={BY + 27} r="3.5" fill="var(--drawing-bg)" />
+          <line x1={NR - 14} y1={BY + 32} x2={NR + 14} y2={BY + 32} />
         </g>
 
-        {/* Эпюра изгибающего момента M (рисуется) */}
-        <text
-          className="cae-demo-loop"
-          style={{ animationName: "caeDiagram" }}
-          x="68"
-          y="205"
-          fill="var(--drawing-blue)"
-          fontFamily="'Roboto Mono', monospace"
-          fontSize="11"
-          fontStyle="italic"
-          opacity="0"
-        >
-          Эпюра M, кН·м
-        </text>
-        <path
-          className="cae-demo-loop"
-          style={{ animationName: "caeDiagram" }}
-          d="M60 215 Q240 290 420 215"
-          fill="none"
-          stroke="var(--drawing-blue)"
-          strokeWidth="2"
-          strokeDasharray="480"
-          opacity="0"
-        />
-        <line x1="60" y1="215" x2="420" y2="215" stroke="var(--drawing-line-thin)" strokeWidth="1" />
+        {/* Размерная линия пролёта */}
+        <g className="cae-demo-loop" style={{ animationName: "caeDeflect" }}>
+          <line x1={NL} y1={BY + 46} x2={NR} y2={BY + 46} stroke="var(--drawing-line-thin)" strokeWidth="0.8" />
+          <text x={240} y={BY + 42} textAnchor="middle" fill="var(--drawing-line-thin)" fontFamily="'Roboto Mono', monospace" fontSize="11">
+            4 м
+          </text>
+        </g>
+
+        {/* Эпюра изгибающего момента M (заливка + точка максимума) */}
+        <g className="cae-demo-loop" style={{ animationName: "caeDiagram" }} opacity="0">
+          <path
+            d={`M${NL} ${BY + 16} Q240 ${BY + 110} ${NR} ${BY + 16} Z`}
+            fill={accent}
+            fillOpacity="0.12"
+            stroke="none"
+          />
+          <path
+            d={`M${NL} ${BY + 16} Q240 ${BY + 110} ${NR} ${BY + 16}`}
+            fill="none"
+            stroke={accent}
+            strokeWidth="2"
+          />
+          <line x1={NL} y1={BY + 16} x2={NR} y2={BY + 16} stroke="var(--drawing-line-thin)" strokeWidth="0.8" />
+          {/* Точка максимума момента */}
+          <circle cx={240} cy={BY + 79} r="4.5" fill={accent} />
+          <text x={240} y={BY + 96} textAnchor="middle" fill={accent} fontFamily="'Roboto Mono', monospace" fontSize="12" fontWeight="bold">
+            20.0 кН·м
+          </text>
+        </g>
       </svg>
 
       {/* Бейдж результата */}
       <div
-        className="cae-demo-loop absolute bottom-3 right-3 border border-[var(--drawing-blue)] bg-[var(--drawing-bg)] px-3 py-1.5"
-        style={{ animationName: "caeResultBadge", opacity: 0 }}
+        className="cae-demo-loop absolute top-9 right-3 border border-[var(--drawing-blue)] bg-[var(--drawing-bg)] px-3 py-1.5"
+        style={{ animationName: "caeResultBadge", opacity: 0, color: blue }}
       >
         <p className="font-gost text-[9px] uppercase tracking-wider text-[var(--drawing-line-thin)] leading-none mb-1">
           σ max

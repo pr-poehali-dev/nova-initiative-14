@@ -1,5 +1,6 @@
 import type { FrameModel, ModelElement, SolverResponse } from "@/lib/cae-model";
 import { ACCENT } from "./canvas-constants";
+import { formatForce, formatMoment } from "@/lib/formatForce";
 
 interface Props {
   model: FrameModel;
@@ -10,25 +11,22 @@ interface Props {
   toScreenY: (y: number) => number;
 }
 
-// Единицы измерения для каждого типа эпюры
-const UNITS: Record<string, string> = {
-  N: "Н",
-  Qy: "Н",
-  Mz: "Н·м",
-  sigma: "МПа",
-  uy: "мм",
-};
-
-// Форматирование значения: автовыбор разрядности
+// Форматирование значения эпюры с единицами по системе СИ.
+// Силы (N, Qy) и моменты (Mz) масштабируются с приставкой кратности
+// прямо в единице (например «20.0 кН·м») через общие форматтеры.
+// Напряжения (МПа) и перемещения (мм) выводятся в производных единицах.
 const fmtVal = (v: number, kind: string): string => {
-  const val = kind === "sigma" ? v / 1e6 : kind === "uy" ? v * 1e3 : v;
-  const abs = Math.abs(val);
-  if (abs === 0) return "0";
-  if (abs >= 10000) return `${(val / 1000).toFixed(1)}к`;
-  if (abs >= 1000) return val.toFixed(0);
-  if (abs >= 100) return val.toFixed(1);
-  if (abs >= 1) return val.toFixed(2);
-  return val.toExponential(2);
+  if (kind === "N" || kind === "Qy") return formatForce(v);
+  if (kind === "Mz") return formatMoment(v);
+  if (kind === "sigma") {
+    const mpa = v / 1e6;
+    return `${mpa.toFixed(Math.abs(mpa) >= 100 ? 0 : 1)} МПа`;
+  }
+  if (kind === "uy") {
+    const mm = v * 1e3;
+    return `${mm.toFixed(Math.abs(mm) >= 10 ? 1 : 2)} мм`;
+  }
+  return String(v);
 };
 
 interface DiagramPoint {
@@ -145,8 +143,7 @@ const CanvasDiagrams = ({ model, result, showDiagram, diagramScale, toScreenX, t
   // Рендерим подписи макс/мин
   const renderLabel = (pt: DiagramPoint, isMax: boolean, kind: string) => {
     const color = elDataList.find((d) => d.el.id === pt.elId)?.color ?? ACCENT;
-    const unit = UNITS[kind] ?? "";
-    const text = `${fmtVal(pt.val, kind)} ${unit}`;
+    const text = fmtVal(pt.val, kind);
 
     // Смещение подписи: чуть дальше от линии эпюры (в ту же сторону, куда легла эпюра).
     // Для Mz знак инвертирован — подпись тоже должна следовать за инверсией.
