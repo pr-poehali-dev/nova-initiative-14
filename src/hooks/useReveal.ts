@@ -21,6 +21,14 @@ export function useReveal<T extends HTMLElement = HTMLDivElement>(
       return;
     }
 
+    // Если блок уже в зоне видимости (близко к экрану) — показываем сразу,
+    // чтобы не было «пустых провалов» при загрузке посреди страницы.
+    const rect = el.getBoundingClientRect();
+    if (rect.top < window.innerHeight + 200) {
+      setVisible(true);
+      return;
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -30,7 +38,7 @@ export function useReveal<T extends HTMLElement = HTMLDivElement>(
           }
         });
       },
-      { threshold: 0.12, rootMargin: "0px 0px -10% 0px", ...options },
+      { threshold: 0, rootMargin: "0px 0px 200px 0px", ...options },
     );
 
     observer.observe(el);
