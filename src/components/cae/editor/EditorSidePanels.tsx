@@ -8,6 +8,7 @@
  *    в MobileCanvasHud, фильтры эпюр — в CanvasFloatingControls.
  *  - Плавающая кнопка «Рассчитать» (только mobile, fixed bottom-right)
  */
+import { useEffect } from "react";
 import Icon from "@/components/ui/icon";
 import EditorResultsPanel from "./EditorResultsPanel";
 import EditorChecksPanel from "./EditorChecksPanel";
@@ -64,6 +65,11 @@ interface Props {
   solving: boolean;
   blocked: boolean;
   onSolve: () => void;
+  // Мобильные модальные окна (управляются HUD-кнопками на канвасе)
+  mobileChecksOpen?: boolean;
+  setMobileChecksOpen?: (v: boolean) => void;
+  mobileResultsOpen?: boolean;
+  setMobileResultsOpen?: (v: boolean) => void;
 }
 
 const EditorSidePanels = ({
@@ -79,6 +85,10 @@ const EditorSidePanels = ({
   solving,
   blocked,
   onSolve,
+  mobileChecksOpen,
+  setMobileChecksOpen,
+  mobileResultsOpen,
+  setMobileResultsOpen,
 }: Props) => {
   const focusNode = (id: string) => {
     setSelectedNodeIds([id]);
@@ -121,28 +131,29 @@ const EditorSidePanels = ({
         </div>
       </aside>
 
-      {/* Мобильная раскладка — два блока стека под канвасом: «Проверки» и
-          «Результаты». Инструменты/сетка/вид теперь в MobileCanvasHud на
-          канвасе, фильтры эпюр — в CanvasFloatingControls. Свойства узла/балки
-          открываются удержанием пальца по объекту (контекстный popup).
-          id-якоря используются HUD-кнопками для плавного скролла. */}
-      <div className="lg:hidden col-span-full space-y-3 pb-24 text-[12px]">
-        {/* Якоря — пустые div с scroll-margin, чтобы HUD-кнопки точно
-            докручивали до панелей с учётом фиксированного топ-бара.
-            Сами панели рендерят свои чертёжные рамки. */}
-        <div id="mobile-checks" className="scroll-mt-20">
+      {/* Мобильные модальные окна: «Проверки» и «Результаты».
+          Открываются HUD-кнопками на канвасе (MobileCanvasHud). Инструменты/
+          сетка/вид — в MobileCanvasHud, фильтры эпюр — в CanvasFloatingControls.
+          Свойства узла/балки — удержанием пальца по объекту (контекстный popup). */}
+      {mobileChecksOpen && (
+        <MobileModal title="Проверки конструкции" onClose={() => setMobileChecksOpen?.(false)}>
           <EditorChecksPanel
             model={model}
             result={result}
-            onFocusElement={focusElement}
+            onFocusElement={(id) => {
+              focusElement(id);
+              setMobileChecksOpen?.(false);
+            }}
             onOpenSettings={() => setSettingsOpen(true)}
           />
-        </div>
+        </MobileModal>
+      )}
 
-        <div id="mobile-results" className="scroll-mt-20">
+      {mobileResultsOpen && (
+        <MobileModal title="Результаты и эпюры" onClose={() => setMobileResultsOpen?.(false)}>
           <EditorResultsPanel {...resultsPanelProps} showDiagramControls={false} />
-        </div>
-      </div>
+        </MobileModal>
+      )}
 
       {/* Плавающая кнопка «Рассчитать» — только на мобилке.
           Видна всегда независимо от активной вкладки, фиксирована к низу экрана. */}
@@ -167,5 +178,57 @@ const EditorSidePanels = ({
     </>
   );
 };
+
+/**
+ * Мобильное модальное окно (full-screen sheet) для блоков проверок/результатов.
+ * Тёмная подложка + панель снизу почти во весь экран, прокручиваемая.
+ * Только на мобильной ширине (lg:hidden).
+ */
+function MobileModal({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true">
+      <button
+        type="button"
+        aria-label="Закрыть"
+        onClick={onClose}
+        className="absolute inset-0 bg-black/40"
+      />
+      <div className="absolute left-0 right-0 bottom-0 max-h-[88vh] flex flex-col bg-[var(--drawing-bg)] border-t-2 border-[var(--drawing-line)] shadow-2xl">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--drawing-line)] shrink-0">
+          <p className="font-gost text-[12px] uppercase tracking-[0.2em] text-[var(--drawing-line)] font-bold">
+            {title}
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Закрыть"
+            className="min-w-[40px] min-h-[40px] flex items-center justify-center text-[var(--drawing-line)] active:bg-[var(--drawing-paper)]"
+          >
+            <Icon name="X" size={20} />
+          </button>
+        </div>
+        <div className="overflow-y-auto p-3 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default EditorSidePanels;

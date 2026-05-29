@@ -34,12 +34,11 @@ interface Props {
   fontScale: number;
   setFontScale: (v: number) => void;
   onResetView: () => void;
+  /** Открыть модальное окно проверок конструкции. */
+  onOpenChecks: () => void;
+  /** Открыть модальное окно результатов и эпюр. */
+  onOpenResults: () => void;
 }
-
-/** Прокрутка к блоку под канвасом по id (проверки / результаты). */
-const scrollToAnchor = (id: string) => {
-  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-};
 
 export default function MobileCanvasHud({
   mode,
@@ -51,13 +50,15 @@ export default function MobileCanvasHud({
   fontScale,
   setFontScale,
   onResetView,
+  onOpenChecks,
+  onOpenResults,
 }: Props) {
   const [sheet, setSheet] = useState<Sheet>(null);
 
   const currentTool = TOOLS.find((t) => t.v === mode) ?? TOOLS[2];
 
   const hudBtn =
-    "min-w-[44px] min-h-[44px] flex flex-col items-center justify-center gap-0.5 border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)]/95 text-[var(--drawing-line)] shadow-md active:bg-[var(--drawing-paper)] transition";
+    "min-w-[44px] min-h-[44px] flex flex-col items-center justify-center gap-0.5 border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] text-[var(--drawing-line)] shadow-md active:bg-[var(--drawing-paper)] transition";
 
   return (
     <div className="lg:hidden">
@@ -105,23 +106,23 @@ export default function MobileCanvasHud({
           <span className="font-gost text-[8px] uppercase tracking-wider">Вид</span>
         </button>
 
-        {/* Якорь: к проверкам */}
+        {/* Проверки конструкции — открыть модальное окно */}
         <button
           type="button"
-          onClick={() => scrollToAnchor("mobile-checks")}
-          aria-label="К проверкам"
-          title="Перейти к проверкам прочности"
+          onClick={onOpenChecks}
+          aria-label="Проверки конструкции"
+          title="Проверки конструкции"
           className={hudBtn}
         >
           <Icon name="ShieldCheck" size={18} />
         </button>
 
-        {/* Якорь: к результатам / эпюрам */}
+        {/* Результаты и эпюры — открыть модальное окно */}
         <button
           type="button"
-          onClick={() => scrollToAnchor("mobile-results")}
-          aria-label="К результатам"
-          title="Перейти к результатам и эпюрам"
+          onClick={onOpenResults}
+          aria-label="Результаты и эпюры"
+          title="Результаты и эпюры"
           className={hudBtn}
         >
           <Icon name="BarChart3" size={18} />

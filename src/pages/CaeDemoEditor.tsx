@@ -134,6 +134,10 @@ const CaeDemoEditor = () => {
   const viewSettings = useCaeViewSettings();
   const labelOffsets = useLabelOffsets(0);
 
+  // Мобильные модальные окна проверок / результатов (открываются HUD-кнопками).
+  const [mobileChecksOpen, setMobileChecksOpen] = useState(false);
+  const [mobileResultsOpen, setMobileResultsOpen] = useState(false);
+
   const {
     onCanvasClick,
     deleteSelected,
@@ -318,6 +322,8 @@ const CaeDemoEditor = () => {
               }
               setContextTarget(req);
             }}
+            onOpenChecks={() => setMobileChecksOpen(true)}
+            onOpenResults={() => setMobileResultsOpen(true)}
           />
 
           <EditorSidePanels
@@ -325,6 +331,10 @@ const CaeDemoEditor = () => {
             result={result}
             issues={issues}
             errorsCount={errorsCount}
+            mobileChecksOpen={mobileChecksOpen}
+            setMobileChecksOpen={setMobileChecksOpen}
+            mobileResultsOpen={mobileResultsOpen}
+            setMobileResultsOpen={setMobileResultsOpen}
             selectedNode={selectedNode}
             selectedElementId={selectedElementId}
             nodeBC={nodeBC}

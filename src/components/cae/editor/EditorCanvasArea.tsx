@@ -65,6 +65,10 @@ interface Props {
 
   /** Открытие контекстного popup'а свойств (правый клик / long-press). */
   onRequestContext?: (req: ContextRequest) => void;
+
+  /** Открыть модальное окно проверок / результатов (мобильный HUD). */
+  onOpenChecks?: () => void;
+  onOpenResults?: () => void;
 }
 
 const EditorCanvasArea = ({
@@ -106,13 +110,16 @@ const EditorCanvasArea = ({
   onFocusNode,
   onFocusElement,
   onRequestContext,
+  onOpenChecks,
+  onOpenResults,
 }: Props) => (
   <div
     className="border-2 border-[var(--drawing-line)] relative h-[75vh] min-h-[420px] lg:h-[70vh] lg:min-h-[480px]"
     data-tutorial="canvas"
   >
-    {/* Плавающая панель инструментов — кнопки 44×44 на мобилке, компактные на десктопе */}
-    <div className="absolute top-2 left-2 z-10 flex gap-0 bg-[var(--drawing-bg)]/95 border border-[var(--drawing-line)] shadow-sm">
+    {/* Плавающая панель инструментов — кнопки 44×44 на мобилке, компактные на десктопе.
+        Явный цвет текста и непрозрачный фон, чтобы иконки были чётко видны. */}
+    <div className="absolute top-2 left-2 z-10 flex gap-0 bg-[var(--drawing-bg)] text-[var(--drawing-line)] border border-[var(--drawing-line)] shadow-sm">
       <button
         onClick={undo}
         disabled={!canUndo}
@@ -203,6 +210,8 @@ const EditorCanvasArea = ({
       setArrowScale &&
       setFontScale &&
       onResetView &&
+      onOpenChecks &&
+      onOpenResults &&
       arrowScale !== undefined &&
       fontScale !== undefined && (
         <MobileCanvasHud
@@ -215,6 +224,8 @@ const EditorCanvasArea = ({
           fontScale={fontScale}
           setFontScale={setFontScale}
           onResetView={onResetView}
+          onOpenChecks={onOpenChecks}
+          onOpenResults={onOpenResults}
         />
       )}
 

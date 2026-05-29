@@ -143,7 +143,7 @@ export default function CanvasFloatingControls({
           onClick={() => setOpen(open === "issues" ? null : "issues")}
           aria-label={isValid ? "Модель корректна" : `Проблем: ${totalIssues}`}
           title={isValid ? "Модель корректна" : `Проблем: ${totalIssues} — посмотреть`}
-          className={`relative min-w-[40px] min-h-[40px] flex items-center justify-center border-[1.5px] bg-[var(--drawing-bg)]/95 shadow-sm transition-colors ${
+          className={`relative min-w-[40px] min-h-[40px] flex items-center justify-center border-[1.5px] bg-[var(--drawing-bg)] shadow-sm transition-colors ${
             isValid
               ? "border-[#1a8a5a] text-[#1a8a5a] hover:bg-[#1a8a5a]/10"
               : "border-[var(--drawing-accent)] text-[var(--drawing-accent)] hover:bg-[var(--drawing-accent)]/10"
@@ -163,7 +163,7 @@ export default function CanvasFloatingControls({
           onClick={() => setOpen(open === "hint" ? null : "hint")}
           aria-label="Подсказка"
           title="Подсказка"
-          className="min-w-[40px] min-h-[40px] flex items-center justify-center border-[1.5px] border-[var(--drawing-line)] bg-[var(--drawing-bg)]/95 shadow-sm hover:bg-[var(--drawing-paper)] transition-colors"
+          className="min-w-[40px] min-h-[40px] flex items-center justify-center border-[1.5px] border-[var(--drawing-line)] text-[var(--drawing-line)] bg-[var(--drawing-bg)] shadow-sm hover:bg-[var(--drawing-paper)] transition-colors"
         >
           <Icon name="HelpCircle" size={20} />
         </button>
@@ -181,10 +181,10 @@ export default function CanvasFloatingControls({
                 ? "Сейчас показана деформированная — кликните, чтобы вернуть исходную"
                 : "Показать деформированную схему"
           }
-          className={`min-w-[40px] min-h-[40px] flex items-center justify-center border-[1.5px] bg-[var(--drawing-bg)]/95 shadow-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+          className={`min-w-[40px] min-h-[40px] flex items-center justify-center border-[1.5px] bg-[var(--drawing-bg)] shadow-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
             isDeformed
               ? "border-[var(--drawing-accent)] text-[var(--drawing-accent)] bg-[var(--drawing-accent)]/10"
-              : "border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)]"
+              : "border-[var(--drawing-line)] text-[var(--drawing-line)] hover:bg-[var(--drawing-paper)]"
           }`}
         >
           <Icon name={isDeformed ? "Eye" : "EyeOff"} size={20} />
@@ -197,10 +197,10 @@ export default function CanvasFloatingControls({
           disabled={!hasResult}
           aria-label="Эпюры"
           title={hasResult ? "Эпюры N / Q / M / σ / v" : "Сначала запустите расчёт"}
-          className={`min-w-[40px] min-h-[40px] flex items-center justify-center border-[1.5px] bg-[var(--drawing-bg)]/95 shadow-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+          className={`min-w-[40px] min-h-[40px] flex items-center justify-center border-[1.5px] bg-[var(--drawing-bg)] shadow-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
             ["N", "Qy", "Mz", "sigma", "uy"].includes(showDiagram)
               ? "border-[var(--drawing-accent)] text-[var(--drawing-accent)] bg-[var(--drawing-accent)]/10"
-              : "border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)]"
+              : "border-[var(--drawing-line)] text-[var(--drawing-line)] hover:bg-[var(--drawing-paper)]"
           }`}
         >
           <Icon name="LineChart" size={20} />

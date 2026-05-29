@@ -101,6 +101,10 @@ const CaeEditor = () => {
   const NODE_LIMIT_ALPHA = 10;
   const [nodeLimitOpen, setNodeLimitOpen] = useState(false);
 
+  // Мобильные модальные окна проверок / результатов (открываются HUD-кнопками).
+  const [mobileChecksOpen, setMobileChecksOpen] = useState(false);
+  const [mobileResultsOpen, setMobileResultsOpen] = useState(false);
+
   // Глобальные настройки отображения (размер стрелок и шрифта подписей).
   // Сохраняются в localStorage между сессиями.
   const viewSettings = useCaeViewSettings();
@@ -254,6 +258,8 @@ const CaeEditor = () => {
               }
               setContextTarget(req);
             }}
+            onOpenChecks={() => setMobileChecksOpen(true)}
+            onOpenResults={() => setMobileResultsOpen(true)}
           />
 
           <EditorSidePanels
@@ -261,6 +267,10 @@ const CaeEditor = () => {
             result={result}
             issues={issues}
             errorsCount={errorsCount}
+            mobileChecksOpen={mobileChecksOpen}
+            setMobileChecksOpen={setMobileChecksOpen}
+            mobileResultsOpen={mobileResultsOpen}
+            setMobileResultsOpen={setMobileResultsOpen}
             selectedNode={selectedNode}
             selectedElementId={selectedElementId}
             nodeBC={nodeBC}
