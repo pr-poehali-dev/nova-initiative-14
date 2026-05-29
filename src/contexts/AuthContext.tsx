@@ -54,7 +54,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem("sso_user", JSON.stringify(res.data.user));
       return;
     }
-    // access невалидный — пробуем refresh
+
+    // Различаем НАСТОЯЩУЮ ошибку авторизации (401/403) и временный сбой
+    // (нет сети — status 0, или серверная 5xx). На временном сбое НЕЛЬЗЯ
+    // разлогинивать: токены валидны, просто запрос не дошёл. Оставляем
+    // сохранённого пользователя залогиненным — это и есть причина бага,
+    // когда сессия «слетала» от случайного обрыва связи.
+    const isAuthError = res.status === 401 || res.status === 403;
+    if (!isAuthError) {
+      const stored = getStoredUser();
+      setState({ user: stored, loading: false, error: null });
+      return;
+    }
+
+    // access протух/невалиден — пробуем обновить по refresh-токену.
     const rt = getRefreshToken();
     if (!rt) {
       clearTokens();
@@ -64,9 +77,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const r = await apiRefresh(rt);
     if (r.ok && r.data) {
       handleTokens(r.data);
-    } else {
+    } else if (r.status === 401 || r.status === 403) {
+      // refresh-токен тоже отвергнут сервером — это честный разлогин.
       clearTokens();
       setState({ user: null, loading: false, error: null });
+    } else {
+      // refresh не удался из-за сети/5xx — сохраняем сессию, не разлогиниваем.
+      const stored = getStoredUser();
+      setState({ user: stored, loading: false, error: null });
     }
   }, [handleTokens]);
 

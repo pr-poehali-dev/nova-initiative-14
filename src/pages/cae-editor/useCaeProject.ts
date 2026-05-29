@@ -7,6 +7,7 @@ import {
   saveProjectModel,
   type FrameModel,
 } from "@/lib/cae-model";
+import { setUnsavedChanges } from "@/lib/reloadGuard";
 import { useCaeHistory } from "./useCaeHistory";
 
 export function useCaeProject(projectId: number) {
@@ -51,6 +52,22 @@ export function useCaeProject(projectId: number) {
       .finally(() => setLoadingModel(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, user, authLoading]);
+
+  // Синхронизируем флаг несохранённых изменений с глобальным сторожем и
+  // предупреждаем при попытке закрыть/обновить вкладку с правками.
+  useEffect(() => {
+    setUnsavedChanges(dirty);
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!dirty) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      setUnsavedChanges(false);
+    };
+  }, [dirty]);
 
   /** Главная точка мутации модели — пишется в историю */
   const updateModel = useCallback((next: FrameModel) => {

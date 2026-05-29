@@ -269,10 +269,14 @@ function TicketRow({
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as TicketStatus)}
-                className="drawing-input text-xs"
+                className="drawing-input text-xs bg-[var(--drawing-bg)] text-[var(--drawing-line)]"
               >
                 {(Object.keys(STATUS_LABELS) as TicketStatus[]).map((s) => (
-                  <option key={s} value={s}>
+                  <option
+                    key={s}
+                    value={s}
+                    className="bg-[var(--drawing-bg)] text-[var(--drawing-line)]"
+                  >
                     {STATUS_LABELS[s]}
                   </option>
                 ))}

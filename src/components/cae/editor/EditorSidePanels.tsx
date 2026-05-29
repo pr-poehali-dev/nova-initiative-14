@@ -131,6 +131,30 @@ const EditorSidePanels = ({
         </div>
       </aside>
 
+      {/* Плавающая кнопка «Рассчитать» — только на мобилке.
+          Рендерится ДО модальных окон, чтобы её позиция в DOM была
+          стабильной: при монтировании/размонтировании модалок (которые
+          анимируются через transform) fixed-кнопка не «прыгала» под
+          рабочую область. */}
+      <button
+        onClick={onSolve}
+        disabled={solving || blocked}
+        className="lg:hidden fixed bottom-4 right-4 z-30 min-w-[64px] min-h-[56px] px-5 py-3 bg-[var(--drawing-accent)] text-white font-gost-upright font-bold text-[14px] uppercase tracking-wider shadow-2xl border-2 border-[var(--drawing-ink)] flex items-center gap-2 active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed"
+        aria-label="Запустить расчёт"
+      >
+        {solving ? (
+          <>
+            <Icon name="Loader2" size={20} className="animate-spin" />
+            <span>Счёт…</span>
+          </>
+        ) : (
+          <>
+            <Icon name="Play" size={20} />
+            <span>Расчёт</span>
+          </>
+        )}
+      </button>
+
       {/* Мобильные модальные окна: «Проверки» и «Результаты».
           Открываются HUD-кнопками на канвасе (MobileCanvasHud). Инструменты/
           сетка/вид — в MobileCanvasHud, фильтры эпюр — в CanvasFloatingControls.
@@ -154,27 +178,6 @@ const EditorSidePanels = ({
           <EditorResultsPanel {...resultsPanelProps} showDiagramControls={false} />
         </MobileModal>
       )}
-
-      {/* Плавающая кнопка «Рассчитать» — только на мобилке.
-          Видна всегда независимо от активной вкладки, фиксирована к низу экрана. */}
-      <button
-        onClick={onSolve}
-        disabled={solving || blocked}
-        className="lg:hidden fixed bottom-4 right-4 z-30 min-w-[64px] min-h-[56px] px-5 py-3 bg-[var(--drawing-accent)] text-white font-gost-upright font-bold text-[14px] uppercase tracking-wider shadow-2xl border-2 border-[var(--drawing-ink)] flex items-center gap-2 active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed"
-        aria-label="Запустить расчёт"
-      >
-        {solving ? (
-          <>
-            <Icon name="Loader2" size={20} className="animate-spin" />
-            <span>Счёт…</span>
-          </>
-        ) : (
-          <>
-            <Icon name="Play" size={20} />
-            <span>Расчёт</span>
-          </>
-        )}
-      </button>
     </>
   );
 };
@@ -201,6 +204,16 @@ function MobileModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  // Блокируем прокрутку фоновой страницы, пока открыта модалка, чтобы при
+  // листании содержимого пальцем не «проскальзывала» страница под ней.
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, []);
+
   return (
     <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true">
       <button
@@ -223,7 +236,7 @@ function MobileModal({
             <Icon name="X" size={20} />
           </button>
         </div>
-        <div className="overflow-y-auto p-3 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+        <div className="overflow-y-auto overscroll-contain p-3 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
           {children}
         </div>
       </div>

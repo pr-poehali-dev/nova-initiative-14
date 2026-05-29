@@ -28,12 +28,13 @@ DEFAULT_PROJECT_QUOTA = 10
 
 
 def action_list_projects(conn, user: dict) -> dict:
-    """GET — все непустые проекты пользователя, упорядоченные по updated_at DESC."""
+    """GET — активные (не архивированные) проекты пользователя, по updated_at DESC."""
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute(
             "SELECT id, name, slug, description, project_type, units_length, units_force, "
             "is_archived, current_version_id, created_at, updated_at "
-            "FROM cae_projects WHERE owner_id = %s ORDER BY updated_at DESC",
+            "FROM cae_projects WHERE owner_id = %s AND is_archived = FALSE "
+            "ORDER BY updated_at DESC",
             (int(user['sub']),),
         )
         items = [project_to_dict(dict(r)) for r in cur.fetchall()]

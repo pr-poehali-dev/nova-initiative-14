@@ -405,6 +405,13 @@ textarea.drawing-input::placeholder {
   opacity: 0.5;
 }
 
+/* Опции выпадающего списка: явные фон и цвет, иначе в тёмной теме нативный
+   попап рисует светло-серый текст на светлом фоне и пункты не читаются. */
+select.drawing-input option {
+  background: var(--drawing-bg);
+  color: var(--drawing-line);
+}
+
 @keyframes fadeInUp {
   from {
     opacity: 0;

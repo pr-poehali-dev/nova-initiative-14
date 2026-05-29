@@ -62,8 +62,9 @@ export default function MobileCanvasHud({
 
   return (
     <div className="lg:hidden">
-      {/* ── Столбец HUD-иконок внизу-слева. bottom-20 — выше кнопки «Рассчитать» ── */}
-      <div className="absolute bottom-4 left-2 z-30 flex flex-col gap-1.5">
+      {/* ── Столбец HUD-иконок внизу-слева. bottom-10 — выше строки координат
+            курсора (она рисуется у самого низа канваса), чтобы не перекрывать ── */}
+      <div className="absolute bottom-10 left-2 z-30 flex flex-col gap-1.5">
         {/* Текущий инструмент → открыть выбор */}
         <button
           type="button"

@@ -15,6 +15,7 @@
  */
 import * as React from "react";
 import funcUrls from "../../backend/func2url.json";
+import { requestReloadConfirmation } from "@/lib/reloadGuard";
 
 interface State {
   error: Error | null;
@@ -61,8 +62,34 @@ function logRecovery(triggerType: string, errorMessage?: string) {
   } catch { /* ignore */ }
 }
 
+/** Жёсткая перезагрузка с очисткой кэша/SW. Вызывается напрямую или после
+ *  подтверждения пользователем (когда были несохранённые данные). */
+export async function performHardReload() {
+  try {
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+  } catch { /* ignore */ }
+  try {
+    if ("serviceWorker" in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+    }
+  } catch { /* ignore */ }
+  const url = new URL(window.location.href);
+  url.searchParams.set("_r", String(Date.now()));
+  window.location.replace(url.toString());
+}
+
 async function silentReload(triggerType: string, errorMessage?: string) {
   if (getAttempts() >= MAX_AUTO_RELOADS) return; // защита от петли
+  // Если в редакторе есть несохранённые данные — не перезагружаем молча,
+  // а просим подтверждение (popup покажет ReloadConfirmDialog).
+  if (requestReloadConfirmation(triggerType)) {
+    logRecovery(triggerType + "_deferred", errorMessage);
+    return;
+  }
   logRecovery(triggerType, errorMessage);
   bumpAttempts();
   try {

@@ -100,11 +100,18 @@ async function call<T = unknown>(
   };
   if (authToken) headers["X-Authorization"] = `Bearer ${authToken}`;
 
-  const res = await fetch(url, {
-    method,
-    headers,
-    body: method === "POST" ? JSON.stringify(body || {}) : undefined,
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method,
+      headers,
+      body: method === "POST" ? JSON.stringify(body || {}) : undefined,
+    });
+  } catch {
+    // Сетевая ошибка (нет соединения, таймаут, обрыв). Это НЕ ошибка
+    // авторизации — отдаём status 0, чтобы вызывающий не сбрасывал сессию.
+    return { ok: false, status: 0, data: null, error: "network_error" };
+  }
   let data: unknown = null;
   try {
     data = await res.json();
