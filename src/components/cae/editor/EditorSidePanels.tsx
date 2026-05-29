@@ -9,6 +9,7 @@
  *  - Плавающая кнопка «Рассчитать» (только mobile, fixed bottom-right)
  */
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import Icon from "@/components/ui/icon";
 import EditorResultsPanel from "./EditorResultsPanel";
 import EditorChecksPanel from "./EditorChecksPanel";
@@ -132,28 +133,33 @@ const EditorSidePanels = ({
       </aside>
 
       {/* Плавающая кнопка «Рассчитать» — только на мобилке.
-          Рендерится ДО модальных окон, чтобы её позиция в DOM была
-          стабильной: при монтировании/размонтировании модалок (которые
-          анимируются через transform) fixed-кнопка не «прыгала» под
-          рабочую область. */}
-      <button
-        onClick={onSolve}
-        disabled={solving || blocked}
-        className="lg:hidden fixed bottom-4 right-4 z-30 min-w-[64px] min-h-[56px] px-5 py-3 bg-[var(--drawing-accent)] text-white font-gost-upright font-bold text-[14px] uppercase tracking-wider shadow-2xl border-2 border-[var(--drawing-ink)] flex items-center gap-2 active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed"
-        aria-label="Запустить расчёт"
-      >
-        {solving ? (
-          <>
-            <Icon name="Loader2" size={20} className="animate-spin" />
-            <span>Счёт…</span>
-          </>
-        ) : (
-          <>
-            <Icon name="Play" size={20} />
-            <span>Расчёт</span>
-          </>
-        )}
-      </button>
+          Рендерится через ПОРТАЛ в document.body, чтобы её position:fixed
+          считался строго от вьюпорта и НЕ зависел от transform-контекста
+          модалок/анимаций. Иначе после закрытия модалки кнопка «уезжала»
+          под рабочую область и становилась некликабельной (тикеты #27, #33). */}
+      {/* Пока открыта мобильная модалка — кнопку прячем, чтобы не висела
+          поверх содержимого. */}
+      {!mobileChecksOpen && !mobileResultsOpen && createPortal(
+        <button
+          onClick={onSolve}
+          disabled={solving || blocked}
+          className="lg:hidden fixed bottom-4 right-4 z-40 min-w-[64px] min-h-[56px] px-5 py-3 bg-[var(--drawing-accent)] text-white font-gost-upright font-bold text-[14px] uppercase tracking-wider shadow-2xl border-2 border-[var(--drawing-ink)] flex items-center gap-2 active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          aria-label="Запустить расчёт"
+        >
+          {solving ? (
+            <>
+              <Icon name="Loader2" size={20} className="animate-spin" />
+              <span>Счёт…</span>
+            </>
+          ) : (
+            <>
+              <Icon name="Play" size={20} />
+              <span>Расчёт</span>
+            </>
+          )}
+        </button>,
+        document.body,
+      )}
 
       {/* Мобильные модальные окна: «Проверки» и «Результаты».
           Открываются HUD-кнопками на канвасе (MobileCanvasHud). Инструменты/

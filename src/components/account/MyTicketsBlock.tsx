@@ -20,11 +20,16 @@ interface Props {
  * заметкой администратора и баллами, начисленными по факту обработки.
  * Загружается при монтировании компонента.
  */
+const ACTIVE_STATUSES: SupportTicket["status"][] = ["open", "in_progress"];
+const PREVIEW_COUNT = 3;
+
 export default function MyTicketsBlock({ onNewTicket }: Props) {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<number | null>(null);
+  // Показывать ли весь список (включая решённые) или только превью.
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -56,6 +61,19 @@ export default function MyTicketsBlock({ onNewTicket }: Props) {
     }
   };
 
+  // Активные тикеты — сверху; внутри групп новые выше. Превью показывает
+  // последние активные, остальное — под кнопкой «показать все».
+  const activeTickets = tickets.filter((t) => ACTIVE_STATUSES.includes(t.status));
+  const activeCount = activeTickets.length;
+  const sorted = [...tickets].sort((a, b) => {
+    const aActive = ACTIVE_STATUSES.includes(a.status) ? 0 : 1;
+    const bActive = ACTIVE_STATUSES.includes(b.status) ? 0 : 1;
+    if (aActive !== bActive) return aActive - bActive;
+    return (b.created_at || "").localeCompare(a.created_at || "");
+  });
+  const visible = showAll ? sorted : sorted.slice(0, PREVIEW_COUNT);
+  const hiddenCount = sorted.length - visible.length;
+
   return (
     <section className="mb-8">
       <div className="flex items-end justify-between mb-3">
@@ -63,8 +81,13 @@ export default function MyTicketsBlock({ onNewTicket }: Props) {
           <p className="font-gost text-[10px] uppercase tracking-[0.25em] text-[var(--drawing-line-thin)] mb-1">
             Техподдержка
           </p>
-          <h2 className="font-gost-upright text-lg md:text-xl font-black uppercase tracking-wide">
+          <h2 className="font-gost-upright text-lg md:text-xl font-black uppercase tracking-wide flex items-center gap-2">
             Мои обращения
+            {activeCount > 0 && (
+              <span className="font-gost text-[10px] font-bold uppercase tracking-wider text-white bg-[var(--drawing-accent)] px-2 py-0.5 leading-none">
+                {activeCount} актив.
+              </span>
+            )}
           </h2>
         </div>
         <button
@@ -96,7 +119,7 @@ export default function MyTicketsBlock({ onNewTicket }: Props) {
         </div>
       ) : (
         <div className="space-y-2">
-          {tickets.map((t) => {
+          {visible.map((t) => {
             const isOpen = expanded === t.id;
             return (
               <div key={t.id} className="border-[1.5px] border-[var(--drawing-line)]">
@@ -165,6 +188,27 @@ export default function MyTicketsBlock({ onNewTicket }: Props) {
               </div>
             );
           })}
+
+          {/* Кнопка «показать все / свернуть» — только если есть скрытые. */}
+          {(hiddenCount > 0 || showAll) && sorted.length > PREVIEW_COUNT && (
+            <button
+              type="button"
+              onClick={() => setShowAll((v) => !v)}
+              className="w-full border border-dashed border-[var(--drawing-line)]/50 py-2 text-[10px] font-gost uppercase tracking-wider text-[var(--drawing-line-thin)] hover:text-[var(--drawing-accent)] hover:border-[var(--drawing-accent)] flex items-center justify-center gap-1.5 transition-colors"
+            >
+              {showAll ? (
+                <>
+                  <Icon name="ChevronUp" size={12} />
+                  Свернуть
+                </>
+              ) : (
+                <>
+                  <Icon name="ChevronDown" size={12} />
+                  Показать все ({sorted.length}), включая решённые
+                </>
+              )}
+            </button>
+          )}
         </div>
       )}
     </section>

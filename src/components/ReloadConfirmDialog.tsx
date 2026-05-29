@@ -9,15 +9,23 @@
  */
 import { useEffect, useState } from "react";
 import Icon from "@/components/ui/icon";
-import { setReloadHandler } from "@/lib/reloadGuard";
+import { setReloadHandler, setUnsavedChanges } from "@/lib/reloadGuard";
 import { performHardReload } from "@/components/AppErrorBoundary";
 
 export default function ReloadConfirmDialog() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
+    // Источник 1: React-перехват в AppErrorBoundary (chunk-ошибки внутри SPA).
     setReloadHandler(() => setOpen(true));
-    return () => setReloadHandler(null);
+    // Источник 2: независимый watchdog в index.html — он шлёт это событие,
+    // когда есть несохранённые данные, вместо браузерного confirm.
+    const onReq = () => setOpen(true);
+    window.addEventListener("cae:reload-request", onReq);
+    return () => {
+      setReloadHandler(null);
+      window.removeEventListener("cae:reload-request", onReq);
+    };
   }, []);
 
   if (!open) return null;
@@ -49,7 +57,12 @@ export default function ReloadConfirmDialog() {
           <div className="flex flex-col gap-2 pt-1">
             <button
               type="button"
-              onClick={() => performHardReload()}
+              onClick={() => {
+                // Снимаем флаг несохранённых данных ДО перезагрузки, иначе
+                // beforeunload-страж покажет ещё один браузерный вопрос.
+                setUnsavedChanges(false);
+                performHardReload();
+              }}
               className="w-full border-2 border-[var(--drawing-accent)] bg-[var(--drawing-accent)] text-white py-2.5 text-[12px] font-gost uppercase tracking-wider"
             >
               Обновить сейчас (потерять изменения)

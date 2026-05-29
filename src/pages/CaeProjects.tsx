@@ -171,17 +171,6 @@ const CaeProjects = () => {
           </div>
         </div>
 
-        {/* Banner — каталоги */}
-        <div className="border border-[var(--drawing-accent)] bg-[var(--drawing-bg)] p-4 mb-8 flex items-start gap-3">
-          <Icon name="Sparkles" size={18} className="text-[var(--drawing-accent)] mt-0.5 shrink-0" />
-          <div className="text-sm">
-            <p className="font-gost-upright font-bold mb-1">Новое: каталоги и шаблоны</p>
-            <p className="text-[var(--drawing-line-thin)]">
-              Доступны каталоги ГОСТ-сталей и&nbsp;сечений (двутавры, швеллеры, уголки, трубы), параметрические сечения и&nbsp;10 шаблонов типовых задач. 3D-редактор и&nbsp;PDF-отчёт по&nbsp;ЕСКД &mdash; на&nbsp;подходе.
-            </p>
-          </div>
-        </div>
-
         {/* Тизер 3D-редактора */}
         <div className="border-2 border-dashed border-amber-700/40 bg-amber-50/30 p-5 mb-8">
           <div className="flex items-start gap-3 mb-4">
