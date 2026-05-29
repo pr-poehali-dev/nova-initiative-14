@@ -351,6 +351,13 @@ class FrameSolver:
         max_sigma_vm = 0.0
         max_disp_internal = max_disp
         n_sub = int(self.payload.get('analysis_options', {}).get('diagram_subdivisions', 20))
+        # Сечения, для которых момент сопротивления W пришлось оценить как
+        # I/(h/2) из-за отсутствия данных. Для несимметричных сечений это
+        # приближение — собираем предупреждения, чтобы вернуть пользователю.
+        estimated_w_sections: set[str] = set()
+        # Типы сечений, у которых центр тяжести НЕ посередине высоты, поэтому
+        # оценка W = I/(h/2) даёт погрешность (нужны точные W из каталога).
+        asymmetric_types = {'angle', 'tee', 'channel', 'уголок', 'тавр', 'швеллер'}
 
         for el in self.elements:
             cache = el_cache[el.id]
@@ -411,8 +418,12 @@ class FrameSolver:
                     Qya = f_end[1]
                     Qza = f_end[2]
                     Tx = -f_end[3]
-                    Mya_at_x = -f_end[4] + f_end[2] * x   # M_y(x) = M_y_a + Qz_a·x
-                    Mza_at_x = -f_end[5] + f_end[1] * x   # M_z(x) = M_z_a + Qy_a·x
+                    # Соглашение для эпюр: dM_z/dx = +Q_y, но dM_y/dx = −Q_z
+                    # (из-за ориентации осей в правой СК). Поэтому линейный
+                    # член для M_y берётся с минусом — иначе эпюра M_y
+                    # рассогласуется с поперечной силой Q_z.
+                    Mya_at_x = -f_end[4] - f_end[2] * x   # dM_y/dx = −Q_z
+                    Mza_at_x = -f_end[5] + f_end[1] * x   # dM_z/dx = +Q_y
                     # Нагрузки внутри элемента: знаки согласованы со знаками
                     # начальных усилий (+ Qy_a·x → нагрузки тоже добавляются).
                     for ld in self.loads:
@@ -502,18 +513,51 @@ class FrameSolver:
                 if d > max_disp_internal:
                     max_disp_internal = d
 
-            # Напряжения по Мизесу.
+            # === Напряжения по Мизесу (4-я теория прочности) ===
+            # В балке напряжённое состояние одноосное (нормальное σ по оси
+            # стержня) плюс касательное τ от поперечной силы. Нормальное и
+            # касательное напряжения достигают максимума в РАЗНЫХ точках
+            # сечения, поэтому проверяем две характерные точки и берём
+            # худшую (стандартная инженерная практика, без завышения):
+            #
+            #   1) Крайнее волокно: σ = |σ_N| + σ_изг (волокно подбирается
+            #      так, чтобы осевое и изгибное складывались), τ ≈ 0.
+            #      σ_vm = |σ|.
+            #   2) Нейтральная ось: σ = σ_N (только осевое), τ = Q/A_s
+            #      (максимальное касательное). σ_vm = √(σ_N² + 3·τ²).
+            #
+            # При двухосном изгибе (3D) изгибные напряжения от My и Mz в
+            # одном крайнем углу складываются по модулю — это консервативная
+            # оценка наиболее нагруженного волокна.
+            # Моменты сопротивления (один раз на элемент). Если W не задан —
+            # оцениваем как I/(h/2); для несимметричных сечений это
+            # приближение, о чём предупреждаем пользователя.
+            Wz = sec.W_z or (sec.I_z / max(sec.h / 2, 1e-9) if sec.I_z > 0 else 0.0)
+            Wy = sec.W_y or (sec.I_y / max(sec.h / 2, 1e-9) if sec.I_y > 0 else 0.0)
+            if (not sec.W_z or not sec.W_y) and (sec.type or '').lower() in asymmetric_types:
+                estimated_w_sections.add(sec.name or sec.id)
+            As_y = sec.shear_area_y or sec.A
+            As_z = sec.shear_area_z or sec.A
+
             sigma_vm_arr = []
             for i, x in enumerate(xs):
                 sigma_n = N_arr[i] / sec.A if sec.A > 0 else 0.0
-                Wz = sec.W_z or (sec.I_z / max(sec.h / 2, 1e-9) if sec.I_z > 0 else 0.0)
-                Wy = sec.W_y or (sec.I_y / max(sec.h / 2, 1e-9) if sec.I_y > 0 else 0.0)
-                sigma_b = (abs(Mz_arr[i]) / Wz if Wz > 0 else 0.0) + \
-                          (abs(My_arr[i]) / Wy if Wy > 0 else 0.0)
-                sigma_total = abs(sigma_n) + sigma_b
-                As_y = sec.shear_area_y or sec.A
-                tau = abs(Qy_arr[i]) / As_y if As_y > 0 else 0.0
-                sigma_vm = math.sqrt(sigma_total ** 2 + 3 * tau ** 2)
+                sigma_bend = (abs(Mz_arr[i]) / Wz if Wz > 0 else 0.0) + \
+                             (abs(My_arr[i]) / Wy if Wy > 0 else 0.0)
+
+                # Касательные напряжения от поперечных сил (Qy и Qz в 3D).
+                tau_y = abs(Qy_arr[i]) / As_y if As_y > 0 else 0.0
+                tau_z = abs(Qz_arr[i]) / As_z if As_z > 0 else 0.0
+                tau = math.sqrt(tau_y ** 2 + tau_z ** 2)
+
+                # Точка 1 — крайнее волокно (макс. нормальное, сдвиг ~0).
+                sigma_fiber = abs(sigma_n) + sigma_bend
+                vm_fiber = abs(sigma_fiber)
+
+                # Точка 2 — нейтральная ось (только осевое + макс. сдвиг).
+                vm_neutral = math.sqrt(sigma_n ** 2 + 3.0 * tau ** 2)
+
+                sigma_vm = max(vm_fiber, vm_neutral)
                 sigma_vm_arr.append(float(sigma_vm))
                 if sigma_vm > max_sigma_vm:
                     max_sigma_vm = sigma_vm
@@ -552,6 +596,13 @@ class FrameSolver:
             warnings.append(f'Внимание: коэффициент запаса < 1 (min={min_sf:.2f}) — конструкция не проходит по прочности.')
         elif min_sf < 1.5:
             warnings.append(f'Низкий запас прочности (min={min_sf:.2f}). Рекомендуется усилить сечение.')
+        if estimated_w_sections:
+            names = ', '.join(sorted(estimated_w_sections))
+            warnings.append(
+                'Для несимметричных сечений (' + names + ') момент сопротивления W '
+                'оценён приближённо как I/(h/2). Для точного расчёта напряжений '
+                'задайте W_z и W_y из справочника.'
+            )
 
         summary = {
             'dim': self.dim,
