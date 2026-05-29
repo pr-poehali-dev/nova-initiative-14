@@ -5,21 +5,49 @@ const AboutSection = () => {
     <>
       <section className="py-14 px-4 md:px-8 hatching">
         <div className="max-w-[1200px] mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-6">
-            {[
-              { title: "Инженеры, а не репетиторы", desc: "Каждый наставник работает на производстве и ведёт реальные проекты." },
-              { title: "Профиль — машиностроение и механика", desc: "Конструирование, технология, детали машин, CAD/CAE, ЕСКД." },
-              { title: "Учим, а не пишем за вас", desc: "Цель — чтобы вы разбирались в своей работе и могли её защитить." },
-            ].map((item) => (
-              <div key={item.title} className="border-[1.5px] border-[var(--drawing-line)] p-5 bg-[var(--drawing-bg)]">
-                <p className="font-gost-upright text-sm md:text-base font-bold text-[var(--drawing-line)] mb-2">
-                  {item.title}
+          <div className="grid grid-cols-1 md:grid-cols-3 md:auto-rows-fr gap-4 md:gap-5 mb-6">
+            {/* Крупная акцентная карточка — занимает 2 колонки и 2 строки */}
+            <div className="relative md:col-span-2 md:row-span-2 border-2 border-[var(--drawing-accent)] bg-[var(--drawing-bg)] p-6 md:p-8 flex flex-col justify-between overflow-hidden">
+              <span className="zone-marker top-2 right-3">01</span>
+              <div>
+                <span className="inline-flex w-11 h-11 border-2 border-[var(--drawing-accent)] items-center justify-center text-[var(--drawing-accent)] mb-5">
+                  <Icon name="HardHat" size={22} />
+                </span>
+                <p className="font-gost-upright text-xl md:text-2xl font-bold text-[var(--drawing-line)] mb-3 leading-tight">
+                  Инженеры, а&nbsp;не&nbsp;репетиторы
                 </p>
-                <p className="font-gost text-xs text-[var(--drawing-line-thin)] leading-relaxed">
-                  {item.desc}
+                <p className="font-gost text-sm text-[var(--drawing-line-thin)] leading-relaxed max-w-md">
+                  Каждый наставник сегодня работает на&nbsp;производственном предприятии Екатеринбурга и&nbsp;ведёт реальные конструкторские проекты&nbsp;&mdash; не&nbsp;теоретик, а&nbsp;действующий специалист.
                 </p>
               </div>
-            ))}
+              <div className="extension-line-h w-full mt-6" />
+            </div>
+
+            <div className="relative border-[1.5px] border-[var(--drawing-line)] bg-[var(--drawing-bg)] p-5 md:p-6">
+              <span className="zone-marker top-2 right-3">02</span>
+              <span className="inline-flex w-9 h-9 border border-[var(--drawing-line)] items-center justify-center text-[var(--drawing-line)] mb-3">
+                <Icon name="Cog" size={18} />
+              </span>
+              <p className="font-gost-upright text-sm md:text-base font-bold text-[var(--drawing-line)] mb-2 leading-tight">
+                Профиль&nbsp;&mdash; машиностроение и&nbsp;механика
+              </p>
+              <p className="font-gost text-xs text-[var(--drawing-line-thin)] leading-relaxed">
+                Конструирование, технология, детали машин, CAD/CAE, ЕСКД.
+              </p>
+            </div>
+
+            <div className="relative border-[1.5px] border-[var(--drawing-line)] bg-[var(--drawing-bg)] p-5 md:p-6">
+              <span className="zone-marker top-2 right-3">03</span>
+              <span className="inline-flex w-9 h-9 border border-[var(--drawing-line)] items-center justify-center text-[var(--drawing-line)] mb-3">
+                <Icon name="GraduationCap" size={18} />
+              </span>
+              <p className="font-gost-upright text-sm md:text-base font-bold text-[var(--drawing-line)] mb-2 leading-tight">
+                Учим, а&nbsp;не&nbsp;пишем за&nbsp;вас
+              </p>
+              <p className="font-gost text-xs text-[var(--drawing-line-thin)] leading-relaxed">
+                Цель&nbsp;&mdash; чтобы вы&nbsp;разбирались в&nbsp;своей работе и&nbsp;могли её&nbsp;защитить.
+              </p>
+            </div>
           </div>
           <div className="extension-line-h w-full my-4" />
           <p className="font-gost text-[10px] text-center text-[var(--drawing-line-thin)] opacity-70 max-w-xl mx-auto">

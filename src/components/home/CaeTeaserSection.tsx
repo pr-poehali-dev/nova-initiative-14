@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
+import CaeDemoAnimation from "@/components/home/CaeDemoAnimation";
 
 const HIGHLIGHTS = [
   {
@@ -47,24 +48,34 @@ const CaeTeaserSection = () => {
 
         <div className="extension-line-h w-full mb-8" />
 
-        <div className="grid gap-5 md:grid-cols-3 mb-8">
-          {HIGHLIGHTS.map((h, idx) => (
-            <div
-              key={h.title}
-              className="border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] p-5 relative"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <Icon name={h.icon} size={26} className="text-[var(--drawing-accent)]" />
-                <span className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)]">
-                  Поз. {String(idx + 1).padStart(2, "0")}
+        <div className="grid gap-6 md:gap-8 md:grid-cols-2 items-center mb-8">
+          {/* Живое демо: балка под нагрузкой, прогиб и эпюра момента */}
+          <CaeDemoAnimation />
+
+          {/* Возможности */}
+          <div className="space-y-4">
+            {HIGHLIGHTS.map((h, idx) => (
+              <div
+                key={h.title}
+                className="border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] p-4 relative flex items-start gap-4"
+              >
+                <span className="inline-flex w-10 h-10 border border-[var(--drawing-line)] items-center justify-center text-[var(--drawing-accent)] shrink-0">
+                  <Icon name={h.icon} size={20} />
                 </span>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-gost-upright text-base md:text-lg font-bold leading-snug">
+                      {h.title}
+                    </h3>
+                    <span className="font-gost text-[9px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)]">
+                      Поз. {String(idx + 1).padStart(2, "0")}
+                    </span>
+                  </div>
+                  <p className="text-sm text-[var(--drawing-line-thin)] leading-relaxed">{h.text}</p>
+                </div>
               </div>
-              <h3 className="font-gost-upright text-base md:text-lg font-bold mb-2 leading-snug">
-                {h.title}
-              </h3>
-              <p className="text-sm text-[var(--drawing-line-thin)] leading-relaxed">{h.text}</p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
         <div className="border-t border-dashed border-[var(--drawing-line-thin)] pt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

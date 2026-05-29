@@ -4,6 +4,8 @@ import { Helmet } from "@/lib/helmet-shim";
 import { fetchArticle, formatRuDate, type Article } from "@/lib/articles";
 import { SITE_URL } from "@/lib/seo";
 import NotFound from "@/pages/NotFound";
+import ReadingProgress from "@/components/blog/ReadingProgress";
+import ArticleToc from "@/components/blog/ArticleToc";
 
 const ORG_NAME = "Уральский федеральный университет (внеучебный материал)";
 const PROVERIL = "Диплом-Инж.рф";
@@ -99,6 +101,8 @@ const BlogArticle = () => {
         {faqLd && <script type="application/ld+json">{JSON.stringify(faqLd)}</script>}
       </Helmet>
 
+      <ReadingProgress />
+
       <div className="px-3 sm:px-4 py-6 md:py-10 pt-20 md:pt-24">
         <div className="max-w-[820px] mx-auto mb-4">
           <Link
@@ -133,6 +137,8 @@ const BlogArticle = () => {
               </dl>
             </section>
           )}
+
+          <ArticleToc containerSelector=".eskd-body" deps={article.slug} />
 
           <div
             className="eskd-body"

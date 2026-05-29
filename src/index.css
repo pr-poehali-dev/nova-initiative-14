@@ -420,6 +420,72 @@ textarea.drawing-input::placeholder {
   animation: fadeInUp 0.5s ease-out both;
 }
 
+/* ===== Анимированное демо CAE (балка под нагрузкой) ===== */
+@keyframes caeLoadArrows {
+  0%,
+  18% {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  30%,
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes caeDeflect {
+  0%,
+  30% {
+    opacity: 0;
+  }
+  45%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes caeDiagram {
+  0%,
+  55% {
+    opacity: 0;
+    stroke-dashoffset: 480;
+  }
+  75%,
+  100% {
+    opacity: 1;
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes caeResultBadge {
+  0%,
+  70% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  85%,
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cae-demo-loop {
+  animation-iteration-count: infinite;
+  animation-duration: 6s;
+  animation-timing-function: ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cae-demo-loop {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    stroke-dashoffset: 0 !important;
+  }
+}
+
 /* Появление блоков при скролле (IntersectionObserver добавляет .reveal-visible) */
 .reveal {
   opacity: 0;
