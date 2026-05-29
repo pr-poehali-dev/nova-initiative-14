@@ -21,6 +21,7 @@ interface Props {
   model: FrameModel;
   updateModel: (m: FrameModel) => void;
   mode: EditorMode;
+  setMode?: (m: EditorMode) => void;
   gridStep: number;
   selectedNodeIds: string[];
   selectedElementIds: string[];
@@ -61,6 +62,7 @@ const EditorCanvasArea = ({
   model,
   updateModel,
   mode,
+  setMode,
   gridStep,
   selectedNodeIds,
   selectedElementIds,
@@ -178,6 +180,38 @@ const EditorCanvasArea = ({
         diagramScale={diagramScale}
         setDiagramScale={setDiagramScale}
       />
+    )}
+
+    {/* Мобильный HUD выбора инструмента — поверх рабочей области, слева снизу.
+        Позволяет переключать инструмент одним касанием, не уходя на вкладку
+        «Чертить». На десктопе скрыт (там есть постоянная левая панель). */}
+    {setMode && (
+      <div className="lg:hidden absolute bottom-4 left-2 z-30 flex flex-col gap-1.5">
+        {[
+          { v: "draw-node", label: "Узел", icon: "Circle" },
+          { v: "draw-element", label: "Балка", icon: "Minus" },
+          { v: "select", label: "Выбор", icon: "MousePointer" },
+        ].map((t) => {
+          const active = mode === t.v;
+          return (
+            <button
+              key={t.v}
+              onClick={() => setMode(t.v as EditorMode)}
+              aria-pressed={active}
+              aria-label={t.label}
+              title={t.label}
+              className={`min-w-[48px] min-h-[48px] flex flex-col items-center justify-center gap-0.5 border-2 shadow-md transition ${
+                active
+                  ? "bg-[var(--drawing-accent)] text-white border-[var(--drawing-accent)]"
+                  : "bg-[var(--drawing-bg)]/95 text-[var(--drawing-line)] border-[var(--drawing-line)] active:bg-[var(--drawing-paper)]"
+              }`}
+            >
+              <Icon name={t.icon} size={18} />
+              <span className="font-gost text-[8px] uppercase tracking-wider">{t.label}</span>
+            </button>
+          );
+        })}
+      </div>
     )}
 
     {displayError && (

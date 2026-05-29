@@ -270,6 +270,7 @@ const CaeDemoEditor = () => {
             model={model}
             updateModel={updateModel}
             mode={mode}
+            setMode={setMode}
             gridStep={gridStep}
             selectedNodeIds={selectedNodeIds}
             selectedElementIds={selectedElementIds}

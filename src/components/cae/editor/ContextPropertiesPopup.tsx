@@ -195,7 +195,38 @@ const ContextPropertiesPopup = ({
   // занимает почти весь экран через CSS.
   const POPUP_W = 300;
   const POPUP_H = 520;
-  const pos = clampDesktopPosition(target.clientX, target.clientY, POPUP_W, POPUP_H);
+  const basePos = clampDesktopPosition(target.clientX, target.clientY, POPUP_W, POPUP_H);
+
+  // Перетаскивание попапа за шапку (только десктоп). null → позиция по курсору.
+  const [dragPos, setDragPos] = useState<{ left: number; top: number } | null>(null);
+  const dragState = useRef<{ startX: number; startY: number; left: number; top: number } | null>(null);
+
+  const onHeaderPointerDown = (e: React.PointerEvent) => {
+    // Только десктоп и только левая кнопка; не мешаем кнопке закрытия.
+    if (!window.matchMedia("(min-width: 768px)").matches) return;
+    if (e.button !== 0) return;
+    const cur = dragPos ?? basePos;
+    dragState.current = { startX: e.clientX, startY: e.clientY, left: cur.left, top: cur.top };
+    const onMove = (ev: PointerEvent) => {
+      const st = dragState.current;
+      if (!st) return;
+      const margin = 8;
+      const maxLeft = window.innerWidth - POPUP_W - margin;
+      const maxTop = window.innerHeight - 60 - margin;
+      const left = Math.min(maxLeft, Math.max(margin, st.left + (ev.clientX - st.startX)));
+      const top = Math.min(maxTop, Math.max(margin, st.top + (ev.clientY - st.startY)));
+      setDragPos({ left, top });
+    };
+    const onUp = () => {
+      dragState.current = null;
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  };
+
+  const pos = dragPos ?? basePos;
 
   const title =
     target.kind === "node" ? `Узел ${target.id}` : `Элемент ${target.id}`;
@@ -235,9 +266,15 @@ const ContextPropertiesPopup = ({
             : {}),
         }}
       >
-        {/* Шапка popup'а с кнопкой закрытия */}
-        <div className="flex items-center justify-between px-3 py-2 border-b-2 border-[var(--drawing-line)] bg-[var(--drawing-paper)] shrink-0">
-          <p className="font-gost text-[11px] uppercase tracking-[0.2em] text-[var(--drawing-line)] font-bold">
+        {/* Шапка popup'а с кнопкой закрытия. На десктопе — «ручка» для
+            перетаскивания (touch-action:none, чтобы не мешал скролл). */}
+        <div
+          onPointerDown={onHeaderPointerDown}
+          className="flex items-center justify-between px-3 py-2 border-b-2 border-[var(--drawing-line)] bg-[var(--drawing-paper)] shrink-0 md:cursor-grab md:active:cursor-grabbing select-none"
+          style={{ touchAction: "none" }}
+        >
+          <p className="font-gost text-[11px] uppercase tracking-[0.2em] text-[var(--drawing-line)] font-bold flex items-center gap-1.5">
+            <Icon name="GripVertical" size={12} className="hidden md:inline opacity-40" />
             {title}
           </p>
           <button

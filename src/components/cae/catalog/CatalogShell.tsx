@@ -36,10 +36,10 @@ const CatalogShell = ({ open, onClose, title, width = 460, children }: Props) =>
   return (
     <>
       {isDesktop && (
-        <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
+        <div className="fixed inset-0 z-[55] bg-black/30" onClick={onClose} />
       )}
       <aside
-        className={`fixed z-50 bg-[var(--drawing-bg)] shadow-2xl flex flex-col ${
+        className={`fixed z-[60] bg-[var(--drawing-bg)] shadow-2xl flex flex-col ${
           isDesktop ? "border-l-2 border-[var(--drawing-line)]" : ""
         }`}
         style={asideStyle}

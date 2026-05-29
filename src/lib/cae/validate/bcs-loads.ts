@@ -61,6 +61,21 @@ export function validateLoads(model: FrameModel): ValidationIssue[] {
     const f = ld.force || [0, 0, 0];
     const m = ld.moment || [0, 0, 0];
     const q = ld.load_local_per_length || [0, 0, 0];
+
+    // Защита от некорректного ввода: NaN/Infinity в величине или позиции.
+    const allNums = [...f, ...m, ...q];
+    if (typeof ld.position_ratio === "number") allNums.push(ld.position_ratio);
+    if (allNums.some((v) => !Number.isFinite(v))) {
+      issues.push({
+        level: "error",
+        code: "load_invalid_value",
+        message: `Нагрузка ${ld.id} содержит некорректное значение (не число)`,
+        hint: "Проверьте величину нагрузки и позицию — впишите число, например 0.8",
+        target: { kind: "load", id: ld.id },
+      });
+      continue;
+    }
+
     const mag =
       Math.abs(f[0]) + Math.abs(f[1]) + Math.abs(f[2]) +
       Math.abs(m[0]) + Math.abs(m[1]) + Math.abs(m[2]) +
