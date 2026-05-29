@@ -78,14 +78,30 @@ export function saveProjectModel(
   }>(`${CAE_API}?action=save-model&id=${projectId}`, "POST", { model, comment });
 }
 
+/**
+ * Прокидывает тип расчёта (линейный / нелинейный P-Δ) из настроек анализа
+ * в analysis_options, который читает решатель на бэкенде.
+ */
+function withAnalysisType(model: FrameModel): FrameModel {
+  const analysisType = model.analysis_settings?.analysis_type ?? "linear";
+  return {
+    ...model,
+    analysis_options: {
+      ...model.analysis_options,
+      analysis_type: analysisType,
+    },
+  };
+}
+
 export async function runSolver(
   model: FrameModel,
   projectId?: number,
   versionId?: number,
 ): Promise<ApiResult<SolverResponse>> {
+  const m = withAnalysisType(model);
   const payload = {
-    ...model,
-    meta: { ...model.meta, project_id: projectId, version_id: versionId },
+    ...m,
+    meta: { ...m.meta, project_id: projectId, version_id: versionId },
   };
   return authCall<SolverResponse>(`${CAE_SOLVER}?action=solve`, "POST", payload);
 }
@@ -94,5 +110,5 @@ export async function runSolver(
 export async function runDemoSolver(
   model: FrameModel,
 ): Promise<ApiResult<SolverResponse>> {
-  return authCall<SolverResponse>(`${CAE_SOLVER}?action=demo`, "POST", model);
+  return authCall<SolverResponse>(`${CAE_SOLVER}?action=demo`, "POST", withAnalysisType(model));
 }

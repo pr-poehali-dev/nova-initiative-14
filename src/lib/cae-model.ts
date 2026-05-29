@@ -21,6 +21,7 @@ export type {
   LoadType,
   ModelLoad,
   StrengthTheory,
+  AnalysisType,
   IndustryKind,
   AnalysisSettings,
   FrameModel,

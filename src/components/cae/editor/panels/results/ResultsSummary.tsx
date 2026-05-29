@@ -3,8 +3,23 @@ import { formatNumber } from "./formatNumber";
 
 /** Сводка ключевых чисел расчёта: узлы, элементы, прогиб, σ, запас, время. */
 export default function ResultsSummary({ result }: { result: SolverResponse }) {
+  const isPdelta = result.summary.analysis_type === "nonlinear_pdelta";
+  const pd = result.summary.pdelta;
   return (
     <dl className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] font-mono mb-3">
+      <dt className="text-[var(--drawing-line-thin)]">Тип расчёта:</dt>
+      <dd>
+        {isPdelta ? (
+          <span title="Геометрическая нелинейность">
+            P-Δ нелинейный
+            {pd && (
+              <span className="text-[var(--drawing-line-thin)]"> · {pd.iterations} итер.</span>
+            )}
+          </span>
+        ) : (
+          "линейный"
+        )}
+      </dd>
       <dt className="text-[var(--drawing-line-thin)]">Узлов:</dt>
       <dd>{result.summary.n_nodes}</dd>
       <dt className="text-[var(--drawing-line-thin)]">Элементов:</dt>

@@ -5,9 +5,11 @@
  *
  * Изменения мгновенно применяются к модели и сохраняются вместе с проектом.
  */
+import { useState } from "react";
 import Icon from "@/components/ui/icon";
 import {
   type AnalysisSettings,
+  type AnalysisType,
   type StrengthTheory,
   type IndustryKind,
   DEFAULT_ANALYSIS_SETTINGS,
@@ -42,12 +44,28 @@ const THEORIES: { key: StrengthTheory; label: string; formula: string; descripti
   },
 ];
 
+const ANALYSIS_TYPES: { key: AnalysisType; label: string; hint: string }[] = [
+  {
+    key: "linear",
+    label: "Линейный",
+    hint: "Малые перемещения, постоянная жёсткость. Быстрый и точный для большинства задач в пределах упругости.",
+  },
+  {
+    key: "nonlinear_pdelta",
+    label: "Нелинейный (P-Δ)",
+    hint: "Учитывает деформированную схему: сжатая стойка получает доп. момент от отклонения. Нужен для устойчивости.",
+  },
+];
+
 const EditorAnalysisSettingsDialog = ({ open, onClose, settings, onChange }: Props) => {
+  const [showCheatSheet, setShowCheatSheet] = useState(false);
   if (!open) return null;
 
   const update = (patch: Partial<AnalysisSettings>) => {
     onChange({ ...settings, ...patch });
   };
+
+  const analysisType: AnalysisType = settings.analysis_type ?? "linear";
 
   return (
     <div className="fixed inset-0 z-[95] bg-black/50 flex items-center justify-center p-4">
@@ -67,6 +85,87 @@ const EditorAnalysisSettingsDialog = ({ open, onClose, settings, onChange }: Pro
         </div>
 
         <div className="p-5 space-y-5">
+          {/* ТИП РАСЧЁТА */}
+          <section>
+            <div className="flex items-center gap-2 mb-2">
+              <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)]">
+                Тип расчёта
+              </p>
+              <button
+                onClick={() => setShowCheatSheet((v) => !v)}
+                className="flex items-center gap-1 text-[10px] font-gost text-[var(--drawing-line-thin)] hover:text-[var(--drawing-accent)]"
+                title="Что это и зачем?"
+              >
+                <Icon name="HelpCircle" size={13} />
+                что это?
+              </button>
+            </div>
+            <div className="grid md:grid-cols-2 gap-2">
+              {ANALYSIS_TYPES.map((at) => {
+                const selected = analysisType === at.key;
+                return (
+                  <button
+                    key={at.key}
+                    onClick={() => update({ analysis_type: at.key })}
+                    className={`text-left border p-2.5 transition ${
+                      selected
+                        ? "border-[var(--drawing-accent)] bg-[var(--drawing-accent)]/5"
+                        : "border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)]"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`w-3 h-3 rounded-full border-2 ${
+                          selected
+                            ? "border-[var(--drawing-accent)] bg-[var(--drawing-accent)]"
+                            : "border-[var(--drawing-line-thin)]"
+                        }`}
+                      />
+                      <p className="font-gost-upright text-[13px] font-bold text-[var(--drawing-ink)]">
+                        {at.label}
+                      </p>
+                    </div>
+                    <p className="font-gost text-[11px] text-[var(--drawing-line-thin)] mt-1 leading-snug">
+                      {at.hint}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Шпаргалка для новичков */}
+            {showCheatSheet && (
+              <div className="mt-3 p-3 border border-dashed border-[var(--drawing-line)] bg-[var(--drawing-paper)]/40 space-y-2">
+                <p className="font-gost-upright text-[12px] font-bold text-[var(--drawing-ink)]">
+                  Чем отличаются расчёты?
+                </p>
+                <p className="font-gost text-[11px] text-[var(--drawing-line-thin)] leading-snug">
+                  <b className="text-[var(--drawing-ink)]">Линейный</b> считает по правилу
+                  «удвоил нагрузку → удвоились прогибы и напряжения». Жёсткость
+                  конструкции постоянна. Этого достаточно для балок, перекрытий и
+                  типовых рам, работающих в пределах упругости.
+                </p>
+                <p className="font-gost text-[11px] text-[var(--drawing-line-thin)] leading-snug">
+                  <b className="text-[var(--drawing-ink)]">Нелинейный (P-Δ)</b> учитывает,
+                  что нагрузка действует на уже искривлённую схему. Сжатая стойка
+                  отклоняется → появляется дополнительный изгибающий момент → отклонение
+                  растёт ещё сильнее. Линейный расчёт этого не видит и недооценивает
+                  напряжения у гибких сжатых элементов.
+                </p>
+                <p className="font-gost text-[11px] text-[var(--drawing-line-thin)] leading-snug">
+                  <b className="text-[var(--drawing-ink)]">Когда выбирать P-Δ:</b> высокие
+                  колонны и стойки, гибкие рамы, мачты — везде, где есть заметное сжатие
+                  и важна устойчивость. Если P-Δ показывает «потерю устойчивости» —
+                  конструкция близка к критической нагрузке, нужно усилить сечение.
+                </p>
+                <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] italic leading-snug">
+                  P-Δ — это геометрическая нелинейность. Пластичность материала пока
+                  не учитывается (расчёт остаётся в упругой стадии).
+                </p>
+              </div>
+            )}
+          </section>
+
           {/* ОТРАСЛЬ */}
           <section>
             <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-2">

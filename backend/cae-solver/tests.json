@@ -141,6 +141,36 @@
       "expectedStatus": 200
     },
     {
+      "name": "Demo: P-Delta нелинейный расчёт консольной стойки",
+      "comment": "Сжатие N + поперечная сила. analysis_type=nonlinear_pdelta — итерации должны сойтись и вернуть результат.",
+      "method": "POST",
+      "path": "/?action=demo",
+      "body": {
+        "meta": { "dim": "2d" },
+        "analysis_options": { "analysis_type": "nonlinear_pdelta" },
+        "materials": [
+          { "id": "steel", "E": 2.1e11, "G": 8.1e10, "nu": 0.3, "sigma_yield": 245e6 }
+        ],
+        "sections": [
+          { "id": "i20", "A": 26.8e-4, "I_z": 1840e-8, "W_z": 184e-6, "h": 0.2, "shear_area_y": 13.4e-4 }
+        ],
+        "nodes": [
+          { "id": "n1", "coords": [0, 0] },
+          { "id": "n2", "coords": [0, 3.0] }
+        ],
+        "elements": [
+          { "id": "e1", "node_start": "n1", "node_end": "n2", "material_id": "steel", "section_id": "i20" }
+        ],
+        "boundary_conditions": [
+          { "node_id": "n1", "constrained_dofs": ["ux", "uy", "rz"] }
+        ],
+        "loads": [
+          { "type": "nodal_force", "node_id": "n2", "force": [5000, -50000, 0], "moment": [0, 0, 0] }
+        ]
+      },
+      "expectedStatus": 200
+    },
+    {
       "name": "Demo: треугольная ферма с шарнирами на обоих концах всех стержней",
       "comment": "Регрессия: раньше падала с 'Решение не сошлось' из-за свободных rz узлов. После фикса автоподавление нулевых DOF должно дать корректный расчёт.",
       "method": "POST",

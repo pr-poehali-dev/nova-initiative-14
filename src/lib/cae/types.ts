@@ -88,6 +88,17 @@ export interface ModelLoad {
 export type StrengthTheory = "tresca" | "mises" | "normal";
 
 /**
+ * Тип расчёта:
+ *  - linear:           линейная статика (по умолчанию). Перемещения малы,
+ *                      жёсткость постоянна — нагрузка пропорциональна отклику.
+ *  - nonlinear_pdelta: геометрическая нелинейность (P-Δ). Учитывает влияние
+ *                      деформированной схемы: сжатая стойка получает
+ *                      дополнительный момент от собственного отклонения.
+ *                      Нужен для оценки устойчивости сжатых элементов.
+ */
+export type AnalysisType = "linear" | "nonlinear_pdelta";
+
+/**
  * Отрасль применения конструкции — определяет норматив допускаемого прогиба [f].
  * Список взят из реальных машиностроительных норм и справочников.
  */
@@ -104,6 +115,8 @@ export interface AnalysisSettings {
   industry: IndustryKind;
   /** Теория прочности для расчёта σ_экв */
   strength_theory: StrengthTheory;
+  /** Тип расчёта: линейный (по умолчанию) или нелинейный P-Δ */
+  analysis_type?: AnalysisType;
   /** Коэффициент запаса прочности n (σ_экв ≤ σ_т / n). По умолчанию 1.5 */
   safety_factor: number;
   /** Для industry=custom: знаменатель отношения L/k (250 → [f]=L/250). null если не задано */
@@ -129,7 +142,7 @@ export interface FrameModel {
   elements: ModelElement[];
   boundary_conditions: BoundaryCondition[];
   loads: ModelLoad[];
-  analysis_options?: { diagram_subdivisions?: number };
+  analysis_options?: { diagram_subdivisions?: number; analysis_type?: AnalysisType };
   analysis_settings?: AnalysisSettings;
 }
 
@@ -145,6 +158,13 @@ export interface SolverResponse {
     max_displacement: number;
     max_sigma_vm: number;
     min_safety_factor: number | null;
+    analysis_type?: AnalysisType;
+    /** Сведения об итерациях P-Δ (только для nonlinear_pdelta) */
+    pdelta?: {
+      iterations: number;
+      converged: boolean;
+      unstable: boolean;
+    };
   };
   nodal_displacements: Array<{
     node_id: string;

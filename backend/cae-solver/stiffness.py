@@ -91,6 +91,78 @@ def beam_local_k_3d(E: float, G: float, A: float, L: float,
     return k
 
 
+def beam_geometric_k_2d(N: float, L: float) -> np.ndarray:
+    """
+    Геометрическая матрица жёсткости 6×6 для 2D-балки (P-Δ эффект).
+    DOF: [ux_a, uy_a, rz_a, ux_b, uy_b, rz_b].
+
+    N — осевая сила в элементе: N>0 растяжение (повышает поперечную
+    жёсткость), N<0 сжатие (понижает → ведёт к потере устойчивости).
+    Используется согласованная (consistent) форма по полиномам Эрмита.
+    Осевые и крутильные DOF в геометрию не входят.
+    """
+    kg = np.zeros((6, 6))
+    if L <= 0:
+        return kg
+    L2 = L * L
+    c = N / L
+    # Подматрица для (uy_a, rz_a, uy_b, rz_b) — индексы 1,2,4,5.
+    Kg = c * np.array([
+        [6.0 / 5.0,   L / 10.0,   -6.0 / 5.0,   L / 10.0],
+        [L / 10.0,    2.0 * L2 / 15.0, -L / 10.0, -L2 / 30.0],
+        [-6.0 / 5.0, -L / 10.0,    6.0 / 5.0,  -L / 10.0],
+        [L / 10.0,   -L2 / 30.0,  -L / 10.0,   2.0 * L2 / 15.0],
+    ])
+    idx = [1, 2, 4, 5]
+    for i in range(4):
+        for j in range(4):
+            kg[idx[i], idx[j]] += Kg[i, j]
+    return kg
+
+
+def beam_geometric_k_3d(N: float, L: float) -> np.ndarray:
+    """
+    Геометрическая матрица жёсткости 12×12 для 3D-балки (P-Δ эффект).
+    DOF на узле: ux, uy, uz, rx, ry, rz.
+
+    Осевая сила N даёт геометрическую жёсткость в ОБЕИХ плоскостях изгиба
+    (xy → uy/rz и xz → uz/ry). Кручение/осевое в геометрию не входят.
+    Знаки внеосевых членов для плоскости xz инвертированы аналогично
+    упругой матрице (правило правой руки: ry противоположен rz).
+    """
+    kg = np.zeros((12, 12))
+    if L <= 0:
+        return kg
+    L2 = L * L
+    c = N / L
+
+    # Плоскость xy: uy_a=1, rz_a=5, uy_b=7, rz_b=11
+    Kxy = c * np.array([
+        [6.0 / 5.0,   L / 10.0,   -6.0 / 5.0,   L / 10.0],
+        [L / 10.0,    2.0 * L2 / 15.0, -L / 10.0, -L2 / 30.0],
+        [-6.0 / 5.0, -L / 10.0,    6.0 / 5.0,  -L / 10.0],
+        [L / 10.0,   -L2 / 30.0,  -L / 10.0,   2.0 * L2 / 15.0],
+    ])
+    idx_xy = [1, 5, 7, 11]
+    for i in range(4):
+        for j in range(4):
+            kg[idx_xy[i], idx_xy[j]] += Kxy[i, j]
+
+    # Плоскость xz: uz_a=2, ry_a=4, uz_b=8, ry_b=10 (внеосевые с минусом)
+    Kxz = c * np.array([
+        [6.0 / 5.0,  -L / 10.0,   -6.0 / 5.0,  -L / 10.0],
+        [-L / 10.0,   2.0 * L2 / 15.0,  L / 10.0, -L2 / 30.0],
+        [-6.0 / 5.0,  L / 10.0,    6.0 / 5.0,   L / 10.0],
+        [-L / 10.0,  -L2 / 30.0,   L / 10.0,   2.0 * L2 / 15.0],
+    ])
+    idx_xz = [2, 4, 8, 10]
+    for i in range(4):
+        for j in range(4):
+            kg[idx_xz[i], idx_xz[j]] += Kxz[i, j]
+
+    return kg
+
+
 def beam_local_k_2d(E: float, A: float, G: float, L: float,
                     I_z: float, A_sy: float | None,
                     hinge_a: bool = False, hinge_b: bool = False) -> np.ndarray:

@@ -49,7 +49,12 @@ from models import (
     SolveResult,
 )
 from postprocess import fixed_fixed_deflection_at
-from stiffness import beam_local_k_2d, beam_local_k_3d
+from stiffness import (
+    beam_geometric_k_2d,
+    beam_geometric_k_3d,
+    beam_local_k_2d,
+    beam_local_k_3d,
+)
 
 
 class FrameSolver:
@@ -61,6 +66,13 @@ class FrameSolver:
         if self.dim not in ('2d', '3d'):
             raise ValueError(f'Неизвестная размерность: {self.dim}')
         self.dof_per_node = 6 if self.dim == '3d' else 3
+        # Тип анализа: 'linear' (по умолчанию) или 'nonlinear_pdelta'
+        # (геометрическая нелинейность — учёт P-Δ эффектов через
+        # геометрическую матрицу жёсткости с итерациями).
+        opts = payload.get('analysis_options', {})
+        self.analysis_type = opts.get('analysis_type', 'linear')
+        self.pdelta_max_iter = int(opts.get('pdelta_max_iter', 20))
+        self.pdelta_tol = float(opts.get('pdelta_tol', 1e-4))
         self._parse()
 
     def _parse(self):
@@ -174,6 +186,118 @@ class FrameSolver:
         k_global = T.T @ k_local @ T
         return k_local, k_global, T, L
 
+    def _solve_linear(self, K_csr, F, free_indices):
+        """Решает K·u = F методом исключения закреплённых DOF. Возвращает u."""
+        n = self.n_dofs
+        K_ff = K_csr[free_indices, :][:, free_indices]
+        F_f = F[free_indices].copy()
+
+        # Автоподавление «висячих» DOF (шарнирные узлы фермы): нулевая
+        # диагональ → сингулярность. Эти DOF не влияют на решение → u=0.
+        diag = K_ff.diagonal()
+        nonzero_diag = diag[np.abs(diag) > 1e-30]
+        diag_scale = float(np.median(np.abs(nonzero_diag))) if nonzero_diag.size > 0 else 1.0
+        zero_dof_mask = np.abs(diag) < diag_scale * 1e-12
+        if int(zero_dof_mask.sum()) > 0:
+            K_ff = K_ff.tolil()
+            for idx in np.where(zero_dof_mask)[0]:
+                K_ff.rows[idx] = [int(idx)]
+                K_ff.data[idx] = [1.0]
+                F_f[idx] = 0.0
+            K_ff = K_ff.tocsr()
+
+        try:
+            u_f = spsolve(K_ff, F_f)
+        except Exception as e:
+            raise RuntimeError(
+                f'Не удалось решить СЛАУ: возможно, конструкция геометрически '
+                f'изменяема или у узлов фермы не хватает связей. Подробности: {e}'
+            )
+        if not np.all(np.isfinite(u_f)):
+            raise RuntimeError(
+                'Решение содержит бесконечные перемещения. Скорее всего конструкция '
+                'геометрически изменяема (мгновенно изменяемая система) — добавьте '
+                'связи или уберите лишние шарниры.'
+            )
+        u = np.zeros(n)
+        u[free_indices] = u_f
+        return u
+
+    def _element_axial_force(self, el, u, cache) -> float:
+        """Осевая сила N в элементе по перемещениям u (N>0 — растяжение)."""
+        T = cache['T']
+        dofs = cache['dofs']
+        u_local = T @ u[dofs]
+        k_local = cache['k_local']
+        f_end = k_local @ u_local - cache.get('f_eq_local', 0.0)
+        # f_end[0] — осевое усилие на узле A в локальной СК.
+        # Растяжению (N>0) соответствует f_end[0] < 0 (узел A тянут наружу),
+        # поэтому N = -f_end[0] — согласовано с постпроцессингом эпюр.
+        return float(-f_end[0])
+
+    def _assemble_geometric(self, u, el_cache):
+        """Глобальная геометрическая матрица Kg по текущим осевым силам N."""
+        n = self.n_dofs
+        Kg = lil_matrix((n, n))
+        for el in self.elements:
+            cache = el_cache[el.id]
+            N = self._element_axial_force(el, u, cache)
+            L = cache['L']
+            if self.dim == '3d':
+                kg_local = beam_geometric_k_3d(N, L)
+            else:
+                kg_local = beam_geometric_k_2d(N, L)
+            T = cache['T']
+            kg_global = T.T @ kg_local @ T
+            dofs = cache['dofs']
+            for i in range(len(dofs)):
+                for j in range(len(dofs)):
+                    Kg[dofs[i], dofs[j]] += kg_global[i, j]
+        return Kg.tocsr()
+
+    def _solve_pdelta(self, K_elastic, F, free_indices, el_cache):
+        """
+        Итерационный расчёт с учётом P-Δ (геометрическая нелинейность).
+
+        На каждом шаге собирается геометрическая матрица Kg по осевым силам
+        предыдущего шага, система (K_упр + Kg)·u = F решается заново.
+        Итерации повторяются, пока относительное изменение перемещений не
+        станет меньше pdelta_tol. Возвращает (u, info).
+        """
+        # Шаг 0 — линейное решение как стартовое приближение.
+        u = self._solve_linear(K_elastic, F, free_indices)
+        info = {'iterations': 0, 'converged': True, 'unstable': False,
+                'rel_change': 0.0}
+        prev_norm = float(np.linalg.norm(u))
+
+        for it in range(1, self.pdelta_max_iter + 1):
+            Kg = self._assemble_geometric(u, el_cache)
+            K_total = K_elastic + Kg
+            try:
+                u_new = self._solve_linear(K_total, F, free_indices)
+            except RuntimeError:
+                # Касательная матрица вырождена → потеря устойчивости.
+                info.update({'iterations': it, 'converged': False, 'unstable': True})
+                return u, info
+
+            norm_new = float(np.linalg.norm(u_new))
+            if not np.isfinite(norm_new) or norm_new > prev_norm * 1e6:
+                # Перемещения разбегаются → закритическое состояние.
+                info.update({'iterations': it, 'converged': False, 'unstable': True})
+                return u, info
+
+            denom = norm_new if norm_new > 1e-30 else 1.0
+            rel = float(np.linalg.norm(u_new - u) / denom)
+            u = u_new
+            prev_norm = norm_new
+            info.update({'iterations': it, 'rel_change': rel})
+            if rel < self.pdelta_tol:
+                info['converged'] = True
+                return u, info
+
+        info['converged'] = False
+        return u, info
+
     def solve(self) -> SolveResult:
         n = self.n_dofs
         K = lil_matrix((n, n))
@@ -183,9 +307,9 @@ class FrameSolver:
         # ===== Сборка K и f_eq от внутрипролётных нагрузок =====
         for el in self.elements:
             k_local, k_global, T, L = self._build_element_stiffness(el)
-            el_cache[el.id] = {'k_local': k_local, 'T': T, 'L': L}
-
             dofs = self._element_dof_indices(el)
+            el_cache[el.id] = {'k_local': k_local, 'T': T, 'L': L, 'dofs': dofs}
+
             for i in range(len(dofs)):
                 for j in range(len(dofs)):
                     K[dofs[i], dofs[j]] += k_global[i, j]
@@ -260,48 +384,19 @@ class FrameSolver:
         if not free_indices:
             raise ValueError('Все DOF закреплены — нечего решать')
 
-        K_csr = K.tocsr()
-        K_ff = K_csr[free_indices, :][:, free_indices]
-        F_f = F[free_indices]
+        K_elastic = K.tocsr()
 
-        # ===== Автоподавление «висячих» DOF (шарнирные узлы фермы) =====
-        # Если по строке/столбцу матрицы стоят нули (rz узла, к которому
-        # сходятся только шарнирные стержни и нет приложенного момента),
-        # spsolve вернёт сингулярную систему. Эти DOF не влияют на решение —
-        # принудительно обнуляем (математически: u_dof = 0).
-        diag = K_ff.diagonal()
-        nonzero_diag = diag[np.abs(diag) > 1e-30]
-        diag_scale = float(np.median(np.abs(nonzero_diag))) if nonzero_diag.size > 0 else 1.0
-        zero_dof_mask = np.abs(diag) < diag_scale * 1e-12
-        suppressed_count = int(zero_dof_mask.sum())
-        if suppressed_count > 0:
-            K_ff = K_ff.tolil()
-            for idx in np.where(zero_dof_mask)[0]:
-                K_ff.rows[idx] = [int(idx)]
-                K_ff.data[idx] = [1.0]
-                F_f[idx] = 0.0
-            K_ff = K_ff.tocsr()
-
-        # ===== Решение СЛАУ =====
-        try:
-            u_f = spsolve(K_ff, F_f)
-        except Exception as e:
-            raise RuntimeError(
-                f'Не удалось решить СЛАУ: возможно, конструкция геометрически '
-                f'изменяема или у узлов фермы не хватает связей. Подробности: {e}'
-            )
-        if not np.all(np.isfinite(u_f)):
-            raise RuntimeError(
-                'Решение содержит бесконечные перемещения. Скорее всего конструкция '
-                'геометрически изменяема (мгновенно изменяемая система) — добавьте '
-                'связи или уберите лишние шарниры.'
-            )
-
-        u = np.zeros(n)
-        u[free_indices] = u_f
+        # ===== Решение: линейное или итерационное P-Δ =====
+        pdelta_info = None
+        if self.analysis_type == 'nonlinear_pdelta':
+            u, pdelta_info = self._solve_pdelta(K_elastic, F, free_indices, el_cache)
+        else:
+            u = self._solve_linear(K_elastic, F, free_indices)
 
         # ===== Реакции в опорах =====
-        full_F = K_csr @ u
+        # Внешние реакции берём по УПРУГОЙ матрице (внутренние усилия от
+        # деформации), вычитая приложенную нагрузку.
+        full_F = K_elastic @ u
         reactions_vec = full_F - F  # внешние реакции
 
         # ===== Постпроцессинг: узловые перемещения =====
@@ -604,6 +699,21 @@ class FrameSolver:
                 'задайте W_z и W_y из справочника.'
             )
 
+        # Предупреждения по нелинейному (P-Δ) расчёту.
+        if pdelta_info is not None:
+            if pdelta_info.get('unstable'):
+                warnings.append(
+                    'Потеря устойчивости: при учёте P-Δ касательная жёсткость '
+                    'вырождается — конструкция теряет устойчивость при заданной '
+                    'нагрузке. Уменьшите сжимающую нагрузку или усильте сечение.'
+                )
+            elif not pdelta_info.get('converged'):
+                warnings.append(
+                    f'Итерации P-Δ не сошлись за {pdelta_info.get("iterations")} '
+                    'шагов. Результат приближённый — конструкция близка к '
+                    'критической нагрузке.'
+                )
+
         summary = {
             'dim': self.dim,
             'n_nodes': len(self.nodes),
@@ -613,7 +723,14 @@ class FrameSolver:
             'max_displacement': float(max_disp_internal),
             'max_sigma_vm': float(max_sigma_vm),
             'min_safety_factor': float(min_sf) if min_sf != float('inf') else None,
+            'analysis_type': self.analysis_type,
         }
+        if pdelta_info is not None:
+            summary['pdelta'] = {
+                'iterations': int(pdelta_info.get('iterations', 0)),
+                'converged': bool(pdelta_info.get('converged', False)),
+                'unstable': bool(pdelta_info.get('unstable', False)),
+            }
 
         return SolveResult(
             summary=summary,

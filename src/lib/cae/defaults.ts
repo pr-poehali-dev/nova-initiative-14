@@ -18,6 +18,7 @@ import type {
 export const DEFAULT_ANALYSIS_SETTINGS: AnalysisSettings = {
   industry: "general",
   strength_theory: "mises",
+  analysis_type: "linear",
   safety_factor: 1.5,
   custom_deflection_divisor: null,
   check_deflection: true,
