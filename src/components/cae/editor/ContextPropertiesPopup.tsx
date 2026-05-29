@@ -179,10 +179,13 @@ const ContextPropertiesPopup = ({
 
   // Если объект, по которому открыли popup, исчез из модели
   // (удалили через кнопку «Удалить»), popup надо закрыть.
+  // Проверяем наличие объекта в МОДЕЛИ по target.id, а не только по выделению:
+  // на мобиле выделение применяется на следующий тик, и завязка на selectedNode
+  // приводила к мгновенному закрытию popup и краху панели свойств.
   const targetExists =
     target.kind === "node"
-      ? !!selectedNode
-      : !!selectedElementId && model.elements.some((e) => e.id === selectedElementId);
+      ? model.nodes.some((n) => n.id === target.id)
+      : model.elements.some((e) => e.id === target.id);
 
   useEffect(() => {
     if (!targetExists) onClose();

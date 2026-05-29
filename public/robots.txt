@@ -8,5 +8,6 @@ Disallow: /forgot-password
 Disallow: /reset-password
 Disallow: /oauth/
 Disallow: /cae/projects
+Disallow: /admin/
 
 Sitemap: https://xn----gtbhgbqhkfi.xn--p1ai/sitemap.xml

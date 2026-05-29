@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import {
   adminListTickets,
@@ -22,7 +23,7 @@ import {
  * Кнопки плейсхолдеров видны, но помечены «в разработке» и неактивны.
  */
 export default function AdminPanel() {
-  const [tab, setTab] = useState<"tickets" | "users" | "points" | "content">("tickets");
+  const [tab, setTab] = useState<"tickets" | "marketing" | "users" | "points" | "content">("tickets");
   return (
     <section className="mb-8 border-[2.5px] border-[var(--drawing-accent)] bg-[var(--drawing-bg)] relative">
       <div className="absolute -top-px -left-px w-3 h-3 border-t-[2.5px] border-l-[2.5px] border-[var(--drawing-accent)]" />
@@ -39,6 +40,7 @@ export default function AdminPanel() {
 
       <div className="px-4 pt-3 flex flex-wrap gap-1 border-b border-[var(--drawing-line)]/20">
         <TabBtn active={tab === "tickets"} onClick={() => setTab("tickets")} label="Тикеты" />
+        <TabBtn active={tab === "marketing"} onClick={() => setTab("marketing")} label="Маркетинг" />
         <TabBtn active={tab === "users"} onClick={() => setTab("users")} label="Пользователи" wip />
         <TabBtn active={tab === "points"} onClick={() => setTab("points")} label="Очки и ачивки" wip />
         <TabBtn active={tab === "content"} onClick={() => setTab("content")} label="Контент" wip />
@@ -46,6 +48,7 @@ export default function AdminPanel() {
 
       <div className="p-4">
         {tab === "tickets" && <TicketsTab />}
+        {tab === "marketing" && <MarketingTab />}
         {tab === "users" && <PlaceholderTab title="Управление пользователями" />}
         {tab === "points" && <PlaceholderTab title="Ручное начисление баллов" />}
         {tab === "content" && <PlaceholderTab title="Управление контентом (статьи, кейсы)" />}
@@ -68,6 +71,28 @@ function TabBtn({ active, onClick, label, wip }: { active: boolean; onClick: () 
       {label}
       {wip && <span className="ml-1 text-[8px] text-amber-700">в разраб.</span>}
     </button>
+  );
+}
+
+function MarketingTab() {
+  return (
+    <div className="space-y-3">
+      <Link
+        to="/admin/generator"
+        className="flex items-start gap-3 border-[1.5px] border-[var(--drawing-line)] hover:border-[var(--drawing-accent)] p-4 transition-colors group"
+      >
+        <Icon name="Megaphone" size={24} className="text-[var(--drawing-accent)] shrink-0 mt-0.5" />
+        <div className="min-w-0 flex-1">
+          <p className="font-gost-upright font-bold mb-0.5 group-hover:text-[var(--drawing-accent)] transition-colors">
+            Генератор рекламы
+          </p>
+          <p className="font-gost text-[11px] text-[var(--drawing-line-thin)] leading-snug">
+            Посты, сториз, обложки и листовки A5 в фирменном стиле. Выгрузка в PNG, JPG, PDF.
+          </p>
+        </div>
+        <Icon name="ArrowRight" size={16} className="text-[var(--drawing-line-thin)] shrink-0 mt-1" />
+      </Link>
+    </div>
   );
 }
 

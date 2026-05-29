@@ -102,6 +102,16 @@ export function useCanvasInteractions({
       // удержал палец, чтобы открыть свойства, а не выделить/нарисовать.
       setDraggingNode(null);
       suppressNextClick.current = true;
+      // ВАЖНО: выделяем объект ДО открытия popup, как это делает контекст-меню
+      // на десктопе. Иначе на мобиле selectedNode/selectedElementId остаются
+      // пустыми, panel свойств рендерится «вхолостую» и падает с ошибкой.
+      if (kind === "node") {
+        onSelectNodes([id]);
+        onSelectElements([]);
+      } else {
+        onSelectElements([id]);
+        onSelectNodes([]);
+      }
       onRequestContext?.({ kind, id, clientX, clientY });
       longPressTimer.current = null;
     }, LONG_PRESS_MS);
