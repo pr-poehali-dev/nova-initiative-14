@@ -23,6 +23,12 @@ interface Props {
   setShowDiagram: (d: DiagramKind) => void;
   diagramScale: number;
   setDiagramScale: (v: number) => void;
+  /**
+   * Показывать ли фильтры вида/эпюр/масштаба (DiagramControls).
+   * На мобильной раскладке они уже доступны на канвасе (CanvasFloatingControls),
+   * поэтому передаём false. По умолчанию true (десктоп).
+   */
+  showDiagramControls?: boolean;
 }
 
 const EditorResultsPanel = ({
@@ -32,6 +38,7 @@ const EditorResultsPanel = ({
   setShowDiagram,
   diagramScale,
   setDiagramScale,
+  showDiagramControls = true,
 }: Props) => {
   const analytic = result ? computeAnalytic(model) : null;
   const numericMm = result ? result.summary.max_displacement * 1000 : null;
@@ -65,12 +72,14 @@ const EditorResultsPanel = ({
 
           <ReactionsTable reactions={result.reactions} />
 
-          <DiagramControls
-            showDiagram={showDiagram}
-            setShowDiagram={setShowDiagram}
-            diagramScale={diagramScale}
-            setDiagramScale={setDiagramScale}
-          />
+          {showDiagramControls && (
+            <DiagramControls
+              showDiagram={showDiagram}
+              setShowDiagram={setShowDiagram}
+              diagramScale={diagramScale}
+              setDiagramScale={setDiagramScale}
+            />
+          )}
 
           {result.warnings.length > 0 && (
             <div className="mt-3 p-2 border border-[var(--drawing-accent)] text-[10px] text-[var(--drawing-accent)]">

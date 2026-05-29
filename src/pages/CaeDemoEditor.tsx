@@ -273,6 +273,7 @@ const CaeDemoEditor = () => {
             mode={mode}
             setMode={setMode}
             gridStep={gridStep}
+            setGridStep={setGridStep}
             selectedNodeIds={selectedNodeIds}
             selectedElementIds={selectedElementIds}
             setSelectedNodeIds={setSelectedNodeIds}
@@ -294,6 +295,9 @@ const CaeDemoEditor = () => {
             onOpenSettings={() => setSettingsOpen(true)}
             arrowScale={viewSettings.arrowScale}
             fontScale={viewSettings.fontScale}
+            setArrowScale={viewSettings.setArrowScale}
+            setFontScale={viewSettings.setFontScale}
+            onResetView={() => { viewSettings.resetView(); labelOffsets.resetAll(); }}
             labelOffsets={labelOffsets}
             elementLimit={DEMO_ELEMENT_LIMIT}
             issues={issues}

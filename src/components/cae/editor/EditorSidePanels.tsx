@@ -1,13 +1,14 @@
 /**
  * Боковые панели редактора CAE.
  * Содержит:
- *  - Десктопная правая aside (EditorIssuesPanel, EditorRightPanel, EditorChecksPanel, EditorResultsPanel)
- *  - Мобильная раскладка: липкие вкладки (Чертить / Свойства / Проверки / Эпюры)
- *    с соответствующим содержимым под ними
+ *  - Десктопная правая aside (EditorChecksPanel + EditorResultsPanel с фильтрами эпюр)
+ *  - Мобильная раскладка: два блока стека под канвасом — «Проверки» и
+ *    «Результаты» (с id-якорями mobile-checks / mobile-results, к которым
+ *    скроллит мобильный HUD на канвасе). Инструменты/сетка/вид переехали
+ *    в MobileCanvasHud, фильтры эпюр — в CanvasFloatingControls.
  *  - Плавающая кнопка «Рассчитать» (только mobile, fixed bottom-right)
  */
 import Icon from "@/components/ui/icon";
-import EditorLeftPanel from "./EditorLeftPanel";
 import EditorResultsPanel from "./EditorResultsPanel";
 import EditorChecksPanel from "./EditorChecksPanel";
 import type { EditorMode, DiagramKind } from "@/components/cae/FrameCanvas";
@@ -68,41 +69,13 @@ interface Props {
 const EditorSidePanels = ({
   model,
   result,
-  issues,
-  errorsCount,
-  selectedNode,
-  selectedElementId,
-  nodeBC,
-  nodeLoad,
-  mode,
-  setMode,
-  gridStep,
-  setGridStep,
   showDiagram,
   setShowDiagram,
   diagramScale,
   setDiagramScale,
-  bcCustomOpen,
-  setBcCustomOpen,
-  setMatPickerOpen,
-  setSecPickerOpen,
   setSettingsOpen,
-  mobileTab,
-  setMobileTab,
-  addBC,
-  removeBC,
-  toggleCustomDof,
-  addNodalLoad,
-  setNodalMoment,
-  removeLoadOnNode,
-  setDistributedLoad,
-  addInSpanPoint,
-  removeLoadById,
-  setElementHinge,
-  deleteSelected,
   setSelectedNodeIds,
   setSelectedElementIds,
-  onStartTutorial,
   solving,
   blocked,
   onSolve,
@@ -148,63 +121,26 @@ const EditorSidePanels = ({
         </div>
       </aside>
 
-      {/* Мобильная раскладка — 3 вкладки: Чертить / Проверки / Эпюры.
-          Свойства узла/балки открываются long-press'ом по объекту
-          (контекстный popup), отдельной вкладки больше нет. */}
-      <div className="lg:hidden col-span-full">
-        <div className="grid grid-cols-3 gap-0 border-2 border-[var(--drawing-line)] border-b-0 bg-[var(--drawing-bg)] sticky top-16 z-20">
-          {([
-            { key: "tools", label: "Чертить", icon: "Pencil" },
-            { key: "checks", label: "Проверки", icon: "ShieldCheck" },
-            { key: "results", label: "Эпюры", icon: "BarChart3" },
-          ] as const).map((t) => {
-            const active = mobileTab === t.key;
-            const hasIssues = t.key === "checks" && (result || errorsCount > 0);
-            return (
-              <button
-                key={t.key}
-                onClick={() => setMobileTab(t.key)}
-                className={`min-h-[48px] flex flex-col items-center justify-center gap-0.5 border-r border-[var(--drawing-line)] last:border-r-0 font-gost text-[10px] uppercase tracking-wider transition ${
-                  active
-                    ? "bg-[var(--drawing-line)] text-[var(--drawing-bg)]"
-                    : "hover:bg-[var(--drawing-paper)] text-[var(--drawing-ink)]"
-                }`}
-                aria-label={t.label}
-                aria-pressed={active}
-              >
-                <Icon name={t.icon} size={18} />
-                <span className="leading-none">{t.label}</span>
-                {hasIssues && errorsCount > 0 && !active && (
-                  <span className="absolute mt-[-22px] ml-7 bg-[var(--drawing-accent)] text-white rounded-full text-[9px] w-4 h-4 flex items-center justify-center">
-                    {errorsCount}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+      {/* Мобильная раскладка — два блока стека под канвасом: «Проверки» и
+          «Результаты». Инструменты/сетка/вид теперь в MobileCanvasHud на
+          канвасе, фильтры эпюр — в CanvasFloatingControls. Свойства узла/балки
+          открываются удержанием пальца по объекту (контекстный popup).
+          id-якоря используются HUD-кнопками для плавного скролла. */}
+      <div className="lg:hidden col-span-full space-y-3 pb-24 text-[12px]">
+        {/* Якоря — пустые div с scroll-margin, чтобы HUD-кнопки точно
+            докручивали до панелей с учётом фиксированного топ-бара.
+            Сами панели рендерят свои чертёжные рамки. */}
+        <div id="mobile-checks" className="scroll-mt-20">
+          <EditorChecksPanel
+            model={model}
+            result={result}
+            onFocusElement={focusElement}
+            onOpenSettings={() => setSettingsOpen(true)}
+          />
         </div>
 
-        <div className="border-2 border-[var(--drawing-line)] p-3 space-y-3 text-[12px] min-h-[200px] pb-24">
-          {mobileTab === "tools" && (
-            <EditorLeftPanel
-              mode={mode}
-              setMode={setMode}
-              gridStep={gridStep}
-              setGridStep={setGridStep}
-              onStartTutorial={onStartTutorial}
-            />
-          )}
-          {mobileTab === "checks" && (
-            <EditorChecksPanel
-              model={model}
-              result={result}
-              onFocusElement={focusElement}
-              onOpenSettings={() => setSettingsOpen(true)}
-            />
-          )}
-          {mobileTab === "results" && (
-            <EditorResultsPanel {...resultsPanelProps} />
-          )}
+        <div id="mobile-results" className="scroll-mt-20">
+          <EditorResultsPanel {...resultsPanelProps} showDiagramControls={false} />
         </div>
       </div>
 

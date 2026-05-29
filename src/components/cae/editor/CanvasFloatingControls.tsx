@@ -261,12 +261,25 @@ export default function CanvasFloatingControls({
           <p className="text-xs leading-relaxed text-[var(--drawing-line-thin)]">
             Чтобы настроить узел или балку — откройте свойства:
           </p>
-          <ul className="mt-2 space-y-1 text-[11px] text-[var(--drawing-line-thin)]">
-            <li className="flex gap-2"><Icon name="MousePointer2" size={11} className="mt-0.5 shrink-0" /> <strong>Правый клик</strong> по&nbsp;узлу/балке&nbsp;&mdash; свойства (десктоп)</li>
-            <li className="flex gap-2"><Icon name="Hand" size={11} className="mt-0.5 shrink-0" /> <strong>Удержать палец</strong> на&nbsp;узле/балке ~0.5с&nbsp;&mdash; свойства (мобиль)</li>
+
+          {/* ПК-подсказки: правый клик, клавиатура */}
+          <ul className="mt-2 space-y-1 text-[11px] text-[var(--drawing-line-thin)] hidden md:block">
+            <li className="flex gap-2"><Icon name="MousePointer2" size={11} className="mt-0.5 shrink-0" /> <strong>Правый клик</strong> по&nbsp;узлу/балке&nbsp;&mdash; свойства</li>
             <li className="flex gap-2"><Icon name="MousePointer" size={11} className="mt-0.5 shrink-0" /> Обычный клик&nbsp;&mdash; выделить</li>
             <li className="flex gap-2"><Icon name="MousePointer" size={11} className="mt-0.5 shrink-0" /> Двойной клик в&nbsp;пустом месте&nbsp;&mdash; новый узел</li>
             <li className="flex gap-2"><Icon name="Keyboard" size={11} className="mt-0.5 shrink-0" /> Delete&nbsp;&mdash; удалить выбранное, Ctrl+Z&nbsp;&mdash; отменить</li>
+          </ul>
+          {/* На ПК сообщаем, что доступна и мобильная версия */}
+          <p className="mt-2 text-[11px] font-gost text-[var(--drawing-accent)] leading-snug hidden md:block">
+            <Icon name="Smartphone" size={11} className="inline mr-1 -mt-0.5" />
+            Программой можно пользоваться даже с телефона.
+          </p>
+
+          {/* Мобильные подсказки: жесты пальцем */}
+          <ul className="mt-2 space-y-1 text-[11px] text-[var(--drawing-line-thin)] md:hidden">
+            <li className="flex gap-2"><Icon name="Hand" size={11} className="mt-0.5 shrink-0" /> <strong>Удержать палец</strong> на&nbsp;узле/балке ~0.5с&nbsp;&mdash; свойства</li>
+            <li className="flex gap-2"><Icon name="Pointer" size={11} className="mt-0.5 shrink-0" /> Обычный тап&nbsp;&mdash; выделить</li>
+            <li className="flex gap-2"><Icon name="Pointer" size={11} className="mt-0.5 shrink-0" /> Двойной тап в&nbsp;пустом месте&nbsp;&mdash; новый узел</li>
           </ul>
         </Popover>
       )}

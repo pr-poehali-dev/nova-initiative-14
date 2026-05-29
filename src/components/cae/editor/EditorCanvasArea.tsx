@@ -16,6 +16,7 @@ import type { FrameModel, SolverResponse } from "@/lib/cae-model";
 import type { LabelOffsetsApi } from "@/pages/cae-editor/useLabelOffsets";
 import type { ValidationIssue } from "@/lib/cae-validate";
 import CanvasFloatingControls from "./CanvasFloatingControls";
+import MobileCanvasHud from "./MobileCanvasHud";
 
 interface Props {
   model: FrameModel;
@@ -23,6 +24,8 @@ interface Props {
   mode: EditorMode;
   setMode?: (m: EditorMode) => void;
   gridStep: number;
+  /** Изменение шага сетки (мобильный HUD «Сетка»). */
+  setGridStep?: (g: number) => void;
   selectedNodeIds: string[];
   selectedElementIds: string[];
   setSelectedNodeIds: (ids: string[]) => void;
@@ -44,6 +47,12 @@ interface Props {
   onOpenSettings: () => void;
   arrowScale?: number;
   fontScale?: number;
+  /** Изменение масштаба стрелок (мобильный HUD «Вид»). */
+  setArrowScale?: (v: number) => void;
+  /** Изменение масштаба шрифта подписей (мобильный HUD «Вид»). */
+  setFontScale?: (v: number) => void;
+  /** Сброс настроек вида + положения подписей (мобильный HUD «Вид»). */
+  onResetView?: () => void;
   labelOffsets?: LabelOffsetsApi;
   elementLimit?: number;
 
@@ -64,6 +73,7 @@ const EditorCanvasArea = ({
   mode,
   setMode,
   gridStep,
+  setGridStep,
   selectedNodeIds,
   selectedElementIds,
   setSelectedNodeIds,
@@ -85,6 +95,9 @@ const EditorCanvasArea = ({
   onOpenSettings,
   arrowScale,
   fontScale,
+  setArrowScale,
+  setFontScale,
+  onResetView,
   labelOffsets,
   elementLimit,
   issues,
@@ -182,37 +195,28 @@ const EditorCanvasArea = ({
       />
     )}
 
-    {/* Мобильный HUD выбора инструмента — поверх рабочей области, слева снизу.
-        Позволяет переключать инструмент одним касанием, не уходя на вкладку
-        «Чертить». На десктопе скрыт (там есть постоянная левая панель). */}
-    {setMode && (
-      <div className="lg:hidden absolute bottom-4 left-2 z-30 flex flex-col gap-1.5">
-        {[
-          { v: "draw-node", label: "Узел", icon: "Circle" },
-          { v: "draw-element", label: "Балка", icon: "Minus" },
-          { v: "select", label: "Выбор", icon: "MousePointer" },
-        ].map((t) => {
-          const active = mode === t.v;
-          return (
-            <button
-              key={t.v}
-              onClick={() => setMode(t.v as EditorMode)}
-              aria-pressed={active}
-              aria-label={t.label}
-              title={t.label}
-              className={`min-w-[48px] min-h-[48px] flex flex-col items-center justify-center gap-0.5 border-2 shadow-md transition ${
-                active
-                  ? "bg-[var(--drawing-accent)] text-white border-[var(--drawing-accent)]"
-                  : "bg-[var(--drawing-bg)]/95 text-[var(--drawing-line)] border-[var(--drawing-line)] active:bg-[var(--drawing-paper)]"
-              }`}
-            >
-              <Icon name={t.icon} size={18} />
-              <span className="font-gost text-[8px] uppercase tracking-wider">{t.label}</span>
-            </button>
-          );
-        })}
-      </div>
-    )}
+    {/* Мобильный HUD: инструмент / сетка / вид + якоря к блокам под канвасом.
+        Каждая иконка открывает bottom-sheet. На десктопе скрыт (там левая
+        панель). Рендерим только когда есть все необходимые сеттеры. */}
+    {setMode &&
+      setGridStep &&
+      setArrowScale &&
+      setFontScale &&
+      onResetView &&
+      arrowScale !== undefined &&
+      fontScale !== undefined && (
+        <MobileCanvasHud
+          mode={mode}
+          setMode={setMode}
+          gridStep={gridStep}
+          setGridStep={setGridStep}
+          arrowScale={arrowScale}
+          setArrowScale={setArrowScale}
+          fontScale={fontScale}
+          setFontScale={setFontScale}
+          onResetView={onResetView}
+        />
+      )}
 
     {displayError && (
       <div className="absolute top-14 left-2 right-2 bg-[var(--drawing-accent)] text-white text-xs font-gost p-2 flex items-start gap-2 z-20 shadow-lg">

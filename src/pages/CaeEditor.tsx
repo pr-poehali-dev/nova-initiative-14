@@ -210,6 +210,7 @@ const CaeEditor = () => {
             mode={mode}
             setMode={setMode}
             gridStep={gridStep}
+            setGridStep={setGridStep}
             selectedNodeIds={selectedNodeIds}
             selectedElementIds={selectedElementIds}
             setSelectedNodeIds={setSelectedNodeIds}
@@ -231,6 +232,9 @@ const CaeEditor = () => {
             onOpenSettings={() => setSettingsOpen(true)}
             arrowScale={viewSettings.arrowScale}
             fontScale={viewSettings.fontScale}
+            setArrowScale={viewSettings.setArrowScale}
+            setFontScale={viewSettings.setFontScale}
+            onResetView={() => { viewSettings.resetView(); labelOffsets.resetAll(); }}
             labelOffsets={labelOffsets}
             issues={issues}
             setShowDiagram={setShowDiagram}
