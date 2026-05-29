@@ -5,8 +5,8 @@
  * Бесконечный цикл 6 с: схема → нагрузка → деформация → эпюра → результат.
  */
 export default function CaeDemoAnimation() {
-  // Стрелки распределённой нагрузки
-  const arrows = Array.from({ length: 9 }, (_, i) => 60 + i * 40);
+  // Стрелки распределённой нагрузки — внутри пролёта (70…410), не на опорах
+  const arrows = Array.from({ length: 9 }, (_, i) => 70 + i * 42.5);
 
   return (
     <div className="relative w-full border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] overflow-hidden">
@@ -46,7 +46,7 @@ export default function CaeDemoAnimation() {
           className="cae-demo-loop"
           style={{ animationName: "caeLoadArrows" }}
         >
-          <line x1="60" y1="70" x2="420" y2="70" stroke="var(--drawing-accent)" strokeWidth="1.5" />
+          <line x1="62" y1="70" x2="418" y2="70" stroke="var(--drawing-accent)" strokeWidth="1.5" />
           {arrows.map((x) => (
             <line
               key={x}
@@ -92,13 +92,25 @@ export default function CaeDemoAnimation() {
           opacity="0"
         />
 
-        {/* Опоры (шарнирные треугольники) */}
-        <g fill="none" stroke="var(--drawing-line)" strokeWidth="2">
-          <path d="M60 120 L48 142 L72 142 Z" />
-          <line x1="44" y1="148" x2="76" y2="148" />
-          <path d="M420 120 L408 142 L432 142 Z" />
-          <line x1="404" y1="148" x2="436" y2="148" />
-          <circle cx="420" cy="142" r="3" fill="var(--drawing-bg)" />
+        {/* Левая опора — шарнирно-неподвижная (ГОСТ): треугольник + штриховка основания */}
+        <g stroke="var(--drawing-line)" strokeWidth="1.6">
+          <path d="M60 120 L48 142 L72 142 Z" fill="none" />
+          <line x1="44" y1="142" x2="76" y2="142" />
+          {[48, 55, 62, 69].map((x) => (
+            <line key={x} x1={x} y1="142" x2={x - 6} y2="150" strokeWidth="1.2" />
+          ))}
+        </g>
+
+        {/* Правая опора — шарнирно-подвижная (ГОСТ): треугольник + катки + опорная линия */}
+        <g stroke="var(--drawing-line)" strokeWidth="1.6">
+          <path d="M420 120 L408 140 L432 140 Z" fill="none" />
+          <circle cx="412" cy="145" r="3.5" fill="var(--drawing-bg)" />
+          <circle cx="420" cy="145" r="3.5" fill="var(--drawing-bg)" />
+          <circle cx="428" cy="145" r="3.5" fill="var(--drawing-bg)" />
+          <line x1="404" y1="150" x2="436" y2="150" />
+          {[408, 415, 422, 429, 436].map((x) => (
+            <line key={x} x1={x} y1="150" x2={x - 5} y2="157" strokeWidth="1.2" />
+          ))}
         </g>
 
         {/* Эпюра изгибающего момента M (рисуется) */}
