@@ -19,11 +19,11 @@ const PricingMentorsSection = () => {
 
           {loading ? (
             <div className="py-10 text-center">
-              <span className="font-gost text-sm text-[rgba(255,255,255,0.4)]">Загрузка тарифов...</span>
+              <span className="font-gost text-sm text-[var(--drawing-bg)] opacity-50">Загрузка тарифов...</span>
             </div>
           ) : tariffs.length === 0 ? (
-            <div className="py-10 text-center border border-[rgba(255,255,255,0.15)]">
-              <p className="font-gost text-sm text-[rgba(255,255,255,0.6)] mb-3">
+            <div className="py-10 text-center border border-[var(--drawing-bg)]/20">
+              <p className="font-gost text-sm text-[var(--drawing-bg)] opacity-70 mb-3">
                 Тарифы временно недоступны. Это сетевая ошибка — обновите страницу.
               </p>
               <Link
@@ -43,17 +43,17 @@ const PricingMentorsSection = () => {
                   : "border border-[var(--drawing-line-thin)] p-0"
                 }
               >
-                <div className={`px-6 py-3 flex justify-between items-center ${t.is_popular ? "bg-[var(--drawing-accent)]" : "bg-[rgba(255,255,255,0.05)] border-b border-[var(--drawing-line-thin)]"}`}>
-                  <span className={`font-gost text-[10px] uppercase tracking-[0.2em] ${t.is_popular ? "" : "text-[rgba(255,255,255,0.4)]"}`}>
+                <div className={`px-6 py-3 flex justify-between items-center ${t.is_popular ? "bg-[var(--drawing-accent)] text-white" : "bg-[var(--drawing-bg)]/5 border-b border-[var(--drawing-line-thin)]"}`}>
+                  <span className={`font-gost text-[10px] uppercase tracking-[0.2em] ${t.is_popular ? "" : "text-[var(--drawing-bg)] opacity-50"}`}>
                     Поз. {t.pos}{t.is_popular ? "\u00A0\u00B7 Популярный" : ""}
                   </span>
-                  <span className={`font-gost text-[10px] ${t.is_popular ? "" : "text-[rgba(255,255,255,0.4)]"}`}>
+                  <span className={`font-gost text-[10px] ${t.is_popular ? "" : "text-[var(--drawing-bg)] opacity-50"}`}>
                     {t.duration}
                   </span>
                 </div>
                 <div className="p-6">
                   <h3 className="font-gost-upright text-lg font-bold mb-1 uppercase tracking-tight">{t.title}</h3>
-                  <p className="font-gost text-xs text-[rgba(255,255,255,0.5)] mb-3">{t.format}</p>
+                  <p className="font-gost text-xs text-[var(--drawing-bg)] opacity-60 mb-3">{t.format}</p>
                   <p className="font-gost-upright text-2xl font-bold tracking-tight mb-4">
                     <span className="text-[var(--drawing-accent)]">{formatPrice(t)}</span>
                     {t.price > 0 && <> &#8381;</>}
@@ -62,8 +62,8 @@ const PricingMentorsSection = () => {
                     to={t.cta_link}
                     className={`block text-center py-2.5 font-gost text-xs uppercase tracking-[0.15em] transition-colors ${
                       t.is_popular
-                        ? "bg-[var(--drawing-accent)] hover:bg-white hover:text-[var(--drawing-line)]"
-                        : "border border-[rgba(255,255,255,0.3)] hover:bg-[var(--drawing-accent)] hover:border-[var(--drawing-accent)]"
+                        ? "bg-[var(--drawing-accent)] text-white hover:bg-[var(--drawing-bg)] hover:text-[var(--drawing-line)]"
+                        : "border border-[var(--drawing-bg)]/30 hover:bg-[var(--drawing-accent)] hover:text-white hover:border-[var(--drawing-accent)]"
                     }`}
                   >
                     {t.cta_text}
@@ -74,7 +74,7 @@ const PricingMentorsSection = () => {
           </div>
           )}
 
-          <p className="font-gost text-[10px] text-[rgba(255,255,255,0.5)] mb-4">
+          <p className="font-gost text-[10px] text-[var(--drawing-bg)] opacity-50 mb-4">
             Итоговая стоимость фиксируется при согласовании объёма и&nbsp;графика.
           </p>
           <Link to="/pricing" className="font-gost text-xs text-[var(--drawing-accent)] hover:underline">
