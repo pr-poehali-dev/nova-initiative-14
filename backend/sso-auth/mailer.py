@@ -58,8 +58,15 @@ def send_email(to: str, subject: str, html_body: str, text_body: str) -> bool:
     # From-заголовок: отдельный секрет или берём из логина (только если это email, а не слэш-формат)
     smtp_from_raw = os.environ.get('SSO_SMTP_FROM') or os.environ.get('SSO_SMTP_USER')
 
+    print(
+        f'[sso-auth] SMTP secrets: user_set={bool(smtp_login_raw)} '
+        f'pwd_set={bool(smtp_password)} '
+        f'pwd_len={len(smtp_password) if smtp_password else 0}',
+        flush=True,
+    )
+
     if not smtp_login_raw or not smtp_password:
-        print('[sso-auth] SMTP secrets not configured, email skipped')
+        print('[sso-auth] SMTP secrets not configured, email skipped', flush=True)
         return False
 
     smtp_login = _prepare_smtp_login(smtp_login_raw)
@@ -94,16 +101,16 @@ def send_email(to: str, subject: str, html_body: str, text_body: str) -> bool:
     msg.set_content(text_body)
     msg.add_alternative(html_body, subtype='html')
 
-    print(f'[sso-auth] SMTP attempt: login={smtp_login!r} from={smtp_from!r} to={recipient!r}')
+    print(f'[sso-auth] SMTP attempt: login={smtp_login!r} from={smtp_from!r} to={recipient!r} pwd_len={len(smtp_password)}', flush=True)
     try:
         ctx = ssl.create_default_context()
         with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, context=ctx, timeout=20) as server:
             server.login(smtp_login, smtp_password)
             server.send_message(msg, from_addr=smtp_from, to_addrs=[recipient])
-        print(f'[sso-auth] email sent OK: to={recipient!r}')
+        print(f'[sso-auth] email sent OK: to={recipient!r}', flush=True)
         return True
     except Exception as e:
-        print(f'[sso-auth] SMTP error: type={type(e).__name__} msg={e!r}')
+        print(f'[sso-auth] SMTP error: type={type(e).__name__} msg={e!r}', flush=True)
         return False
 
 
