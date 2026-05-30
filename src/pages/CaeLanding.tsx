@@ -101,7 +101,7 @@ const CaeLanding = () => {
         <title>Облачный CAE для машиностроителей — 2D/3D расчёт рам и балок · Диплом-Инж.рф</title>
         <meta
           name="description"
-          content="Облачный CAE для машиностроителей: плоские и пространственные рамы, библиотека ГОСТ-профилей, эпюры N/Q/M, PDF-отчёт по ЕСКД. Лёгкий, в браузере, без установки. Скоро в раннем доступе."
+          content="Облачный CAE для машиностроителей: плоские рамы и балки, библиотека ГОСТ-профилей, эпюры N/Q/M, PDF-отчёт по ЕСКД. Лёгкий, в браузере, без установки. Доступен в режиме альфа-теста — бесплатно."
         />
         <link rel="canonical" href={`${SITE_URL}/cae`} />
       </Helmet>
@@ -161,7 +161,7 @@ const CaeLanding = () => {
         {/* Hero */}
         <section className="text-center mb-16">
           <p className="font-gost text-[11px] uppercase tracking-[0.3em] text-[var(--drawing-line-thin)] mb-4">
-            CAE-инструмент · Раздел 01 · Скоро
+            CAE-инструмент · Раздел 01 · Альфа-тест
           </p>
           <h1 className="font-gost-upright text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tight text-[var(--drawing-line)] mb-5 leading-tight">
             Облачный расчёт

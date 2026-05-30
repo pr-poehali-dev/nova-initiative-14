@@ -10,8 +10,9 @@ export default function CaeDemoAnimation() {
   const NL = 92;
   const NR = 388;
   const BY = 150; // уровень балки
-  // Стрелки распределённой нагрузки — внутри пролёта
-  const arrows = Array.from({ length: 7 }, (_, i) => NL + 24 + i * ((NR - NL - 48) / 6));
+  // Стрелки распределённой нагрузки — равномерно по всему пролёту, включая
+  // крайние точки над узлами, чтобы эпюра нагрузки была «закрыта» с краёв.
+  const arrows = Array.from({ length: 9 }, (_, i) => NL + i * ((NR - NL) / 8));
 
   const blue = "var(--drawing-blue)";
   const accent = "var(--drawing-accent)";
@@ -40,35 +41,45 @@ export default function CaeDemoAnimation() {
           <pattern id="caeGrid" width="24" height="24" patternUnits="userSpaceOnUse">
             <path d="M24 0H0V24" fill="none" stroke="var(--drawing-line-thin)" strokeWidth="0.4" opacity="0.22" />
           </pattern>
-          <marker id="caeDown" markerWidth="7" markerHeight="7" refX="3.5" refY="6" orient="auto">
-            <path d="M0 0 L3.5 6 L7 0 Z" fill={accent} />
+          {/* Фиксированная ориентация (orient=0): все нагрузки направлены
+              строго вниз, реакции — строго вверх. Острие треугольника лежит
+              ровно в точке конца линии (refX/refY), поэтому наконечник
+              «прилипает» к концу и не висит в стороне. */}
+          <marker id="caeDown" markerWidth="9" markerHeight="8" refX="4.5" refY="7" orient="0" markerUnits="userSpaceOnUse">
+            <path d="M0 0 L9 0 L4.5 7 Z" fill={accent} />
           </marker>
-          <marker id="caeUp" markerWidth="9" markerHeight="9" refX="4.5" refY="0" orient="auto">
-            <path d="M0 9 L4.5 0 L9 9 Z" fill={green} />
+          <marker id="caeUp" markerWidth="10" markerHeight="9" refX="5" refY="0" orient="0" markerUnits="userSpaceOnUse">
+            <path d="M0 9 L10 9 L5 0 Z" fill={green} />
           </marker>
         </defs>
         <rect width="480" height="320" fill="url(#caeGrid)" />
 
-        {/* Реакции опор R (зелёные стрелки вверх) */}
+        {/* Реакции опор R (зелёные стрелки вверх). Хвост стрелки начинается
+            ровно в узле (BY), наконечник — сверху, как и положено реакции. */}
         <g className="cae-demo-loop" style={{ animationName: "caeResultBadge" }}>
           {[NL, NR].map((x) => (
-            <line key={x} x1={x} y1={BY - 18} x2={x} y2={BY - 78} stroke={green} strokeWidth="2.2" markerEnd="url(#caeUp)" />
+            <line key={x} x1={x} y1={BY} x2={x} y2={BY - 70} stroke={green} strokeWidth="2.2" markerEnd="url(#caeUp)" />
           ))}
-          <text x={NL} y={BY - 86} textAnchor="middle" fill={green} fontFamily="'Roboto Mono', monospace" fontSize="12">
+          <text x={NL} y={BY - 80} textAnchor="middle" fill={green} fontFamily="'Roboto Mono', monospace" fontSize="12">
             R = 20.0 кН
           </text>
-          <text x={NR} y={BY - 86} textAnchor="middle" fill={green} fontFamily="'Roboto Mono', monospace" fontSize="12">
+          <text x={NR} y={BY - 80} textAnchor="middle" fill={green} fontFamily="'Roboto Mono', monospace" fontSize="12">
             R = 20.0 кН
           </text>
         </g>
 
-        {/* Распределённая нагрузка q */}
+        {/* Распределённая нагрузка q. Верхняя полка идёт от узла до узла,
+            крайние стрелки стоят над опорами (нагрузка «закрыта» с краёв),
+            а наконечники доходят до самой балки. */}
         <g className="cae-demo-loop" style={{ animationName: "caeLoadArrows" }}>
-          <line x1={NL} y1={BY - 50} x2={NR} y2={BY - 50} stroke={accent} strokeWidth="1.5" />
+          <line x1={NL} y1={BY - 48} x2={NR} y2={BY - 48} stroke={accent} strokeWidth="1.5" />
+          {/* Боковые «стенки» эпюры нагрузки */}
+          <line x1={NL} y1={BY - 48} x2={NL} y2={BY} stroke={accent} strokeWidth="1.5" />
+          <line x1={NR} y1={BY - 48} x2={NR} y2={BY} stroke={accent} strokeWidth="1.5" />
           {arrows.map((x) => (
-            <line key={x} x1={x} y1={BY - 50} x2={x} y2={BY - 8} stroke={accent} strokeWidth="1.5" markerEnd="url(#caeDown)" />
+            <line key={x} x1={x} y1={BY - 48} x2={x} y2={BY} stroke={accent} strokeWidth="1.5" markerEnd="url(#caeDown)" />
           ))}
-          <text x={240} y={BY - 58} textAnchor="middle" fill={accent} fontFamily="'Roboto Mono', monospace" fontSize="12">
+          <text x={240} y={BY - 56} textAnchor="middle" fill={accent} fontFamily="'Roboto Mono', monospace" fontSize="12">
             q = 10.0 кН/м
           </text>
         </g>
@@ -102,34 +113,50 @@ export default function CaeDemoAnimation() {
           <line x1={NR - 14} y1={BY + 32} x2={NR + 14} y2={BY + 32} />
         </g>
 
-        {/* Размерная линия пролёта */}
-        <g className="cae-demo-loop" style={{ animationName: "caeDeflect" }}>
-          <line x1={NL} y1={BY + 46} x2={NR} y2={BY + 46} stroke="var(--drawing-line-thin)" strokeWidth="0.8" />
-          <text x={240} y={BY + 42} textAnchor="middle" fill="var(--drawing-line-thin)" fontFamily="'Roboto Mono', monospace" fontSize="11">
+        {/* Размерная линия пролёта — ниже эпюры момента, чтобы не пересекать её.
+            Выносные засечки от узлов вниз. */}
+        <g className="cae-demo-loop" style={{ animationName: "caeDeflect" }} stroke="var(--drawing-line-thin)">
+          <line x1={NL} y1={BY + 34} x2={NL} y2={BY + 104} strokeWidth="0.6" />
+          <line x1={NR} y1={BY + 34} x2={NR} y2={BY + 104} strokeWidth="0.6" />
+          <line x1={NL} y1={BY + 100} x2={NR} y2={BY + 100} strokeWidth="0.8" />
+          <text x={240} y={BY + 96} textAnchor="middle" fill="var(--drawing-line-thin)" stroke="none" fontFamily="'Roboto Mono', monospace" fontSize="11">
             4 м
           </text>
         </g>
 
-        {/* Эпюра изгибающего момента M (заливка + точка максимума) */}
+        {/* Эпюра изгибающего момента M (заливка + точка максимума).
+            Базовая линия эпюры совпадает с осью балки (BY) — эпюра «висит»
+            прямо на балке. Вершина параболы при t=0.5 = 0.5·BY + 0.5·контроль,
+            поэтому точка максимума ставится точно на кривую. */}
         <g className="cae-demo-loop" style={{ animationName: "caeDiagram" }} opacity="0">
-          <path
-            d={`M${NL} ${BY + 16} Q240 ${BY + 110} ${NR} ${BY + 16} Z`}
-            fill={accent}
-            fillOpacity="0.12"
-            stroke="none"
-          />
-          <path
-            d={`M${NL} ${BY + 16} Q240 ${BY + 110} ${NR} ${BY + 16}`}
-            fill="none"
-            stroke={accent}
-            strokeWidth="2"
-          />
-          <line x1={NL} y1={BY + 16} x2={NR} y2={BY + 16} stroke="var(--drawing-line-thin)" strokeWidth="0.8" />
-          {/* Точка максимума момента */}
-          <circle cx={240} cy={BY + 79} r="4.5" fill={accent} />
-          <text x={240} y={BY + 96} textAnchor="middle" fill={accent} fontFamily="'Roboto Mono', monospace" fontSize="12" fontWeight="bold">
-            20.0 кН·м
-          </text>
+          {(() => {
+            const baseY = BY;
+            const ctrlY = BY + 130;
+            const apexY = 0.5 * baseY + 0.5 * ctrlY; // вершина параболы
+            return (
+              <>
+                <path
+                  d={`M${NL} ${baseY} Q240 ${ctrlY} ${NR} ${baseY} Z`}
+                  fill={accent}
+                  fillOpacity="0.12"
+                  stroke="none"
+                />
+                <path
+                  d={`M${NL} ${baseY} Q240 ${ctrlY} ${NR} ${baseY}`}
+                  fill="none"
+                  stroke={accent}
+                  strokeWidth="2"
+                />
+                {/* Вертикальная связь вершины с базовой линией */}
+                <line x1={240} y1={baseY} x2={240} y2={apexY} stroke={accent} strokeWidth="0.8" strokeDasharray="3 3" />
+                {/* Точка максимума момента — строго на кривой */}
+                <circle cx={240} cy={apexY} r="4.5" fill={accent} />
+                <text x={240} y={apexY + 18} textAnchor="middle" fill={accent} fontFamily="'Roboto Mono', monospace" fontSize="12" fontWeight="bold">
+                  20.0 кН·м
+                </text>
+              </>
+            );
+          })()}
         </g>
       </svg>
 

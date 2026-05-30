@@ -27,7 +27,7 @@ const CaeTeaserSection = () => {
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
           <div>
             <p className="font-gost text-[10px] uppercase tracking-[0.3em] text-[var(--drawing-line-thin)] mb-2">
-              Конструкторская часть · Раздел 06 · Скоро
+              Конструкторская часть · Раздел 06 · Альфа-тест
             </p>
             <h2 className="font-gost-upright text-2xl sm:text-3xl md:text-4xl font-black uppercase tracking-wide text-[var(--drawing-line)] break-words">
               Облачный CAE для&nbsp;инженеров
@@ -84,7 +84,7 @@ const CaeTeaserSection = () => {
               Стадия проекта
             </p>
             <p className="text-sm text-[var(--drawing-line)]">
-              Решатель уже работает в облаке. 3D-редактор и&nbsp;PDF-отчёт &mdash; на&nbsp;подходе.
+              Решатель и&nbsp;PDF-отчёт по&nbsp;ЕСКД уже работают в&nbsp;облаке. 3D-редактор &mdash; на&nbsp;подходе.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
