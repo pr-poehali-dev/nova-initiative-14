@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import Icon from "@/components/ui/icon";
-import { buildReferralUrl, getReferralProfile, type ReferralProfile } from "@/lib/referrals";
+import {
+  buildReferralUrl,
+  buildReferralMessage,
+  getReferralProfile,
+  type ReferralProfile,
+} from "@/lib/referrals";
 
 interface Props {
   open: boolean;
@@ -18,6 +23,7 @@ export default function InviteFriendModal({ open, onClose }: Props) {
   const [profile, setProfile] = useState<ReferralProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedMsg, setCopiedMsg] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -32,6 +38,7 @@ export default function InviteFriendModal({ open, onClose }: Props) {
   if (!open) return null;
 
   const refUrl = buildReferralUrl(profile?.referral_code);
+  const refMessage = buildReferralMessage(profile?.referral_code);
 
   const handleCopy = async () => {
     if (!refUrl) return;
@@ -44,20 +51,31 @@ export default function InviteFriendModal({ open, onClose }: Props) {
     }
   };
 
+  const handleCopyMessage = async () => {
+    if (!profile?.referral_code) return;
+    try {
+      await navigator.clipboard.writeText(refMessage);
+      setCopiedMsg(true);
+      setTimeout(() => setCopiedMsg(false), 2000);
+    } catch {
+      /* clipboard недоступен */
+    }
+  };
+
   const handleShare = async () => {
-    if (!refUrl) return;
+    if (!profile?.referral_code) return;
+    // Шерим уже готовый «продающий» текст вместе со ссылкой.
     if (navigator.share) {
       try {
         await navigator.share({
           title: "Диплом-Инж.рф · CAE-расчёты",
-          text: "Попробуй облачный CAE-калькулятор для рам и балок. По моему приглашению ты получишь бонусные баллы.",
-          url: refUrl,
+          text: refMessage,
         });
       } catch {
         /* пользователь отменил */
       }
     } else {
-      handleCopy();
+      handleCopyMessage();
     }
   };
 
@@ -158,14 +176,40 @@ export default function InviteFriendModal({ open, onClose }: Props) {
             </button>
           </div>
 
+          {/* Готовое сообщение для пересылки другу */}
+          <div className="flex items-center justify-between mb-1">
+            <label className="font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)]">
+              Готовое сообщение другу
+            </label>
+            <button
+              type="button"
+              onClick={handleCopyMessage}
+              disabled={!profile?.referral_code}
+              className={`font-gost uppercase tracking-wider text-[10px] inline-flex items-center gap-1 transition-colors disabled:opacity-50 ${
+                copiedMsg ? "text-[var(--drawing-accent)]" : "text-[var(--drawing-line-thin)] hover:text-[var(--drawing-accent)]"
+              }`}
+              title="Скопировать текст"
+            >
+              <Icon name={copiedMsg ? "Check" : "Copy"} size={11} />
+              {copiedMsg ? "Скопировано" : "Копировать текст"}
+            </button>
+          </div>
+          <textarea
+            readOnly
+            value={loading ? "Загружаем…" : refMessage}
+            onFocus={(e) => e.currentTarget.select()}
+            rows={7}
+            className="drawing-input w-full text-xs leading-relaxed resize-none mb-3 bg-[var(--drawing-bg)] text-[var(--drawing-line)]"
+          />
+
           <button
             type="button"
             onClick={handleShare}
-            disabled={!refUrl}
+            disabled={!profile?.referral_code}
             className="btn-drawing btn-drawing-accent text-xs w-full justify-center disabled:opacity-50"
           >
             <Icon name="Share2" size={14} className="mr-1.5" />
-            Поделиться ссылкой
+            Поделиться сообщением
           </button>
 
           <div className="mt-4 pt-3 border-t border-dashed border-[var(--drawing-line)]/30 text-xs text-[var(--drawing-line-thin)] leading-relaxed">
