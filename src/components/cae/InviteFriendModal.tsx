@@ -81,27 +81,31 @@ export default function InviteFriendModal({ open, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+      className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
       aria-label="Пригласить друга"
+      onClick={onClose}
     >
-      <div className="bg-[var(--drawing-bg)] border-[2.5px] border-[var(--drawing-line)] max-w-md w-full relative my-4">
-        <div className="absolute -top-px -left-px w-3 h-3 border-t-[2.5px] border-l-[2.5px] border-[var(--drawing-accent)]" />
-        <div className="absolute -top-px -right-px w-3 h-3 border-t-[2.5px] border-r-[2.5px] border-[var(--drawing-accent)]" />
-        <div className="absolute -bottom-px -left-px w-3 h-3 border-b-[2.5px] border-l-[2.5px] border-[var(--drawing-accent)]" />
-        <div className="absolute -bottom-px -right-px w-3 h-3 border-b-[2.5px] border-r-[2.5px] border-[var(--drawing-accent)]" />
+      <div
+        className="bg-[var(--drawing-bg)] border-[2.5px] border-[var(--drawing-line)] max-w-md w-full relative flex flex-col max-h-[90dvh]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="absolute -top-px -left-px w-3 h-3 border-t-[2.5px] border-l-[2.5px] border-[var(--drawing-accent)] pointer-events-none" />
+        <div className="absolute -top-px -right-px w-3 h-3 border-t-[2.5px] border-r-[2.5px] border-[var(--drawing-accent)] pointer-events-none" />
+        <div className="absolute -bottom-px -left-px w-3 h-3 border-b-[2.5px] border-l-[2.5px] border-[var(--drawing-accent)] pointer-events-none" />
+        <div className="absolute -bottom-px -right-px w-3 h-3 border-b-[2.5px] border-r-[2.5px] border-[var(--drawing-accent)] pointer-events-none" />
 
         <button
           type="button"
           onClick={onClose}
           aria-label="Закрыть"
-          className="absolute top-2 right-2 p-1.5 hover:bg-[var(--drawing-line)]/10 transition-colors"
+          className="absolute top-2 right-2 z-10 p-1.5 bg-[var(--drawing-bg)] hover:bg-[var(--drawing-line)]/10 transition-colors"
         >
           <Icon name="X" size={16} />
         </button>
 
-        <div className="p-5 pt-6">
+        <div className="p-5 pt-6 overflow-y-auto">
           <div className="flex items-start gap-3 mb-4">
             <div className="bg-[var(--drawing-accent)] text-white p-2 shrink-0">
               <Icon name="UserPlus" size={20} />
