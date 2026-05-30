@@ -62,6 +62,63 @@ const Account = () => {
         {/* Админ-панель — только для is_admin */}
         {user.is_admin && <AdminPanel />}
 
+        {/* Моя подписка — вверху кабинета */}
+        <section className="drawing-frame p-6 bg-[var(--drawing-bg)] mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Icon name="CreditCard" size={18} />
+            <h2 className="font-gost-upright text-sm uppercase tracking-widest">Моя подписка</h2>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 text-sm">
+            <div>
+              <p className="font-gost text-[var(--drawing-line-thin)] text-xs uppercase tracking-wider mb-1">
+                Наставничество
+              </p>
+              <p>
+                <Link to="/pricing" className="text-[var(--drawing-accent)] hover:underline">
+                  Подобрать тариф &rarr;
+                </Link>
+              </p>
+            </div>
+            <div>
+              <p className="font-gost text-[var(--drawing-line-thin)] text-xs uppercase tracking-wider mb-1">
+                CAE-калькулятор
+              </p>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="inline-flex items-center gap-1 bg-[var(--drawing-accent)] text-white px-2 py-0.5 font-gost text-[10px] uppercase tracking-wider">
+                  <Icon name="FlaskConical" size={10} />
+                  Альфа-тест
+                </span>
+                <span className="font-gost text-xs text-[var(--drawing-line)]">
+                  расчёты бесплатно
+                </span>
+              </div>
+              <p className="text-[var(--drawing-line-thin)] text-xs mt-1">
+                Все функции открыты на&nbsp;время альфа-тестирования.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Мои проекты — отдельный блок */}
+        <section className="drawing-frame p-6 bg-[var(--drawing-bg)] mb-6">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2">
+              <Icon name="FolderKanban" size={18} />
+              <h2 className="font-gost-upright text-sm uppercase tracking-widest">Мои проекты</h2>
+            </div>
+            <Link
+              to="/cae/projects"
+              className="btn-drawing btn-drawing-accent text-xs inline-flex items-center"
+            >
+              <Icon name="ArrowRight" size={13} className="mr-1.5" />
+              Открыть проекты
+            </Link>
+          </div>
+          <p className="text-sm text-[var(--drawing-line-thin)] leading-snug">
+            Расчётные схемы балок и&nbsp;рам, история расчётов и&nbsp;PDF-отчёты по&nbsp;ЕСКД&nbsp;— всё в&nbsp;разделе CAE-проектов.
+          </p>
+        </section>
+
         {/* Очки и ачивки */}
         <PointsAchievementsBlock onInvite={() => setInviteOpen(true)} />
 
@@ -93,48 +150,6 @@ const Account = () => {
                 <dd className="text-right">{user.roles.join(", ") || "—"}</dd>
               </div>
             </dl>
-          </section>
-
-          {/* Подписки */}
-          <section className="drawing-frame p-6 bg-[var(--drawing-bg)]">
-            <div className="flex items-center gap-2 mb-4">
-              <Icon name="CreditCard" size={18} />
-              <h2 className="font-gost-upright text-sm uppercase tracking-widest">Подписки</h2>
-            </div>
-            <div className="space-y-3 text-sm">
-              <div>
-                <p className="font-gost text-[var(--drawing-line-thin)] text-xs uppercase tracking-wider mb-1">
-                  Наставничество
-                </p>
-                <p>
-                  <Link to="/pricing" className="text-[var(--drawing-accent)] hover:underline">
-                    Подобрать тариф &rarr;
-                  </Link>
-                </p>
-              </div>
-              <div>
-                <p className="font-gost text-[var(--drawing-line-thin)] text-xs uppercase tracking-wider mb-1">
-                  CAE-калькулятор
-                </p>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="inline-flex items-center gap-1 bg-[var(--drawing-accent)] text-white px-2 py-0.5 font-gost text-[10px] uppercase tracking-wider">
-                    <Icon name="FlaskConical" size={10} />
-                    Альфа-тест
-                  </span>
-                  <span className="font-gost text-xs text-[var(--drawing-line)]">
-                    расчёты бесплатно
-                  </span>
-                </div>
-                <p>
-                  <Link to="/cae/projects" className="text-[var(--drawing-accent)] hover:underline">
-                    Мои проекты &rarr;
-                  </Link>
-                </p>
-                <p className="text-[var(--drawing-line-thin)] text-xs mt-1">
-                  Все функции открыты на&nbsp;время альфа-тестирования.
-                </p>
-              </div>
-            </div>
           </section>
 
           {/* Способы входа */}
