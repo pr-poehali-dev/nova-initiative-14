@@ -287,7 +287,64 @@ def action_admin_update_ticket(conn, admin_user: dict, body: dict) -> dict:
             )
         conn.commit()
 
+    # Если тикет перешёл в resolved — уведомляем автора (колокольчик + email).
+    # Только при смене статуса (не повторно) и при наличии автора.
+    became_resolved = (
+        new_status == 'resolved'
+        and ticket['status'] != 'resolved'
+        and ticket['user_id']
+    )
+    if became_resolved:
+        _notify_ticket_resolved(conn, int(ticket['user_id']), int(ticket_id), admin_note)
+
     return _json_response(200, {'ok': True})
+
+
+def _notify_ticket_resolved(conn, user_id: int, ticket_id: int, admin_note: str) -> None:
+    """Создаёт уведомление в колокольчик и шлёт email автору о решении тикета."""
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute(
+            "SELECT title, source FROM support_tickets WHERE id = %s", (ticket_id,)
+        )
+        t = cur.fetchone()
+        cur.execute("SELECT email, full_name FROM sso_users WHERE id = %s", (user_id,))
+        u = cur.fetchone()
+    ticket_title = (t['title'] if t else f'#{ticket_id}')[:160]
+    link = '/account#ticket-' + str(ticket_id)
+
+    notif_title = 'Ваше обращение обработано'
+    notif_body = f'#{ticket_id} «{ticket_title}» — решено.'
+    if admin_note:
+        notif_body += f'\nОтвет: {admin_note[:300]}'
+
+    # 1) Уведомление в колокольчик.
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO user_notifications "
+            "(user_id, type, title, body, link, ticket_id) "
+            "VALUES (%s, 'ticket_resolved', %s, %s, %s, %s)",
+            (user_id, notif_title, notif_body, link, ticket_id),
+        )
+    conn.commit()
+
+    # 2) Email (best-effort, не валит запрос).
+    if u and u.get('email'):
+        try:
+            from mailer import send_email, ticket_resolved_html, SITE_URL
+            greet = f"Здравствуйте, {u['full_name']}!" if u.get('full_name') else "Здравствуйте!"
+            html = ticket_resolved_html(
+                greet, ticket_id, ticket_title, admin_note or '',
+                f"{SITE_URL}{link}",
+            )
+            text = (
+                f"{greet}\n\nПо вашему обращению #{ticket_id} «{ticket_title}» есть результат — "
+                f"проблема решена.\n"
+                + (f"\nОтвет команды:\n{admin_note}\n" if admin_note else "")
+                + f"\nОткрыть: {SITE_URL}{link}"
+            )
+            send_email(u['email'], 'Ваше обращение обработано · Диплом-Инж.рф', html, text)
+        except Exception as e:
+            print(f'[support-api] resolve email skipped: {type(e).__name__} {e!r}', flush=True)
 
 
 def handler(event: dict, context) -> dict:

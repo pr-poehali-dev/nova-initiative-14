@@ -38,6 +38,19 @@ function bumpAttempts() {
   } catch { /* ignore */ }
 }
 
+// Достаём id авторизованного пользователя из localStorage (best-effort),
+// чтобы привязать авто-тикет об ошибке к нему.
+function getStoredUserId(): number | null {
+  try {
+    const raw = localStorage.getItem("sso_user");
+    if (!raw) return null;
+    const u = JSON.parse(raw) as { id?: number };
+    return typeof u?.id === "number" ? u.id : null;
+  } catch {
+    return null;
+  }
+}
+
 // Тихая отправка лога. sendBeacon переживает навигацию (мы тут же перезагружаем).
 function logRecovery(triggerType: string, errorMessage?: string) {
   if (!LOG_URL) return;
@@ -47,6 +60,7 @@ function logRecovery(triggerType: string, errorMessage?: string) {
       error_message: errorMessage ? String(errorMessage).slice(0, 2000) : null,
       attempt: getAttempts() + 1,
       page_url: window.location.href,
+      user_id: getStoredUserId(),
     });
     if (navigator.sendBeacon) {
       const blob = new Blob([payload], { type: "application/json" });
@@ -92,6 +106,11 @@ async function silentReload(triggerType: string, errorMessage?: string) {
   }
   logRecovery(triggerType, errorMessage);
   bumpAttempts();
+  // Для НАСТОЯЩИХ ошибок (не штатный chunk-reload) ставим флаг, чтобы после
+  // восстановления показать пользователю мягкое уведомление «мы заметили сбой».
+  if (triggerType === "react_error" || triggerType === "window_error" || triggerType === "unhandled_rejection") {
+    try { sessionStorage.setItem("__cae_error_notice", "1"); } catch { /* ignore */ }
+  }
   try {
     if ("caches" in window) {
       const keys = await caches.keys();

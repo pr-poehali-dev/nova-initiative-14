@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import { useAuth } from "@/contexts/AuthContext";
 import ThemeToggle from "@/components/ThemeToggle";
+import NotificationBell from "@/components/NotificationBell";
 
 const navLinks = [
   { label: "Программа", to: "/program" },
@@ -46,6 +47,7 @@ const Navigation = () => {
 
         <div className="hidden md:flex items-center gap-3 ml-auto">
           <ThemeToggle />
+          <NotificationBell />
           {user ? (
             <Link
               to="/account"
@@ -73,6 +75,7 @@ const Navigation = () => {
         </div>
 
         <div className="md:hidden flex items-center gap-1 ml-auto">
+          <NotificationBell />
           <ThemeToggle />
           <button
             className="flex items-center justify-center min-w-[44px] min-h-[44px]"

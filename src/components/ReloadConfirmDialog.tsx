@@ -14,6 +14,8 @@ import { performHardReload } from "@/components/AppErrorBoundary";
 
 export default function ReloadConfirmDialog() {
   const [open, setOpen] = useState(false);
+  // Мягкое уведомление после восстановления от сбоя (#29).
+  const [errorNotice, setErrorNotice] = useState(false);
 
   useEffect(() => {
     // Источник 1: React-перехват в AppErrorBoundary (chunk-ошибки внутри SPA).
@@ -22,11 +24,46 @@ export default function ReloadConfirmDialog() {
     // когда есть несохранённые данные, вместо браузерного confirm.
     const onReq = () => setOpen(true);
     window.addEventListener("cae:reload-request", onReq);
+
+    // После восстановления от реального сбоя — один раз показываем плашку.
+    try {
+      if (sessionStorage.getItem("__cae_error_notice")) {
+        sessionStorage.removeItem("__cae_error_notice");
+        setErrorNotice(true);
+        window.setTimeout(() => setErrorNotice(false), 8000);
+      }
+    } catch { /* ignore */ }
+
     return () => {
       setReloadHandler(null);
       window.removeEventListener("cae:reload-request", onReq);
     };
   }, []);
+
+  if (errorNotice && !open) {
+    return (
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[110] w-[min(92vw,460px)] bg-[var(--drawing-bg)] border-2 border-[var(--drawing-accent)] shadow-2xl p-3 flex items-start gap-2.5">
+        <Icon name="ShieldAlert" size={18} className="text-[var(--drawing-accent)] mt-0.5 shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="font-gost-upright font-bold text-[13px] mb-0.5">
+            Мы заметили сбой и уже разбираемся
+          </p>
+          <p className="font-gost text-[11px] leading-snug text-[var(--drawing-line-thin)]">
+            Страница восстановлена автоматически. Если вы вошли в аккаунт — мы
+            напишем в уведомлениях, когда проблема будет исправлена.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setErrorNotice(false)}
+          aria-label="Закрыть"
+          className="shrink-0 text-[var(--drawing-line-thin)] hover:text-[var(--drawing-accent)]"
+        >
+          <Icon name="X" size={16} />
+        </button>
+      </div>
+    );
+  }
 
   if (!open) return null;
 

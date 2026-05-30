@@ -231,6 +231,14 @@ def action_get_profile(conn, user: dict) -> dict:
         )
         rank = int(cur.fetchone()['rank'])
 
+        # Кол-во решённых обращений пользователя (для ачивки tickets_resolved)
+        cur.execute(
+            "SELECT COUNT(*) AS c FROM support_tickets "
+            "WHERE user_id = %s AND status = 'resolved'",
+            (user_id,),
+        )
+        resolved_tickets = int(cur.fetchone()['c'])
+
         # Ачивки юзера
         cur.execute(
             "SELECT t.code, t.title, t.description, t.icon, t.points, "
@@ -252,6 +260,28 @@ def action_get_profile(conn, user: dict) -> dict:
     conn.commit()
     _check_inviter_achievements(conn, user_id, active_count)
 
+    # Выдаём ачивку «Соавтор продукта», когда решено достаточно обращений.
+    if resolved_tickets >= 5:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO user_achievements (user_id, achievement_code) "
+                "VALUES (%s, 'tickets_resolved') ON CONFLICT (user_id, achievement_code) DO NOTHING",
+                (user_id,),
+            )
+        conn.commit()
+        # Перечитываем дату выдачи, чтобы отдать awarded в этом же ответе.
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT awarded_at FROM user_achievements "
+                "WHERE user_id = %s AND achievement_code = 'tickets_resolved'",
+                (user_id,),
+            )
+            row = cur.fetchone()
+        if row:
+            for r in ach_rows:
+                if r['code'] == 'tickets_resolved' and r['awarded_at'] is None:
+                    r['awarded_at'] = row[0]
+
     # Прогресс по ачивкам с числовым порогом. Для бинарных progress=None.
     # target — нужное значение метрики, current — текущее значение пользователя.
     ach_targets = {
@@ -259,6 +289,7 @@ def action_get_profile(conn, user: dict) -> dict:
         'inviter_5': (active_count, 5),
         'inviter_15': (active_count, 15),
         'inviter_50': (active_count, 50),
+        'tickets_resolved': (resolved_tickets, 5),
     }
     achievements = []
     for r in ach_rows:

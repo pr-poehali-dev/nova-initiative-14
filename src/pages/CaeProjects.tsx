@@ -89,6 +89,13 @@ const CaeProjects = () => {
             <p className="text-sm text-[var(--drawing-line-thin)] mt-2">
               2D-редактор с&nbsp;каталогом ГОСТ-профилей и&nbsp;конечно-элементным решателем. Создайте проект из&nbsp;шаблона или с&nbsp;нуля.
             </p>
+            <Link
+              to="/cae/changelog"
+              className="inline-flex items-center gap-1.5 mt-2 font-gost text-[11px] uppercase tracking-wider text-[var(--drawing-accent)] hover:underline"
+            >
+              <Icon name="Sparkles" size={12} />
+              Что нового в сервисе
+            </Link>
           </div>
           <div className="flex flex-col sm:flex-row gap-2 shrink-0 self-start md:self-end">
             <Link

@@ -15,6 +15,14 @@ import {
   type AdFormat,
   type AdTheme,
 } from "@/lib/adGenerator";
+import { listChangelog } from "@/lib/notifications";
+
+const CATEGORY_WORD: Record<string, string> = {
+  feature: "Новое",
+  improvement: "Улучшение",
+  fix: "Исправление",
+  breaking: "Важно",
+};
 
 const THEMES: { key: AdTheme; label: string }[] = [
   { key: "light", label: "Светлая" },
@@ -55,6 +63,31 @@ const AdGenerator = () => {
   const set = (patch: Partial<AdContent>) => setAd((a) => ({ ...a, ...patch }));
   const spec = AD_FORMATS.find((f) => f.key === ad.format) || AD_FORMATS[0];
 
+  // Пресет «Новости»: тянет последние версии CAE из журнала и собирает пост
+  // для соцсетей (отчёт об обновлениях за период) — одной кнопкой.
+  const applyNewsPreset = async () => {
+    const res = await listChangelog(6);
+    if (!res.ok || !res.data || res.data.changelog.length === 0) {
+      alert("В журнале версий пока нет записей");
+      return;
+    }
+    const entries = res.data.changelog;
+    const month = new Date().toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
+    const latest = entries[0];
+    const lines = entries
+      .slice(0, 5)
+      .map((e) => `• v${e.version} — ${CATEGORY_WORD[e.category] || ""}: ${e.title}`)
+      .join("\n");
+    set({
+      eyebrow: "Обновления CAE-сервиса",
+      title: `Что нового\n${month}`,
+      subtitle: `Свежая версия v${latest.version}`,
+      body: lines,
+      cta: "Все обновления",
+      site: "диплом-инж.рф/cae/changelog",
+    });
+  };
+
   return (
     <>
       <Helmet>
@@ -85,6 +118,18 @@ const AdGenerator = () => {
         <div className="grid gap-6 lg:grid-cols-[minmax(0,360px)_1fr] [&>*]:min-w-0">
           {/* Форма */}
           <div className="space-y-4">
+            <Field label="Готовые жанры">
+              <button
+                type="button"
+                onClick={applyNewsPreset}
+                className="btn-drawing text-xs inline-flex items-center border-[var(--drawing-accent)] text-[var(--drawing-accent)] w-full justify-center"
+                title="Собрать пост-отчёт об обновлениях из журнала версий CAE"
+              >
+                <Icon name="Newspaper" size={14} className="mr-1.5" />
+                Новости: дайджест обновлений CAE
+              </button>
+            </Field>
+
             <Field label="Формат">
               <select
                 value={ad.format}
