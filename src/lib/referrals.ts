@@ -30,7 +30,28 @@ export interface ReferralProfile {
   referrals_count: number;
   active_referrals_count: number;
   rank: number;
+  /** Привязан ли пользователь к пригласившему (применён ли код). */
+  has_referrer: boolean;
   achievements: Achievement[];
+}
+
+export interface ReferralWeekStats {
+  /** Расчётов за последние 7 дней. */
+  runs: number;
+  /** Проектов, с которыми работал за неделю. */
+  active_projects: number;
+  /** Средняя сложность — элементов в расчёте (null, если расчётов не было). */
+  avg_complexity: number | null;
+  /** Среднее отношение элементов к узлам. */
+  avg_ratio: number | null;
+}
+
+export interface ReferralFriend {
+  name: string;
+  joined_at: string | null;
+  /** Делал ли расчёты хоть раз (активирован). */
+  ever_active: boolean;
+  week: ReferralWeekStats;
 }
 
 export interface LeaderboardEntry {
@@ -89,14 +110,27 @@ export function getLeaderboard() {
   return call<{ leaders: LeaderboardEntry[] }>("leaderboard", "GET");
 }
 
+/** Список приглашённых друзей с их активностью за неделю. */
+export function getMyReferrals() {
+  return call<{ referrals: ReferralFriend[] }>("referrals", "GET");
+}
+
+/** Применить код приглашения позже (если зарегистрировался не по нему). */
+export function applyRefCode(refCode: string) {
+  return call<{ ok: boolean }>("apply-ref-code", "POST", { ref_code: refCode });
+}
+
+/** Красивый домен сайта в кириллице — для ссылок, которыми делятся. */
+const PRETTY_HOST = "диплом-инж.рф";
+
 /**
- * Собирает реферальную ссылку на лендинг CAE.
- * Используется в кнопке «Пригласить друга».
+ * Собирает реферальную ссылку на лендинг CAE в человекочитаемом виде
+ * (кириллический домен, без punycode-«мусора» вроде xn--…).
+ * Браузеры и мессенджеры корректно открывают такие ссылки.
  */
 export function buildReferralUrl(refCode: string | null | undefined): string {
   if (!refCode) return "";
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  return `${origin}/cae?ref=${encodeURIComponent(refCode)}`;
+  return `https://${PRETTY_HOST}/cae?ref=${refCode}`;
 }
 
 const REF_STORAGE_KEY = "pending_ref_code";

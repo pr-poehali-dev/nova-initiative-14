@@ -214,6 +214,14 @@ def action_get_profile(conn, user: dict) -> dict:
         )
         ref_count = int(cur.fetchone()['c'])
 
+        # Привязан ли сам пользователь к пригласившему (для блока «ввести код позже»)
+        cur.execute(
+            "SELECT referred_by_user_id FROM sso_users WHERE id = %s",
+            (user_id,),
+        )
+        rb = cur.fetchone()
+        has_referrer = bool(rb and rb['referred_by_user_id'])
+
         # Активные рефералы — те, у кого был начислен self_daily_solve хотя бы 1 раз
         cur.execute(
             "SELECT COUNT(DISTINCT u.id) AS c FROM sso_users u "
@@ -318,8 +326,75 @@ def action_get_profile(conn, user: dict) -> dict:
         'referrals_count': ref_count,
         'active_referrals_count': active_count,
         'rank': rank,
+        'has_referrer': has_referrer,
         'achievements': achievements,
     })
+
+
+def action_apply_ref_code(conn, user: dict, body: dict) -> dict:
+    """Привязать реф-код позже (если зарегистрировался не по приглашению).
+
+    Защиты: код существует; нельзя свой; нельзя если уже привязан.
+    Начисляет те же бонусы, что и при регистрации по приглашению.
+    """
+    user_id = int(user['sub'])
+    code = (body.get('ref_code') or '').strip().upper()[:16]
+    if not code:
+        return _json_response(400, {'error': 'missing_code', 'message': 'Введите код приглашения'})
+
+    with conn.cursor() as cur:
+        # Уже привязан?
+        cur.execute("SELECT referred_by_user_id, referral_code FROM sso_users WHERE id = %s", (user_id,))
+        row = cur.fetchone()
+        if not row:
+            return _json_response(404, {'error': 'user_not_found'})
+        if row[0]:
+            return _json_response(409, {'error': 'already_referred',
+                                        'message': 'Код приглашения уже применён'})
+        own_code = row[1]
+        if own_code and own_code == code:
+            return _json_response(400, {'error': 'self_invite',
+                                        'message': 'Нельзя применить собственный код'})
+
+        # Ищем пригласившего
+        cur.execute("SELECT id FROM sso_users WHERE referral_code = %s", (code,))
+        r = cur.fetchone()
+        if not r:
+            return _json_response(404, {'error': 'code_not_found',
+                                        'message': 'Такого кода приглашения нет'})
+        referrer_id = int(r[0])
+        if referrer_id == user_id:
+            return _json_response(400, {'error': 'self_invite',
+                                        'message': 'Нельзя применить собственный код'})
+
+        # Привязываем
+        cur.execute(
+            "UPDATE sso_users SET referred_by_user_id = %s WHERE id = %s "
+            "AND referred_by_user_id IS NULL",
+            (referrer_id, user_id),
+        )
+        if cur.rowcount == 0:
+            return _json_response(409, {'error': 'already_referred',
+                                        'message': 'Код приглашения уже применён'})
+    conn.commit()
+
+    # Бонусы: +10 рефералу (себе) и +10 пригласившему, ачивка first_invite.
+    _add_points(conn, user_id, POINTS_SIGNUP, 'referral_late_self',
+                ref_user_id=referrer_id, note='Применён код приглашения',
+                dedup_key=f'ref_late_self:{user_id}')
+    _add_points(conn, referrer_id, POINTS_SIGNUP, 'referral_signup',
+                ref_user_id=user_id, note=f'Реф-привязка #{user_id}',
+                dedup_key=f'ref_signup:{referrer_id}:{user_id}')
+    with conn.cursor() as cur:
+        cur.execute(
+            "UPDATE user_points SET referrals_count = referrals_count + 1, updated_at = now() "
+            "WHERE user_id = %s",
+            (referrer_id,),
+        )
+    conn.commit()
+    _award_achievement(conn, referrer_id, 'first_invite')
+
+    return _json_response(200, {'ok': True})
 
 
 def action_award_daily_solve(conn, user: dict) -> dict:
@@ -360,6 +435,76 @@ def action_award_daily_solve(conn, user: dict) -> dict:
         'awarded_referrer': awarded_referrer,
         'referrer_id': referrer_id,
     })
+
+
+def action_referrals(conn, user: dict) -> dict:
+    """Список приглашённых пользователей с активностью за последнюю неделю.
+
+    Для каждого реферала: имя (маскированное), дата регистрации, активен ли,
+    и метрики за 7 дней — активные проекты, число расчётов, средняя сложность
+    (элементов в расчёте) и среднее отношение элементов к узлам.
+    """
+    user_id = int(user['sub'])
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute(
+            """
+            WITH friends AS (
+                SELECT id, full_name, email, created_at
+                FROM sso_users WHERE referred_by_user_id = %s
+            ),
+            week_runs AS (
+                SELECT r.owner_id,
+                       COUNT(*) AS runs,
+                       COUNT(DISTINCT r.project_id) AS active_projects,
+                       AVG(NULLIF(jsonb_array_length(r.payload_jsonb->'elements'), 0)) AS avg_elements,
+                       AVG(
+                         CASE WHEN jsonb_array_length(r.payload_jsonb->'nodes') > 0
+                              THEN jsonb_array_length(r.payload_jsonb->'elements')::float
+                                   / jsonb_array_length(r.payload_jsonb->'nodes')
+                         END
+                       ) AS avg_ratio
+                FROM cae_solver_runs r
+                WHERE r.created_at > now() - interval '7 days'
+                  AND r.payload_jsonb IS NOT NULL
+                GROUP BY r.owner_id
+            ),
+            ever_solved AS (
+                SELECT DISTINCT owner_id FROM cae_solver_runs
+            )
+            SELECT f.id, f.full_name, f.email, f.created_at,
+                   COALESCE(w.runs, 0) AS runs,
+                   COALESCE(w.active_projects, 0) AS active_projects,
+                   w.avg_elements,
+                   w.avg_ratio,
+                   (e.owner_id IS NOT NULL) AS ever_active
+            FROM friends f
+            LEFT JOIN week_runs w ON w.owner_id = f.id
+            LEFT JOIN ever_solved e ON e.owner_id = f.id
+            ORDER BY COALESCE(w.runs, 0) DESC, f.created_at DESC
+            """,
+            (user_id,),
+        )
+        rows = cur.fetchall()
+
+    def mask(name, email):
+        if name and name.strip():
+            parts = name.strip().split()
+            return parts[0] + ('\u00a0' + parts[1][:1] + '.' if len(parts) > 1 else '')
+        local = (email or '').split('@')[0]
+        return (local[:3] + '***') if len(local) > 3 else (local + '***')
+
+    referrals = [{
+        'name': mask(r['full_name'], r['email']),
+        'joined_at': r['created_at'].isoformat() if r['created_at'] else None,
+        'ever_active': bool(r['ever_active']),
+        'week': {
+            'runs': int(r['runs']),
+            'active_projects': int(r['active_projects']),
+            'avg_complexity': round(float(r['avg_elements']), 1) if r['avg_elements'] is not None else None,
+            'avg_ratio': round(float(r['avg_ratio']), 2) if r['avg_ratio'] is not None else None,
+        },
+    } for r in rows]
+    return _json_response(200, {'referrals': referrals})
 
 
 def action_leaderboard(conn) -> dict:
@@ -425,6 +570,11 @@ def handler(event: dict, context) -> dict:
             return action_get_profile(conn, user)
         if action == 'award-daily-solve' and method == 'POST':
             return action_award_daily_solve(conn, user)
+        if action == 'referrals' and method == 'GET':
+            return action_referrals(conn, user)
+        if action == 'apply-ref-code' and method == 'POST':
+            body = json.loads(event.get('body') or '{}')
+            return action_apply_ref_code(conn, user, body)
 
         return _json_response(404, {'error': 'unknown_action'})
     except Exception as e:
