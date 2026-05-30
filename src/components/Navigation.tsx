@@ -109,47 +109,51 @@ const Navigation = () => {
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto flex flex-col items-center justify-start sm:justify-center gap-4 sm:gap-5 px-4 py-6">
-            {navLinks.map((link) => (
-              <Link
-                key={link.to}
-                to={link.to}
-                onClick={() => setMenuOpen(false)}
-                className="font-gost text-lg sm:text-xl uppercase tracking-widest text-[var(--drawing-line)] hover:text-[var(--drawing-accent)] transition-colors py-1"
-              >
-                {link.label}
-              </Link>
-            ))}
-            <div className="extension-line-h w-32 my-2" />
+          <div className="flex-1 overflow-y-auto flex flex-col px-4 py-3">
+            {/* Личный кабинет / вход — сразу наверху, чтобы не листать */}
             {user ? (
               <Link
                 to="/account"
                 onClick={() => setMenuOpen(false)}
-                className="font-gost text-sm uppercase tracking-wider px-5 py-2.5 border border-[var(--drawing-line)] flex items-center gap-2"
+                className="font-gost text-sm uppercase tracking-wider px-4 py-3 border border-[var(--drawing-line)] flex items-center gap-2 mb-3"
               >
-                <Icon name="User" size={16} />
-                {user.full_name || user.email.split("@")[0]}
+                <Icon name="User" size={16} className="text-[var(--drawing-accent)]" />
+                Личный кабинет
               </Link>
             ) : (
               <Link
                 to="/login"
                 onClick={() => setMenuOpen(false)}
-                className="font-gost text-sm uppercase tracking-wider px-5 py-2.5 border border-[var(--drawing-line)] flex items-center gap-2"
+                className="font-gost text-sm uppercase tracking-wider px-4 py-3 border border-[var(--drawing-line)] flex items-center gap-2 mb-3"
               >
-                <Icon name="LogIn" size={16} />
+                <Icon name="LogIn" size={16} className="text-[var(--drawing-accent)]" />
                 Войти
               </Link>
             )}
+
+            <div className="flex flex-col">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  onClick={() => setMenuOpen(false)}
+                  className="font-gost text-base uppercase tracking-widest text-[var(--drawing-line)] hover:text-[var(--drawing-accent)] transition-colors py-3 border-b border-[var(--drawing-line)]/15"
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+
             <Link
               to="/contacts"
               onClick={() => setMenuOpen(false)}
-              className="btn-drawing-accent font-gost text-sm uppercase tracking-wider px-6 py-3 border-2 border-[var(--drawing-accent)] transition-all hover:bg-[var(--drawing-accent)] hover:text-white"
+              className="btn-drawing-accent font-gost text-sm uppercase tracking-wider text-center px-6 py-3 border-2 border-[var(--drawing-accent)] transition-all hover:bg-[var(--drawing-accent)] hover:text-white mt-4"
             >
               Диагностика ВКР&nbsp;&rarr;
             </Link>
           </div>
 
-          <div className="px-4 pb-6 text-center">
+          <div className="px-4 pb-4 text-center">
             <span className="font-gost-upright text-[9px] text-[var(--drawing-line-thin)] opacity-60">
               ГОСТ 2.104-2006
             </span>
