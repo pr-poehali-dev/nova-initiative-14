@@ -23,6 +23,7 @@ import type {
   BoundaryCondition,
   ModelLoad,
   DofName,
+  NodeConnectionType,
 } from "@/lib/cae-model";
 
 export interface ContextTarget {
@@ -53,6 +54,7 @@ interface Props {
   addNodalLoad: (fx: number, fy: number) => void;
   setNodalMoment: (mz: number) => void;
   removeLoadOnNode: () => void;
+  setNodeConnection: (c: NodeConnectionType) => void;
   setMatPickerOpen: (v: boolean) => void;
   setSecPickerOpen: (v: boolean) => void;
   setDistributedLoad: (qy: number) => void;
@@ -109,6 +111,7 @@ const ContextPropertiesPopup = ({
   addNodalLoad,
   setNodalMoment,
   removeLoadOnNode,
+  setNodeConnection,
   setMatPickerOpen,
   setSecPickerOpen,
   setDistributedLoad,
@@ -309,6 +312,7 @@ const ContextPropertiesPopup = ({
             addNodalLoad={addNodalLoad}
             setNodalMoment={setNodalMoment}
             removeLoadOnNode={removeLoadOnNode}
+            setNodeConnection={setNodeConnection}
             setMatPickerOpen={setMatPickerOpen}
             setSecPickerOpen={setSecPickerOpen}
             setDistributedLoad={setDistributedLoad}

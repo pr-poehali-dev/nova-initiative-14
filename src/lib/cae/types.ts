@@ -29,10 +29,31 @@ export interface Section {
   shear_area_z?: number;
 }
 
+/**
+ * Тип узлового (конструктивного) соединения — как стержни физически
+ * соединяются в узле. Это конструктивная характеристика для документации
+ * и спецификаций (РПЗ, PLM): она НЕ влияет на МКЭ-расчёт — жёсткость/шарнир
+ * в расчёте задаётся через hinge_start/hinge_end элементов. Тип соединения
+ * нужен для оформления, подбора крепежа и будущего расчёта швов/болтов.
+ *  - none:    не задано (по умолчанию)
+ *  - welded:  сварное соединение
+ *  - bolted:  болтовое / винтовое (на болтах или винтах)
+ *  - riveted: заклёпочное
+ *  - pinned:  шарнирное (палец, ось)
+ */
+export type NodeConnectionType =
+  | "none"
+  | "welded"
+  | "bolted"
+  | "riveted"
+  | "pinned";
+
 export interface ModelNode {
   id: string;
   coords: [number, number, number]; // для 2D z=0
   label?: string;
+  /** Конструктивный тип соединения в узле (для документации, не влияет на расчёт). */
+  connection?: NodeConnectionType;
 }
 
 export interface ModelElement {

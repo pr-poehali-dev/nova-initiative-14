@@ -10,6 +10,7 @@
  */
 import type { FrameModel, ModelNode, SolverResponse } from "@/lib/cae-model";
 import { formatForce, formatMoment } from "@/lib/formatForce";
+import { getNodeConnectionSpec } from "@/lib/cae/node-connections";
 import { ACCENT, LINE, THIN, BG, NODE_R } from "./canvas-constants";
 import { REACTION, type DraggableTextFactory } from "./canvas-overlays-helpers";
 
@@ -127,6 +128,12 @@ const CanvasReactionsAndNodes = ({
         const cx = toScreenX(n.coords[0]);
         const cy = toScreenY(n.coords[1]);
         const fs = 10 * fontScale;
+        // Конструктивный тип соединения (сварное/болтовое/…) — маркер-буква
+        // в маленьком кружке рядом с узлом. "none" не показываем.
+        const conn =
+          n.connection && n.connection !== "none"
+            ? getNodeConnectionSpec(n.connection)
+            : null;
         return (
           <g key={n.id}>
             <g
@@ -152,6 +159,31 @@ const CanvasReactionsAndNodes = ({
                 fill="transparent"
               />
             </g>
+            {/* Маркер типа соединения: буква в кружке, левее-ниже узла */}
+            {conn && (
+              <g pointerEvents="none">
+                <circle
+                  cx={cx - 11}
+                  cy={cy + 11}
+                  r={6.5}
+                  fill={BG}
+                  stroke={ACCENT}
+                  strokeWidth={1.5}
+                />
+                <text
+                  x={cx - 11}
+                  y={cy + 11}
+                  fontSize={8}
+                  fill={ACCENT}
+                  fontFamily="monospace"
+                  fontWeight="bold"
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                >
+                  {conn.short}
+                </text>
+              </g>
+            )}
             {makeDraggableText(`node:${n.id}`, cx + 10, cy - 8, (x, y) => (
               <text x={x} y={y} fontSize={fs} fill={THIN} fontFamily="monospace">
                 {n.id}

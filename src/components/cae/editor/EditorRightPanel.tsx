@@ -16,6 +16,7 @@ import type {
   BoundaryCondition,
   ModelLoad,
   DofName,
+  NodeConnectionType,
 } from "@/lib/cae-model";
 import NodePropertiesPanel from "./panels/right/NodePropertiesPanel";
 import ElementPropertiesPanel from "./panels/right/ElementPropertiesPanel";
@@ -34,6 +35,7 @@ interface Props {
   addNodalLoad: (fx: number, fy: number) => void;
   setNodalMoment: (mz: number) => void;
   removeLoadOnNode: () => void;
+  setNodeConnection: (c: NodeConnectionType) => void;
   setMatPickerOpen: (v: boolean) => void;
   setSecPickerOpen: (v: boolean) => void;
   setDistributedLoad: (qy: number) => void;
@@ -59,6 +61,7 @@ const EditorRightPanel = ({
   addNodalLoad,
   setNodalMoment,
   removeLoadOnNode,
+  setNodeConnection,
   setMatPickerOpen,
   setSecPickerOpen,
   setDistributedLoad,
@@ -82,6 +85,7 @@ const EditorRightPanel = ({
         addNodalLoad={addNodalLoad}
         setNodalMoment={setNodalMoment}
         removeLoadOnNode={removeLoadOnNode}
+        setNodeConnection={setNodeConnection}
         deleteSelected={deleteSelected}
       />
     );

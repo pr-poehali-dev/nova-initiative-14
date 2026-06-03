@@ -119,6 +119,7 @@ const CaeEditor = () => {
     moveNode,
     selectAll,
     clearSelection,
+    setNodeConnection,
     addBC,
     removeBC,
     addNodalLoad,
@@ -374,6 +375,7 @@ const CaeEditor = () => {
           addNodalLoad={addNodalLoad}
           setNodalMoment={setNodalMoment}
           removeLoadOnNode={removeLoadOnNode}
+          setNodeConnection={setNodeConnection}
           setMatPickerOpen={setMatPickerOpen}
           setSecPickerOpen={setSecPickerOpen}
           setDistributedLoad={setDistributedLoad}

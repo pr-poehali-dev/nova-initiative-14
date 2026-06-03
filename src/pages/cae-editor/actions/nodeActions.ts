@@ -11,6 +11,7 @@ import {
   type ModelElement,
   type ModelLoad,
   type ModelNode,
+  type NodeConnectionType,
 } from "@/lib/cae-model";
 
 export interface ActionResult {
@@ -283,6 +284,29 @@ export function duplicateSelection(
     nodeIds: Array.from(nodeIdMap.values()),
     elementIds: newElementIds,
   };
+}
+
+/**
+ * Задать конструктивный тип соединения узла (сварное/болтовое/…).
+ * Конструктивная характеристика для документации — на расчёт не влияет.
+ * Значение "none" сбрасывает признак.
+ */
+export function setNodeConnection(
+  model: FrameModel,
+  nodeId: string,
+  connection: NodeConnectionType,
+): FrameModel {
+  const nodes = model.nodes.map((n) =>
+    n.id === nodeId
+      ? connection === "none"
+        ? (() => {
+            const { connection: _omit, ...rest } = n;
+            return rest as ModelNode;
+          })()
+        : { ...n, connection }
+      : n,
+  );
+  return { ...model, nodes };
 }
 
 /** Переместить узел в новые координаты (drag-операция). */

@@ -15,6 +15,7 @@ export type {
   Material,
   Section,
   ModelNode,
+  NodeConnectionType,
   ModelElement,
   DofName,
   BoundaryCondition,

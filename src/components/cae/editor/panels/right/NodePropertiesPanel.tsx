@@ -3,7 +3,10 @@ import type {
   DofName,
   ModelLoad,
   ModelNode,
+  NodeConnectionType,
 } from "@/lib/cae-model";
+import { NODE_CONNECTIONS } from "@/lib/cae/node-connections";
+import Icon from "@/components/ui/icon";
 import NumericInput from "./NumericInput";
 
 /**
@@ -25,6 +28,7 @@ export default function NodePropertiesPanel({
   addNodalLoad,
   setNodalMoment,
   removeLoadOnNode,
+  setNodeConnection,
   deleteSelected,
 }: {
   selectedNode: ModelNode;
@@ -38,6 +42,7 @@ export default function NodePropertiesPanel({
   addNodalLoad: (fx: number, fy: number) => void;
   setNodalMoment: (mz: number) => void;
   removeLoadOnNode: () => void;
+  setNodeConnection: (c: NodeConnectionType) => void;
   deleteSelected: () => void;
 }) {
   return (
@@ -121,6 +126,34 @@ export default function NodePropertiesPanel({
           Убрать опору
         </button>
       )}
+
+      <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-1.5 mt-2">
+        Тип соединения
+      </p>
+      <div className="grid grid-cols-3 gap-1 mb-1">
+        {NODE_CONNECTIONS.map((c) => {
+          const active = (selectedNode.connection ?? "none") === c.key;
+          return (
+            <button
+              key={c.key}
+              onClick={() => setNodeConnection(c.key)}
+              title={c.hint}
+              className={`border min-h-[40px] py-1.5 px-1 text-[10px] font-gost uppercase flex flex-col items-center justify-center gap-0.5 active:bg-[var(--drawing-paper)] ${
+                active
+                  ? "bg-[var(--drawing-line)] text-[var(--drawing-bg)] border-[var(--drawing-line)]"
+                  : "border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)]"
+              }`}
+              aria-pressed={active}
+            >
+              <Icon name={c.icon} size={13} />
+              {c.label}
+            </button>
+          );
+        })}
+      </div>
+      <p className="font-gost text-[9px] text-[var(--drawing-line-thin)] italic mb-3 leading-snug">
+        Конструктивный признак для документации&nbsp;— на&nbsp;расчёт не&nbsp;влияет.
+      </p>
 
       <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-1.5 mt-2">
         Узловые нагрузки

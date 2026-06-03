@@ -17,6 +17,7 @@ import {
   type Section,
   type BoundaryCondition,
   type DofName,
+  type NodeConnectionType,
 } from "@/lib/cae-model";
 import {
   addNodeAt,
@@ -25,6 +26,7 @@ import {
   deleteSelection,
   duplicateSelection,
   moveNode as moveNodePure,
+  setNodeConnection as setNodeConnectionPure,
 } from "./actions/nodeActions";
 import {
   setBC,
@@ -125,6 +127,11 @@ export function useCaeActions(
     updateModel(moveNodePure(model, nodeId, x, y));
   };
 
+  const setNodeConnection = (connection: NodeConnectionType) => {
+    if (!selectedNodeId) return;
+    updateModel(setNodeConnectionPure(model, selectedNodeId, connection));
+  };
+
   const selectAll = () => {
     setSelectedNodeIds(model.nodes.map((n) => n.id));
     setSelectedElementIds(model.elements.map((e) => e.id));
@@ -205,6 +212,7 @@ export function useCaeActions(
     moveNode,
     selectAll,
     clearSelection,
+    setNodeConnection,
     addBC,
     removeBC,
     addNodalLoad,
