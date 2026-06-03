@@ -20,6 +20,8 @@ import {
 } from "@/lib/cae-model";
 import {
   addNodeAt,
+  addNodeOnElement,
+  findElementNearPoint,
   deleteSelection,
   duplicateSelection,
   moveNode as moveNodePure,
@@ -53,6 +55,12 @@ export interface UseCaeActionsOptions {
   nodeLimit?: number;
   /** Колбэк, вызываемый при достижении лимита узлов (для показа модалки). */
   onNodeLimitReached?: () => void;
+  /**
+   * Текущий шаг сетки (м) — используется как допуск «попадания» клика на
+   * существующий стержень при добавлении узла. Если клик ближе половины
+   * шага к стержню, узел врезается в него с разбиением (тикет №36).
+   */
+  gridStep?: number;
 }
 
 export function useCaeActions(
@@ -64,7 +72,7 @@ export function useCaeActions(
   setSelectedElementIds: (ids: string[]) => void,
   options: UseCaeActionsOptions = {},
 ) {
-  const { nodeLimit, onNodeLimitReached } = options;
+  const { nodeLimit, onNodeLimitReached, gridStep } = options;
   // Совместимость с одиночным выбором (правая панель показывает свойства одного объекта)
   const selectedNodeId = selectedNodeIds.length === 1 ? selectedNodeIds[0] : null;
   const selectedElementId = selectedElementIds.length === 1 ? selectedElementIds[0] : null;
@@ -73,6 +81,17 @@ export function useCaeActions(
     // Лимит узлов (альфа-тест): блокируем создание и зовём модалку.
     if (nodeLimit !== undefined && model.nodes.length >= nodeLimit) {
       onNodeLimitReached?.();
+      return;
+    }
+    // Тикет №36: если клик пришёлся на существующий стержень — врезаем узел
+    // в него с реальным разбиением на два соединённых элемента. Иначе —
+    // создаём обычный свободный узел.
+    const tol = (gridStep ?? 0.5) * 0.5;
+    const hit = findElementNearPoint(model, worldX, worldY, tol);
+    if (hit) {
+      const r = addNodeOnElement(model, hit.element, hit.x, hit.y, hit.t);
+      updateModel(r.model);
+      if (r.nodeIds) setSelectedNodeIds(r.nodeIds);
       return;
     }
     const r = addNodeAt(model, worldX, worldY);

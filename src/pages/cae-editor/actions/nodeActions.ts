@@ -5,7 +5,13 @@
  *
  * Используется внутри useCaeActions для разгрузки одного 380-строчного хука.
  */
-import { genId, type FrameModel, type ModelElement, type ModelNode } from "@/lib/cae-model";
+import {
+  genId,
+  type FrameModel,
+  type ModelElement,
+  type ModelLoad,
+  type ModelNode,
+} from "@/lib/cae-model";
 
 export interface ActionResult {
   model: FrameModel;
@@ -18,6 +24,158 @@ export function addNodeAt(model: FrameModel, worldX: number, worldY: number): Ac
   const id = genId("n", model.nodes);
   const n: ModelNode = { id, coords: [worldX, worldY, 0] };
   return { model: { ...model, nodes: [...model.nodes, n] }, nodeIds: [id] };
+}
+
+/**
+ * Проекция точки (px,py) на отрезок [a→b]. Возвращает точку проекции,
+ * параметр t∈[0,1] вдоль отрезка и расстояние от точки до отрезка.
+ */
+function projectPointOnSegment(
+  px: number,
+  py: number,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+): { x: number; y: number; t: number; dist: number } {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const lenSq = dx * dx + dy * dy;
+  let t = lenSq > 0 ? ((px - ax) * dx + (py - ay) * dy) / lenSq : 0;
+  t = Math.min(1, Math.max(0, t));
+  const x = ax + t * dx;
+  const y = ay + t * dy;
+  const dist = Math.hypot(px - x, py - y);
+  return { x, y, t, dist };
+}
+
+/**
+ * Ищет ближайший к точке элемент, на который «попадает» клик.
+ * tolWorld — допуск в мировых единицах (пересчитанный радиус тапа).
+ * Узлы-концы исключаются: если клик у самого узла, делить нечего.
+ */
+export function findElementNearPoint(
+  model: FrameModel,
+  worldX: number,
+  worldY: number,
+  tolWorld: number,
+): { element: ModelElement; t: number; x: number; y: number } | null {
+  let best: { element: ModelElement; t: number; x: number; y: number; dist: number } | null = null;
+  for (const el of model.elements) {
+    const a = model.nodes.find((n) => n.id === el.node_start);
+    const b = model.nodes.find((n) => n.id === el.node_end);
+    if (!a || !b) continue;
+    const proj = projectPointOnSegment(
+      worldX,
+      worldY,
+      a.coords[0],
+      a.coords[1],
+      b.coords[0],
+      b.coords[1],
+    );
+    // Не делим у самых концов (там и так есть узел) — отступ 1% длины.
+    if (proj.t <= 0.01 || proj.t >= 0.99) continue;
+    if (proj.dist <= tolWorld && (!best || proj.dist < best.dist)) {
+      best = { element: el, t: proj.t, x: proj.x, y: proj.y, dist: proj.dist };
+    }
+  }
+  if (!best) return null;
+  return { element: best.element, t: best.t, x: best.x, y: best.y };
+}
+
+/**
+ * Добавляет узел НА существующий элемент, реально разбивая его на два стержня,
+ * соединённых в новом узле (тикет №36). Новый узел становится общим — он
+ * физически связывает обе половины, поэтому расчёт «видит» соединение.
+ *
+ * Что переносится на половинки:
+ *  - материал и сечение — копируются на обе части;
+ *  - шарниры: внешние концы сохраняют свои шарниры, внутреннее соединение
+ *    в новом узле делается жёстким (без шарнира);
+ *  - распределённая нагрузка — переносится на ОБЕ половины (та же интенсивность);
+ *  - сосредоточенная сила в пролёте — попадает на ту половину, где находится,
+ *    с пересчётом относительной позиции.
+ */
+export function addNodeOnElement(
+  model: FrameModel,
+  element: ModelElement,
+  x: number,
+  y: number,
+  t: number,
+): ActionResult {
+  const newNodeId = genId("n", model.nodes);
+  const newNode: ModelNode = { id: newNodeId, coords: [x, y, 0] };
+
+  const nodesWithNew = [...model.nodes, newNode];
+
+  // Две новые половины. Первой выдаём id исходного элемента (чтобы по
+  // возможности сохранить ссылки), второй — новый свободный id.
+  const id1 = element.id;
+  const id2 = genId("e", [...model.elements, { id: id1 }]);
+
+  const half1: ModelElement = {
+    ...element,
+    id: id1,
+    node_start: element.node_start,
+    node_end: newNodeId,
+    hinge_start: element.hinge_start,
+    hinge_end: false, // внутреннее соединение — жёсткое
+  };
+  const half2: ModelElement = {
+    ...element,
+    id: id2,
+    node_start: newNodeId,
+    node_end: element.node_end,
+    hinge_start: false, // внутреннее соединение — жёсткое
+    hinge_end: element.hinge_end,
+  };
+
+  const elements = model.elements.flatMap((e) =>
+    e.id === element.id ? [half1, half2] : [e],
+  );
+
+  // Переносим нагрузки исходного элемента на половины.
+  const loads: ModelLoad[] = [];
+  const usedLoadIds = new Set(model.loads.map((l) => l.id));
+  const freshLoadId = () => {
+    let i = 1;
+    let id = `L${i}`;
+    while (usedLoadIds.has(id)) id = `L${++i}`;
+    usedLoadIds.add(id);
+    return id;
+  };
+
+  for (const l of model.loads) {
+    if (l.element_id !== element.id) {
+      loads.push(l);
+      continue;
+    }
+    if (l.type === "distributed_uniform") {
+      // Та же распределённая нагрузка на обе половины.
+      loads.push({ ...l, element_id: id1 });
+      loads.push({ ...l, id: freshLoadId(), element_id: id2 });
+    } else if (l.type === "in_span_point") {
+      const pos = l.position_ratio ?? 0.5;
+      if (pos <= t) {
+        // Сила на первой половине — масштабируем позицию к [0,1] внутри неё.
+        loads.push({ ...l, element_id: id1, position_ratio: t > 0 ? pos / t : 0 });
+      } else {
+        loads.push({
+          ...l,
+          element_id: id2,
+          position_ratio: t < 1 ? (pos - t) / (1 - t) : 1,
+        });
+      }
+    } else {
+      loads.push(l);
+    }
+  }
+
+  return {
+    model: { ...model, nodes: nodesWithNew, elements, loads },
+    nodeIds: [newNodeId],
+    elementIds: [id1, id2],
+  };
 }
 
 /**

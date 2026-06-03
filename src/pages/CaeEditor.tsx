@@ -142,6 +142,7 @@ const CaeEditor = () => {
     {
       nodeLimit: NODE_LIMIT_ALPHA,
       onNodeLimitReached: () => setNodeLimitOpen(true),
+      gridStep,
     },
   );
 

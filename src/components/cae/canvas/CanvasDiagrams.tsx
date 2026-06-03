@@ -84,11 +84,21 @@ const CanvasDiagrams = ({ model, result, showDiagram, diagramScale, toScreenX, t
     elDataList.push({ el, vals, xs: er.diagrams.x, color, nx, ny, dx, dy, len, a, b, maxAbs });
   }
 
-  // Глобальный максимум и минимум — только для подписей и поиска экстремальных точек.
-  // Масштаб эпюры каждого элемента — per-element (maxAbs конкретного элемента),
-  // иначе при сосредоточенной нагрузке все остальные стержни рисуются в 1px и невидимы.
+  // Глобальный максимум и минимум — для подписей, поиска экстремумов И масштаба.
   const globalMax = Math.max(...elDataList.flatMap((d) => d.vals));
   const globalMin = Math.min(...elDataList.flatMap((d) => d.vals));
+
+  // ЕДИНЫЙ глобальный масштаб эпюр (тикет №39): амплитуда всех стержней
+  // считается от одного максимума по модулю по всей раме. Благодаря этому
+  // эпюры физически согласованы — в общем узле значение у соседних балок
+  // совпадает (например, −10 Н·м у одной и +10 Н·м у другой ложатся в одну
+  // точку). Пользователь регулирует визуальную высоту ползунком diagramScale.
+  const globalAbs = Math.max(
+    1e-12,
+    Math.abs(globalMax),
+    Math.abs(globalMin),
+    ...elDataList.map((d) => d.maxAbs),
+  );
   const offsetPx = 40 * diagramScale;
 
   // Находим точки глобального макс и мин
@@ -98,7 +108,7 @@ const CanvasDiagrams = ({ model, result, showDiagram, diagramScale, toScreenX, t
   const svgElements: React.ReactNode[] = [];
 
   for (const d of elDataList) {
-    const { el, vals, xs, color, nx, ny, dx, dy, len, a, maxAbs } = d;
+    const { el, vals, xs, color, nx, ny, dx, dy, len, a } = d;
     const points: string[] = [];
 
     // Знаковое соглашение РФ-школы: эпюра M рисуется со стороны РАСТЯНУТОГО волокна.
@@ -111,9 +121,10 @@ const CanvasDiagrams = ({ model, result, showDiagram, diagramScale, toScreenX, t
       const t = xs[i] / len;
       const wx = a.coords[0] + dx * t;
       const wy = a.coords[1] + dy * t;
-      // Per-element масштаб: эпюра каждого стержня занимает offsetPx в максимуме.
-      // Это стандартная практика в профессиональных CAE (ЛИРА, SCAD, SAP2000).
-      const dist = signFactor * (vals[i] / maxAbs) * offsetPx;
+      // Единый глобальный масштаб (тикет №39): нормируем по общему максимуму
+      // globalAbs, поэтому эпюры соседних стержней совпадают в общих узлах,
+      // а высота столбика отражает реальное соотношение усилий между балками.
+      const dist = signFactor * (vals[i] / globalAbs) * offsetPx;
       const sx = toScreenX(wx) + nx * dist;
       const sy = toScreenY(wy) - ny * dist;
       points.push(`${sx},${sy}`);
