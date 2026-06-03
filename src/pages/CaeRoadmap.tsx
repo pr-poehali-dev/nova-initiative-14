@@ -1,7 +1,7 @@
 import { Helmet } from "@/lib/helmet-shim";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
-import { SITE_URL } from "@/lib/seo";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   PLM_ROADMAP,
   STATUS_META,
@@ -10,37 +10,53 @@ import {
 } from "@/lib/plmRoadmap";
 
 /**
- * Публичная дорожная карта развития сервиса в сторону PLM (тикет №43).
- * Показывает этапы от текущего фундамента к «большой затее»: совместная
- * работа, модули, авторасчёт соединений, спецификация/РПЗ, CAD/КЭМ, идеи.
+ * ВНУТРЕННЯЯ дорожная карта развития сервиса в сторону PLM (тикет №43).
+ * Доступна ТОЛЬКО администратору и владельцу продукта — вход из личного
+ * кабинета. Скрыта от поисковых роботов (noindex,nofollow).
  */
 export default function CaeRoadmap() {
+  const { user, loading } = useAuth();
+  const nav = useNavigate();
   const stats = roadmapStats();
+
+  if (loading) {
+    return (
+      <div className="max-w-[800px] mx-auto px-4 pt-24 pb-12 text-center font-gost text-[var(--drawing-line-thin)]">
+        Загружаем…
+      </div>
+    );
+  }
+
+  // Доступ только администратору или владельцу продукта.
+  if (!user || (!user.is_admin && !user.is_owner)) {
+    setTimeout(() => nav("/account", { replace: true }), 0);
+    return null;
+  }
 
   return (
     <>
       <Helmet>
-        <title>Дорожная карта PLM · развитие CAE-сервиса · Диплом-Инж.рф</title>
-        <meta
-          name="description"
-          content="Куда движется Диплом-Инж.рф: от облачного CAE-расчёта рам к полноценной PLM-платформе — совместная работа над проектом, модули конструкции, авторасчёт сварных и болтовых соединений, спецификация и пояснительная записка, расчёт стоимости."
-        />
-        <link rel="canonical" href={`${SITE_URL}/cae/roadmap`} />
+        <title>Внутренняя дорожная карта PLM · Диплом-Инж.рф</title>
+        <meta name="robots" content="noindex,nofollow" />
       </Helmet>
 
       <div className="max-w-[880px] mx-auto px-4 pt-20 md:pt-24 pb-16">
-        <p className="font-gost text-[11px] uppercase tracking-[0.3em] text-[var(--drawing-line-thin)] mb-2">
-          CAE → PLM · Дорожная карта
-        </p>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="inline-flex items-center gap-1 bg-[var(--drawing-line)] text-[var(--drawing-bg)] px-2 py-0.5 font-gost text-[10px] uppercase tracking-wider">
+            <Icon name="Lock" size={11} /> Внутренний документ
+          </span>
+          <p className="font-gost text-[11px] uppercase tracking-[0.3em] text-[var(--drawing-line-thin)]">
+            CAE → PLM
+          </p>
+        </div>
         <h1 className="font-gost-upright text-2xl md:text-3xl font-black uppercase tracking-wide mb-3">
-          Куда движется сервис
+          Дорожная карта развития
         </h1>
         <p className="text-sm text-[var(--drawing-line-thin)] mb-6 leading-relaxed max-w-2xl">
-          Мы развиваем расчётный CAE-редактор в сторону полноценной
-          PLM-платформы: совместная работа над проектом, деление конструкции на
-          модули, автоматический расчёт соединений, спецификация и пояснительная
-          записка, оценка стоимости. Здесь открыто показано, что уже готово, что
-          в работе и что впереди.
+          Внутренний план развития сервиса в сторону PLM-платформы: совместная
+          работа над проектом, деление конструкции на модули, автоматический
+          расчёт соединений, спецификация и пояснительная записка, оценка
+          стоимости. Видно, что уже готово, что в работе и что впереди.
         </p>
 
         {/* Сводка по статусам */}

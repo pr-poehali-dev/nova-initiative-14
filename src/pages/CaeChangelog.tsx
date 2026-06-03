@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { Helmet } from "@/lib/helmet-shim";
 import Icon from "@/components/ui/icon";
 import { SITE_URL } from "@/lib/seo";
@@ -58,18 +57,11 @@ export default function CaeChangelog() {
         <h1 className="font-gost-upright text-2xl md:text-3xl font-black uppercase tracking-wide mb-3">
           Что нового в расчётном сервисе
         </h1>
-        <p className="text-sm text-[var(--drawing-line-thin)] mb-4 leading-relaxed max-w-2xl">
+        <p className="text-sm text-[var(--drawing-line-thin)] mb-8 leading-relaxed max-w-2xl">
           Мы открыто ведём учёт каждой версии: новые функции, исправления решателя
           и улучшения интерфейса. Так инженеру видно, как развивается инструмент и
           какие задачи он уже умеет решать.
         </p>
-        <Link
-          to="/cae/roadmap"
-          className="btn-drawing text-xs inline-flex items-center mb-8 border-[var(--drawing-accent)] text-[var(--drawing-accent)]"
-        >
-          <Icon name="Map" size={13} className="mr-1.5" />
-          Дорожная карта развития (PLM)
-        </Link>
 
         {user?.is_admin && <AdminAddEntry onAdded={refresh} />}
 

@@ -71,7 +71,7 @@ def get_user_payload(conn, user_id: int) -> dict:
         cur.execute(
             "SELECT id, email, full_name, phone, avatar_url, locale, "
             "email_verified_at, is_active, created_at, "
-            "is_admin, referral_code, marketing_consent "
+            "is_admin, is_owner, referral_code, marketing_consent "
             "FROM sso_users WHERE id = %s",
             (user_id,),
         )
@@ -90,6 +90,7 @@ def get_user_payload(conn, user_id: int) -> dict:
             'email_verified': bool(u['email_verified_at']),
             'is_active': u['is_active'],
             'is_admin': bool(u.get('is_admin')),
+            'is_owner': bool(u.get('is_owner')),
             'referral_code': u.get('referral_code'),
             'marketing_consent': bool(u.get('marketing_consent')),
             'roles': roles,
