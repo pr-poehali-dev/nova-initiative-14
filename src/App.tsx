@@ -38,6 +38,7 @@ import CaeNewProject from "./pages/CaeNewProject";
 import CaeEditor from "./pages/CaeEditor";
 import CaeDemoEditor from "./pages/CaeDemoEditor";
 import CaeChangelog from "./pages/CaeChangelog";
+import CaeRoadmap from "./pages/CaeRoadmap";
 import AdGenerator from "./pages/AdGenerator";
 import NotFound from "./pages/NotFound";
 import { useVisitorTracking, getVisitorData } from "./hooks/useVisitorTracking";
@@ -143,6 +144,7 @@ const App = () => (
                 <Route path="/cae/projects/:id" element={<CaeEditor />} />
                 <Route path="/cae/demo" element={<CaeDemoEditor />} />
                 <Route path="/cae/changelog" element={<CaeChangelog />} />
+                <Route path="/cae/roadmap" element={<CaeRoadmap />} />
                 <Route path="/oauth/callback" element={<OAuthCallback />} />
                 <Route path="/admin/generator" element={<AdGenerator />} />
                 <Route path="*" element={<NotFound />} />
