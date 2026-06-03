@@ -7,6 +7,7 @@ import { SITE_URL } from "@/lib/seo";
 import PointsAchievementsBlock from "@/components/account/PointsAchievementsBlock";
 import MyTicketsBlock from "@/components/account/MyTicketsBlock";
 import LoginMethodsBlock from "@/components/account/LoginMethodsBlock";
+import DisciplinePreferenceBlock from "@/components/account/DisciplinePreferenceBlock";
 import AdminPanel from "@/components/account/AdminPanel";
 import InviteFriendModal from "@/components/cae/InviteFriendModal";
 import SupportTicketModal from "@/components/SupportTicketModal";
@@ -118,6 +119,9 @@ const Account = () => {
             Расчётные схемы балок и&nbsp;рам, история расчётов и&nbsp;PDF-отчёты по&nbsp;ЕСКД&nbsp;— всё в&nbsp;разделе CAE-проектов.
           </p>
         </section>
+
+        {/* Инженерная школа (машиностроение / строительство) */}
+        <DisciplinePreferenceBlock />
 
         {/* Очки и ачивки */}
         <PointsAchievementsBlock onInvite={() => setInviteOpen(true)} />

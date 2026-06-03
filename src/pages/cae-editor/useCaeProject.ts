@@ -9,6 +9,7 @@ import {
   type FrameModel,
 } from "@/lib/cae-model";
 import { setUnsavedChanges } from "@/lib/reloadGuard";
+import { getDisciplinePreference } from "@/lib/cae/discipline-preference";
 import { useCaeHistory } from "./useCaeHistory";
 
 export function useCaeProject(projectId: number) {
@@ -49,7 +50,12 @@ export function useCaeProject(projectId: number) {
           resetHistory(normalizeModel(m as FrameModel));
         } else {
           const dim = r.data.project.project_type === "frame_3d" ? "3d" : "2d";
-          resetHistory(emptyModel(dim as "2d" | "3d"));
+          // Новый проект наследует инженерную школу из настройки ЛК (тикет №37).
+          const fresh = emptyModel(dim as "2d" | "3d");
+          if (fresh.analysis_settings) {
+            fresh.analysis_settings.discipline = getDisciplinePreference();
+          }
+          resetHistory(fresh);
         }
       })
       .finally(() => setLoadingModel(false));

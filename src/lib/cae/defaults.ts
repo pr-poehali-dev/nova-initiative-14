@@ -16,6 +16,7 @@ import type {
 
 /** Дефолтные настройки расчёта — общее машиностроение, Мизес, n=1.5 */
 export const DEFAULT_ANALYSIS_SETTINGS: AnalysisSettings = {
+  discipline: "mechanical",
   industry: "general",
   strength_theory: "mises",
   analysis_type: "linear",

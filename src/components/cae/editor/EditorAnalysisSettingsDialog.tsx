@@ -12,6 +12,7 @@ import {
   type AnalysisType,
   type StrengthTheory,
   type IndustryKind,
+  type DisciplineKind,
   DEFAULT_ANALYSIS_SETTINGS,
 } from "@/lib/cae-model";
 import { INDUSTRIES } from "@/lib/cae-industry";
@@ -41,6 +42,19 @@ const THEORIES: { key: StrengthTheory; label: string; formula: string; descripti
     label: "1-я (нормальные)",
     formula: "σ_экв = |σ_max|",
     description: "Для хрупких материалов: чугун, керамика. В машиностроении применяется редко.",
+  },
+];
+
+const DISCIPLINES: { key: DisciplineKind; label: string; hint: string }[] = [
+  {
+    key: "mechanical",
+    label: "Машиностроение",
+    hint: "Эпюра момента строится по знаку величины (сопромат, детали машин). Положительный момент — в одну сторону.",
+  },
+  {
+    key: "construction",
+    label: "Строительство",
+    hint: "Эпюра момента — со стороны растянутого волокна (строительная механика, СП/СНиП). Привычно проектировщикам зданий.",
   },
 ];
 
@@ -164,6 +178,48 @@ const EditorAnalysisSettingsDialog = ({ open, onClose, settings, onChange }: Pro
                 </p>
               </div>
             )}
+          </section>
+
+          {/* ИНЖЕНЕРНАЯ ШКОЛА */}
+          <section>
+            <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-2">
+              Инженерная школа · соглашение эпюры момента
+            </p>
+            <div className="grid md:grid-cols-2 gap-2">
+              {DISCIPLINES.map((disc) => {
+                const selected = (settings.discipline ?? "mechanical") === disc.key;
+                return (
+                  <button
+                    key={disc.key}
+                    onClick={() => update({ discipline: disc.key })}
+                    className={`text-left border p-2.5 transition ${
+                      selected
+                        ? "border-[var(--drawing-accent)] bg-[var(--drawing-accent)]/5"
+                        : "border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)]"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`w-3 h-3 rounded-full border-2 ${
+                          selected
+                            ? "border-[var(--drawing-accent)] bg-[var(--drawing-accent)]"
+                            : "border-[var(--drawing-line-thin)]"
+                        }`}
+                      />
+                      <p className="font-gost-upright text-[13px] font-bold text-[var(--drawing-ink)]">
+                        {disc.label}
+                      </p>
+                    </div>
+                    <p className="font-gost text-[11px] text-[var(--drawing-line-thin)] mt-1 leading-snug">
+                      {disc.hint}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] mt-2 italic leading-snug">
+              Влияет только на сторону построения эпюры M&nbsp;— значения усилий и&nbsp;проверки прочности не&nbsp;меняются.
+            </p>
           </section>
 
           {/* ОТРАСЛЬ */}

@@ -17,6 +17,7 @@ import { runChecks, type ElementCheck } from "./cae-checks";
 import { getIndustrySpec } from "./cae-industry";
 import { DEFAULT_ANALYSIS_SETTINGS } from "./cae-model";
 import { formatDistLoad, formatForce, formatMoment } from "./formatForce";
+import { getDisciplinePreference } from "./cae/discipline-preference";
 
 // Декомпозированные модули:
 //   pdf/font-loader — загрузка Roboto с кириллицей + fontState singleton
@@ -650,16 +651,19 @@ function drawDiagramOverScheme(
   // занимает offsetPdf мм, остальное — пропорционально.
   const k = offsetPdf / globalMaxAbs;
 
+  // Соглашение эпюры момента по инженерной школе (тикет №37):
+  //  - construction: со стороны растянутого волокна (инверсия знака);
+  //  - mechanical:   по знаку величины.
+  const discipline = model.analysis_settings?.discipline ?? getDisciplinePreference();
+  const momentSign = discipline === "construction" ? -1 : 1;
+
   // Рисуем для каждого стержня
   for (const d of list) {
     const sx_arr: number[] = [];
     const sy_arr: number[] = [];
     let iLocalMax = 0;
-    // Знаковое соглашение РФ-школы: эпюра M рисуется со стороны РАСТЯНУТОГО волокна.
-    // Положительный Mz по нашему солверу растягивает "нижнее" волокно (правую сторону
-    // относительно направления стержня), поэтому для Mz инвертируем знак — эпюра
-    // ложится со стороны растянутого волокна (под балкой при q вниз, наружу на стойках).
-    const signFactor = kind === "Mz" ? -1 : 1;
+    // Сторона откладывания эпюры Mz — по выбранному соглашению школы.
+    const signFactor = kind === "Mz" ? momentSign : 1;
     for (let i = 0; i < d.xs.length; i++) {
       const t = d.xs[i] / d.len;
       const wx = d.a.coords[0] + d.dx * t;

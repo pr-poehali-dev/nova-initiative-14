@@ -23,6 +23,7 @@ export type {
   StrengthTheory,
   AnalysisType,
   IndustryKind,
+  DisciplineKind,
   AnalysisSettings,
   FrameModel,
   SolverResponse,

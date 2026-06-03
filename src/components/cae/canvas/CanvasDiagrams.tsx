@@ -1,6 +1,7 @@
 import type { FrameModel, ModelElement, SolverResponse } from "@/lib/cae-model";
 import { ACCENT } from "./canvas-constants";
 import { formatForce, formatMoment } from "@/lib/formatForce";
+import { getDisciplinePreference } from "@/lib/cae/discipline-preference";
 
 interface Props {
   model: FrameModel;
@@ -101,6 +102,15 @@ const CanvasDiagrams = ({ model, result, showDiagram, diagramScale, toScreenX, t
   );
   const offsetPx = 40 * diagramScale;
 
+  // Соглашение для эпюры момента (тикет №37): зависит от инженерной школы.
+  //  - construction: эпюра M со стороны растянутого волокна (инверсия знака).
+  //  - mechanical:   эпюра M строится по знаку величины (без инверсии).
+  // Для N/Qy/σ/v соглашение одинаковое в обеих школах.
+  // Школа берётся из настроек проекта; если проект её не задавал (старая
+  // модель) — из глобальной настройки ЛК.
+  const discipline = model.analysis_settings?.discipline ?? getDisciplinePreference();
+  const momentSign = discipline === "construction" ? -1 : 1;
+
   // Находим точки глобального макс и мин
   let maxPoint: DiagramPoint | null = null;
   let minPoint: DiagramPoint | null = null;
@@ -111,12 +121,10 @@ const CanvasDiagrams = ({ model, result, showDiagram, diagramScale, toScreenX, t
     const { el, vals, xs, color, nx, ny, dx, dy, len, a } = d;
     const points: string[] = [];
 
-    // Знаковое соглашение РФ-школы: эпюра M рисуется со стороны РАСТЯНУТОГО волокна.
-    // Левая нормаль (-uy, ux) указывает "вверх" для горизонтального стержня и "наружу"
-    // влево для вертикального. Положительный Mz по нашему солверу растягивает нижнее
-    // волокно (правая сторона относительно направления стержня), поэтому для Mz
-    // инвертируем знак — эпюра ложится на сторону растянутого волокна.
-    const signFactor = showDiagram === "Mz" ? -1 : 1;
+    // Сторона откладывания эпюры. Для Mz зависит от инженерной школы
+    // (см. momentSign выше): строительная — со стороны растянутого волокна,
+    // машиностроительная — по знаку величины. Остальные эпюры одинаковы.
+    const signFactor = showDiagram === "Mz" ? momentSign : 1;
     for (let i = 0; i < xs.length; i++) {
       const t = xs[i] / len;
       const wx = a.coords[0] + dx * t;
@@ -157,10 +165,10 @@ const CanvasDiagrams = ({ model, result, showDiagram, diagramScale, toScreenX, t
     const text = fmtVal(pt.val, kind);
 
     // Смещение подписи: чуть дальше от линии эпюры (в ту же сторону, куда легла эпюра).
-    // Для Mz знак инвертирован — подпись тоже должна следовать за инверсией.
+    // Сторона Mz следует за выбранным соглашением школы (momentSign).
     const d = elDataList.find((d) => d.el.id === pt.elId);
     const extraOffset = 10;
-    const signFactor = kind === "Mz" ? -1 : 1;
+    const signFactor = kind === "Mz" ? momentSign : 1;
     const sign = (pt.val >= 0 ? 1 : -1) * signFactor;
     const lx = pt.sx + (d ? d.nx * sign * extraOffset : 0);
     const ly = pt.sy - (d ? d.ny * sign * extraOffset : 0);
