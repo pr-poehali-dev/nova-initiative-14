@@ -8,6 +8,7 @@ import PointsAchievementsBlock from "@/components/account/PointsAchievementsBloc
 import MyTicketsBlock from "@/components/account/MyTicketsBlock";
 import LoginMethodsBlock from "@/components/account/LoginMethodsBlock";
 import DisciplinePreferenceBlock from "@/components/account/DisciplinePreferenceBlock";
+import RoadmapsBlock from "@/components/account/RoadmapsBlock";
 import AdminPanel from "@/components/account/AdminPanel";
 import InviteFriendModal from "@/components/cae/InviteFriendModal";
 import SupportTicketModal from "@/components/SupportTicketModal";
@@ -69,35 +70,8 @@ const Account = () => {
         {/* Админ-панель — только для is_admin */}
         {user.is_admin && <AdminPanel />}
 
-        {/* Внутренняя дорожная карта PLM — для администратора и владельца */}
-        {(user.is_admin || user.is_owner) && (
-          <Link
-            to="/cae/roadmap"
-            className="drawing-frame p-4 bg-[var(--drawing-bg)] mb-6 flex items-start gap-3 hover:border-[var(--drawing-accent)] transition-colors group"
-          >
-            <Icon
-              name="Map"
-              size={22}
-              className="text-[var(--drawing-accent)] shrink-0 mt-0.5"
-            />
-            <div className="min-w-0 flex-1">
-              <p className="font-gost-upright font-bold text-sm group-hover:text-[var(--drawing-accent)] transition-colors flex items-center gap-2">
-                Дорожная карта PLM
-                <span className="inline-flex items-center gap-1 bg-[var(--drawing-line)] text-[var(--drawing-bg)] px-1.5 py-0.5 font-gost text-[9px] uppercase tracking-wider">
-                  <Icon name="Lock" size={9} /> Внутреннее
-                </span>
-              </p>
-              <p className="text-xs text-[var(--drawing-line-thin)] leading-snug mt-0.5">
-                Внутренний план развития сервиса в&nbsp;сторону PLM: этапы, статусы задач, ближайшие шаги.
-              </p>
-            </div>
-            <Icon
-              name="ArrowRight"
-              size={16}
-              className="text-[var(--drawing-line-thin)] shrink-0 mt-1 group-hover:text-[var(--drawing-accent)] transition-colors"
-            />
-          </Link>
-        )}
+        {/* Дорожные карты — для администратора и владельца */}
+        {(user.is_admin || user.is_owner) && <RoadmapsBlock />}
 
         {/* Моя подписка — вверху кабинета */}
         <section className="drawing-frame p-6 bg-[var(--drawing-bg)] mb-6">
