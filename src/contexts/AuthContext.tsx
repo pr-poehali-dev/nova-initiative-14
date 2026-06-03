@@ -5,6 +5,7 @@ import {
   getAccessToken,
   getRefreshToken,
   getStoredUser,
+  getValidAccessToken,
   saveTokens,
   clearTokens,
   login as apiLogin,
@@ -43,9 +44,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshUser = useCallback(async () => {
-    const access = getAccessToken();
-    if (!access) {
+    if (!getAccessToken()) {
       setState((s) => ({ ...s, loading: false }));
+      return;
+    }
+    // Берём заведомо свежий токен: если срок жизни истёк, getValidAccessToken
+    // сам обновит его по refresh-токену ещё до запроса userinfo.
+    const access = (await getValidAccessToken()) || getAccessToken();
+    if (!access) {
+      const stored = getStoredUser();
+      setState({ user: stored, loading: false, error: null });
       return;
     }
     const res = await fetchUserInfo(access);
@@ -90,6 +98,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     refreshUser();
+  }, [refreshUser]);
+
+  // Перепроверяем сессию при возврате на вкладку. После долгого простоя
+  // (свёрнутая вкладка, заблокированный экран, заново открытый браузер)
+  // access-токен успевает протухнуть. Без этого пользователь видел своё
+  // имя в шапке, но ЛК показывал пустые блоки до ручного F5. Теперь токен
+  // обновляется автоматически, а свежие данные пользователя подгружаются.
+  useEffect(() => {
+    const revalidate = () => {
+      if (document.visibilityState === "visible" && getAccessToken()) {
+        refreshUser();
+      }
+    };
+    document.addEventListener("visibilitychange", revalidate);
+    window.addEventListener("focus", revalidate);
+    window.addEventListener("online", revalidate);
+    return () => {
+      document.removeEventListener("visibilitychange", revalidate);
+      window.removeEventListener("focus", revalidate);
+      window.removeEventListener("online", revalidate);
+    };
   }, [refreshUser]);
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {

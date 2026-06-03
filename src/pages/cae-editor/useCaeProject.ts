@@ -5,6 +5,7 @@ import {
   emptyModel,
   getProjectModel,
   saveProjectModel,
+  normalizeModel,
   type FrameModel,
 } from "@/lib/cae-model";
 import { setUnsavedChanges } from "@/lib/reloadGuard";
@@ -43,7 +44,9 @@ export function useCaeProject(projectId: number) {
         setVersionId(r.data.version_id);
         const m = r.data.model as FrameModel | Record<string, never>;
         if (m && (m as FrameModel).meta) {
-          resetHistory(m as FrameModel);
+          // Чиним возможные дефекты старых сохранённых моделей (дубли id
+          // элементов, «висящие» стержни на удалённых узлах) до показа.
+          resetHistory(normalizeModel(m as FrameModel));
         } else {
           const dim = r.data.project.project_type === "frame_3d" ? "3d" : "2d";
           resetHistory(emptyModel(dim as "2d" | "3d"));

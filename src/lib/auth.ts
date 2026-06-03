@@ -56,6 +56,14 @@ const API = (func2url as Record<string, string>)["sso-auth"];
 const LS_ACCESS = "sso_access";
 const LS_REFRESH = "sso_refresh";
 const LS_USER = "sso_user";
+const LS_EXPIRES = "sso_expires_at";
+
+/**
+ * За сколько секунд до истечения access-токена считаем его «протухшим» и
+ * заранее обновляем. Защищает от ситуации, когда токен формально жив, но
+ * запрос успеет дойти до сервера уже после фактического истечения.
+ */
+const TOKEN_REFRESH_SKEW_SEC = 30;
 
 export function getAccessToken(): string | null {
   return localStorage.getItem(LS_ACCESS);
@@ -63,6 +71,13 @@ export function getAccessToken(): string | null {
 
 export function getRefreshToken(): string | null {
   return localStorage.getItem(LS_REFRESH);
+}
+
+/** Unix-время (мс) истечения access-токена или 0, если неизвестно. */
+function getAccessExpiresAt(): number {
+  const raw = localStorage.getItem(LS_EXPIRES);
+  const n = raw ? Number(raw) : 0;
+  return Number.isFinite(n) ? n : 0;
 }
 
 export function getStoredUser(): SsoUser | null {
@@ -79,12 +94,99 @@ export function saveTokens(t: TokenPair) {
   localStorage.setItem(LS_ACCESS, t.access_token);
   localStorage.setItem(LS_REFRESH, t.refresh_token);
   localStorage.setItem(LS_USER, JSON.stringify(t.user));
+  const expiresAt = Date.now() + (t.expires_in || 0) * 1000;
+  localStorage.setItem(LS_EXPIRES, String(expiresAt));
 }
 
 export function clearTokens() {
   localStorage.removeItem(LS_ACCESS);
   localStorage.removeItem(LS_REFRESH);
   localStorage.removeItem(LS_USER);
+  localStorage.removeItem(LS_EXPIRES);
+}
+
+/**
+ * Признак того, что access-токен скоро истечёт (или уже истёк).
+ * Если время истечения неизвестно (старая сессия) — считаем валидным,
+ * реактивный refresh по 401 подстрахует.
+ */
+function isAccessStale(): boolean {
+  const expiresAt = getAccessExpiresAt();
+  if (!expiresAt) return false;
+  return Date.now() >= expiresAt - TOKEN_REFRESH_SKEW_SEC * 1000;
+}
+
+// Один общий промис обновления токена, чтобы параллельные запросы не
+// запускали refresh одновременно (иначе refresh-токен «прокручивается»
+// несколько раз и часть запросов получает невалидный токен).
+let refreshInFlight: Promise<string | null> | null = null;
+
+async function doRefresh(): Promise<string | null> {
+  const rt = getRefreshToken();
+  if (!rt) return null;
+  const r = await refresh(rt);
+  if (r.ok && r.data) {
+    saveTokens(r.data);
+    return r.data.access_token;
+  }
+  // Честный отказ авторизации — чистим сессию. Сетевые/5xx не трогаем.
+  if (r.status === 401 || r.status === 403) clearTokens();
+  return null;
+}
+
+/** Запускает refresh, дедуплицируя параллельные вызовы. */
+export function refreshAccessToken(): Promise<string | null> {
+  if (!refreshInFlight) {
+    refreshInFlight = doRefresh().finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
+}
+
+/**
+ * Возвращает заведомо свежий access-токен, проактивно обновляя его по
+ * refresh-токену, если срок жизни истёк или вот-вот истечёт. Используется
+ * всеми авторизованными запросами к бэкенду.
+ */
+export async function getValidAccessToken(): Promise<string | null> {
+  const access = getAccessToken();
+  if (!access) return null;
+  if (isAccessStale()) {
+    const fresh = await refreshAccessToken();
+    return fresh ?? getAccessToken();
+  }
+  return access;
+}
+
+/**
+ * Авторизованный fetch с автоматическим обновлением токена.
+ * 1. Подставляет свежий access-токен (с проактивным refresh по сроку).
+ * 2. Если сервер ответил 401 — один раз обновляет токен и повторяет запрос.
+ * Это устраняет «пустые блоки» после простоя вкладки: токен протух, но
+ * данные подгружаются прозрачно, без ручного F5.
+ */
+export async function authorizedFetch(
+  url: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const buildHeaders = (token: string | null): Headers => {
+    const h = new Headers(init.headers || {});
+    if (!h.has("Accept")) h.set("Accept", "application/json");
+    if (token) h.set("X-Authorization", `Bearer ${token}`);
+    return h;
+  };
+
+  const token = await getValidAccessToken();
+  let res = await fetch(url, { ...init, headers: buildHeaders(token) });
+
+  if (res.status === 401 && getRefreshToken()) {
+    const fresh = await refreshAccessToken();
+    if (fresh) {
+      res = await fetch(url, { ...init, headers: buildHeaders(fresh) });
+    }
+  }
+  return res;
 }
 
 async function call<T = unknown>(

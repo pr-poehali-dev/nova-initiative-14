@@ -35,7 +35,7 @@ export {
   emptyModel,
 } from "./cae/defaults";
 
-export { genId, constrainedFromType } from "./cae/utils";
+export { genId, constrainedFromType, normalizeModel } from "./cae/utils";
 
 export {
   getProjectModel,

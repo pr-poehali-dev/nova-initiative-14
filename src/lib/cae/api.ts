@@ -3,7 +3,7 @@
  * Используют authCall с проксированием Authorization → X-Authorization.
  */
 import func2url from "../../../backend/func2url.json";
-import { getAccessToken } from "@/lib/auth";
+import { authorizedFetch } from "@/lib/auth";
 import type { FrameModel, SolverResponse } from "./types";
 
 const CAE_API = (func2url as Record<string, string>)["cae-api"];
@@ -26,9 +26,7 @@ async function authCall<T = unknown>(
     "Content-Type": "application/json",
     Accept: "application/json",
   };
-  const token = getAccessToken();
-  if (token) headers["X-Authorization"] = `Bearer ${token}`;
-  const res = await fetch(url, {
+  const res = await authorizedFetch(url, {
     method,
     headers,
     body: method === "GET" ? undefined : JSON.stringify(body ?? {}),

@@ -3,7 +3,7 @@
  * Колокольчик уведомлений: список, счётчик непрочитанных, отметки прочтения.
  */
 import func2url from "../../backend/func2url.json";
-import { getAccessToken } from "@/lib/auth";
+import { authorizedFetch } from "@/lib/auth";
 
 const API = (func2url as Record<string, string>)["notifications-api"];
 
@@ -43,12 +43,10 @@ async function call<T = unknown>(
     "Content-Type": "application/json",
     Accept: "application/json",
   };
-  const token = getAccessToken();
-  if (token) headers["X-Authorization"] = `Bearer ${token}`;
   const qs = new URLSearchParams({ action, ...query }).toString();
   let res: Response;
   try {
-    res = await fetch(`${API}?${qs}`, {
+    res = await authorizedFetch(`${API}?${qs}`, {
       method,
       headers,
       body: method === "POST" ? JSON.stringify(body ?? {}) : undefined,

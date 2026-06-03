@@ -7,7 +7,7 @@
  * pendingFirstNodeId (для режима draw-element).
  */
 import { useEffect, useRef, useState } from "react";
-import type { FrameModel, ModelNode, ModelElement } from "@/lib/cae-model";
+import { genId, type FrameModel, type ModelNode, type ModelElement } from "@/lib/cae-model";
 import type { EditorMode } from "@/components/cae/FrameCanvas";
 
 /** Цель открытия контекстного popup'а свойств. */
@@ -172,7 +172,7 @@ export function useCanvasInteractions({
             return;
           }
           const newEl: ModelElement = {
-            id: `e${model.elements.length + 1}`,
+            id: genId("e", model.elements),
             node_start: pendingFirstNodeId,
             node_end: n.id,
             material_id: model.materials[0]?.id || "steel",

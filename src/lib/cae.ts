@@ -1,5 +1,5 @@
 import func2url from "../../backend/func2url.json";
-import { getAccessToken } from "@/lib/auth";
+import { authorizedFetch } from "@/lib/auth";
 
 const API = (func2url as Record<string, string>)["cae-api"];
 
@@ -51,11 +51,8 @@ async function call<T = unknown>(
     "Content-Type": "application/json",
     Accept: "application/json",
   };
-  if (auth) {
-    const token = getAccessToken();
-    if (token) headers["X-Authorization"] = `Bearer ${token}`;
-  }
-  const res = await fetch(`${API}?${qs}`, {
+  const doFetch = auth ? authorizedFetch : fetch;
+  const res = await doFetch(`${API}?${qs}`, {
     method,
     headers,
     body: method === "GET" ? undefined : JSON.stringify(body || {}),

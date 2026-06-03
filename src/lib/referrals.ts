@@ -3,7 +3,7 @@
  * Включает получение реф-профиля, рейтинг и помощник для сборки ссылки приглашения.
  */
 import func2url from "../../backend/func2url.json";
-import { getAccessToken } from "@/lib/auth";
+import { authorizedFetch } from "@/lib/auth";
 
 const API = (func2url as Record<string, string>)["referral-api"];
 
@@ -78,9 +78,7 @@ async function call<T = unknown>(
     "Content-Type": "application/json",
     Accept: "application/json",
   };
-  const token = getAccessToken();
-  if (token) headers["X-Authorization"] = `Bearer ${token}`;
-  const res = await fetch(`${API}?action=${action}`, {
+  const res = await authorizedFetch(`${API}?action=${action}`, {
     method,
     headers,
     body: method === "POST" ? JSON.stringify(body ?? {}) : undefined,
