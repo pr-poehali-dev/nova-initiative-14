@@ -93,3 +93,139 @@ export const ALL_ROUTES = Object.keys(PAGES_SEO);
 export function getPageSeo(pathname: string): PageSeo {
   return PAGES_SEO[pathname] || PAGES_SEO["/"];
 }
+
+// ── Schema.org-хелперы (для ИИ-поиска: Google AI Overviews, Алиса, Gemini) ──
+
+type Json = Record<string, unknown>;
+
+/** Абсолютный URL по относительному пути. */
+export function absUrl(path: string): string {
+  return `${SITE_URL}${path === "/" ? "/" : path}`;
+}
+
+/**
+ * BreadcrumbList — хлебные крошки. Помогают ИИ-поиску понять место страницы
+ * в структуре сайта и формируют «дорожку» в выдаче.
+ * @param trail массив [название, путь]; путь "/" для главной добавляется сам.
+ */
+export function breadcrumbsLd(trail: Array<[string, string]>): Json {
+  const items = [["Главная", "/"], ...trail];
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items.map(([name, path], i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name,
+      item: absUrl(path),
+    })),
+  };
+}
+
+/**
+ * Course — образовательная программа наставничества. Сильный сигнал
+ * для ИИ-ответов на запросы «как написать диплом», «помощь с ВКР».
+ */
+export function courseLd(opts: {
+  name: string;
+  description: string;
+  url: string;
+  hasParts?: string[];
+}): Json {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Course",
+    name: opts.name,
+    description: opts.description,
+    url: opts.url,
+    inLanguage: "ru-RU",
+    provider: {
+      "@type": "EducationalOrganization",
+      name: SITE_NAME,
+      url: SITE_URL,
+    },
+    ...(opts.hasParts && opts.hasParts.length
+      ? {
+          hasPart: opts.hasParts.map((n) => ({
+            "@type": "Course",
+            name: n,
+            provider: { "@type": "EducationalOrganization", name: SITE_NAME },
+          })),
+        }
+      : {}),
+  };
+}
+
+/**
+ * Service + предложения (OfferCatalog) — для страницы тарифов.
+ * Помогает ИИ-поиску отвечать на «сколько стоит помощь с дипломом».
+ */
+export function serviceLd(opts: {
+  name: string;
+  description: string;
+  url: string;
+  offers?: Array<{ name: string; price: number; description?: string }>;
+  areaServed?: string;
+}): Json {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    serviceType: opts.name,
+    name: opts.name,
+    description: opts.description,
+    url: opts.url,
+    areaServed: { "@type": "City", name: opts.areaServed || "Екатеринбург" },
+    provider: {
+      "@type": "EducationalOrganization",
+      name: SITE_NAME,
+      url: SITE_URL,
+    },
+    ...(opts.offers && opts.offers.length
+      ? {
+          hasOfferCatalog: {
+            "@type": "OfferCatalog",
+            name: opts.name,
+            itemListElement: opts.offers.map((o) => ({
+              "@type": "Offer",
+              name: o.name,
+              ...(o.description ? { description: o.description } : {}),
+              ...(o.price > 0
+                ? { price: o.price, priceCurrency: "RUB" }
+                : {}),
+            })),
+          },
+        }
+      : {}),
+  };
+}
+
+/**
+ * SoftwareApplication — облачный CAE-инструмент. Для запросов
+ * «расчёт рамы онлайн», «эпюры моментов калькулятор».
+ */
+export function softwareLd(opts: {
+  name: string;
+  description: string;
+  url: string;
+  features?: string[];
+}): Json {
+  return {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: opts.name,
+    description: opts.description,
+    url: opts.url,
+    applicationCategory: "EngineeringApplication",
+    operatingSystem: "Web",
+    inLanguage: "ru-RU",
+    offers: {
+      "@type": "Offer",
+      price: 0,
+      priceCurrency: "RUB",
+      description: "Бесплатный доступ в режиме альфа-теста",
+    },
+    ...(opts.features && opts.features.length
+      ? { featureList: opts.features }
+      : {}),
+  };
+}

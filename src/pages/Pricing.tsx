@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import useTariffs, { formatPrice } from "@/hooks/useTariffs";
 import Seo from "@/components/Seo";
+import { absUrl, breadcrumbsLd, getPageSeo, serviceLd } from "@/lib/seo";
 import CaeCrossSell from "@/components/cae/CaeCrossSell";
 
 const scenarios = [
@@ -50,9 +51,24 @@ const Pricing = () => {
     return rows;
   };
 
+  const seo = getPageSeo("/pricing");
+  const jsonLd = [
+    serviceLd({
+      name: "Наставничество по дипломному проекту (ВКР)",
+      description: seo.description,
+      url: absUrl("/pricing"),
+      offers: tariffs.map((t) => ({
+        name: t.title,
+        price: t.price,
+        description: t.audience || t.duration,
+      })),
+    }),
+    breadcrumbsLd([["Тарифы", "/pricing"]]),
+  ];
+
   return (
     <main className="min-h-screen grid-bg">
-      <Seo />
+      <Seo jsonLd={jsonLd} />
       <section className="pt-28 pb-16 px-4 md:px-8 max-w-[1200px] mx-auto">
         <div className="drawing-frame p-6 md:p-10 relative">
           <div className="zone-marker top-2 left-3">В1</div>

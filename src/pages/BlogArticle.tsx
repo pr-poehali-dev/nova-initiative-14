@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "@/lib/helmet-shim";
 import { fetchArticle, formatRuDate, type Article } from "@/lib/articles";
-import { SITE_URL } from "@/lib/seo";
+import { SITE_URL, breadcrumbsLd } from "@/lib/seo";
 import NotFound from "@/pages/NotFound";
 import ReadingProgress from "@/components/blog/ReadingProgress";
 import ArticleToc from "@/components/blog/ArticleToc";
@@ -99,6 +99,14 @@ const BlogArticle = () => {
         )}
         <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
         {faqLd && <script type="application/ld+json">{JSON.stringify(faqLd)}</script>}
+        <script type="application/ld+json">
+          {JSON.stringify(
+            breadcrumbsLd([
+              ["Блог", "/blog"],
+              [article.h1, `/blog/${article.slug}`],
+            ])
+          )}
+        </script>
       </Helmet>
 
       <ReadingProgress />

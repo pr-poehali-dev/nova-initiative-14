@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Helmet } from "@/lib/helmet-shim";
 import Icon from "@/components/ui/icon";
-import { SITE_URL } from "@/lib/seo";
+import { SITE_URL, absUrl, breadcrumbsLd, softwareLd } from "@/lib/seo";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchCaeTariffs, joinWaitlist, type CaeTariff } from "@/lib/cae";
 import Notify3DForm from "@/components/cae/Notify3DForm";
@@ -20,8 +20,8 @@ const formatPrice = (kopecks: number) => {
 const FEATURES = [
   {
     icon: "Box",
-    title: "2D и 3D редактор рам",
-    text: "Рисуйте узлы и элементы прямо в браузере — плоские схемы и пространственные рамы. Snap к сетке, перемещение узлов, библиотека сечений ГОСТ.",
+    title: "2D-редактор рам и балок",
+    text: "Рисуйте узлы и элементы плоской схемы прямо в браузере: snap к сетке, перемещение узлов, опоры и шарниры, библиотека сечений ГОСТ. 3D-режим — на подходе.",
   },
   {
     icon: "Calculator",
@@ -98,12 +98,33 @@ const CaeLanding = () => {
   return (
     <>
       <Helmet>
-        <title>Облачный CAE для машиностроителей — 2D/3D расчёт рам и балок · Диплом-Инж.рф</title>
+        <title>Расчёт рамы и балки онлайн — облачный CAE · эпюры N/Q/M · Диплом-Инж.рф</title>
         <meta
           name="description"
-          content="Облачный CAE для машиностроителей: плоские рамы и балки, библиотека ГОСТ-профилей, эпюры N/Q/M, PDF-отчёт по ЕСКД. Лёгкий, в браузере, без установки. Доступен в режиме альфа-теста — бесплатно."
+          content="Облачный CAE для расчёта плоских рам и балок онлайн: метод конечных элементов, эпюры N, Q, M, напряжения по Мизесу, каталог ГОСТ-профилей и PDF-отчёт по ЕСКД. Прямо в браузере, без установки. Альфа-тест — бесплатно."
         />
         <link rel="canonical" href={`${SITE_URL}/cae`} />
+        <script type="application/ld+json">
+          {JSON.stringify(
+            softwareLd({
+              name: "Облачный CAE — расчёт рам и балок онлайн",
+              description:
+                "Конечно-элементный расчёт плоских рам и балок в браузере: эпюры N, Q, M, напряжения по Мизесу, каталог ГОСТ-профилей, нелинейный расчёт P-Δ и PDF-отчёт по ЕСКД.",
+              url: absUrl("/cae"),
+              features: [
+                "2D-редактор рам и балок",
+                "Конечно-элементный расчёт (метод КЭ)",
+                "Эпюры N, Q, M и напряжения по Мизесу",
+                "Каталог ГОСТ-профилей",
+                "Нелинейный расчёт P-Δ",
+                "PDF-отчёт по ЕСКД",
+              ],
+            })
+          )}
+        </script>
+        <script type="application/ld+json">
+          {JSON.stringify(breadcrumbsLd([["Облачный CAE", "/cae"]]))}
+        </script>
       </Helmet>
 
       <div className="max-w-[1200px] mx-auto px-4 pt-20 md:pt-24 pb-16">
@@ -171,7 +192,7 @@ const CaeLanding = () => {
             прямо в&nbsp;браузере
           </h1>
           <p className="text-base md:text-lg text-[var(--drawing-line-thin)] max-w-2xl mx-auto leading-relaxed mb-3">
-            Облачный CAE-инструмент для машиностроителей: 2D и&nbsp;3D балочные рамы, библиотека ГОСТ-профилей, эпюры, пояснительная записка по&nbsp;ЕСКД. Лёгкая альтернатива APM&nbsp;WinMachine и&nbsp;ANSYS прямо в&nbsp;браузере.
+            Облачный CAE-инструмент для машиностроителей: плоские (2D) балочные рамы, библиотека ГОСТ-профилей, эпюры N/Q/M, пояснительная записка по&nbsp;ЕСКД. Лёгкая альтернатива APM&nbsp;WinMachine и&nbsp;ANSYS прямо в&nbsp;браузере. Пространственный 3D-режим&nbsp;— на&nbsp;подходе.
           </p>
           <p className="font-gost text-sm uppercase tracking-wider text-[var(--drawing-accent)] mb-6">
             Запуск весной 2027&nbsp;·&nbsp;Сейчас собираем ранний доступ

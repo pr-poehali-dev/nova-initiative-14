@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Helmet } from "@/lib/helmet-shim";
 import { fetchArticles, formatRuDate, type ArticleListItem } from "@/lib/articles";
-import { SITE_URL } from "@/lib/seo";
+import { SITE_URL, absUrl, breadcrumbsLd } from "@/lib/seo";
 
 const Blog = () => {
   const [articles, setArticles] = useState<ArticleListItem[]>([]);
@@ -16,6 +16,20 @@ const Blog = () => {
       .finally(() => setLoading(false));
   }, []);
 
+  const itemListLd = articles.length
+    ? {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        name: "Инженерный блог Диплом-Инж.рф",
+        itemListElement: articles.map((a, i) => ({
+          "@type": "ListItem",
+          position: i + 1,
+          url: absUrl(`/blog/${a.slug}`),
+          name: a.h1,
+        })),
+      }
+    : null;
+
   return (
     <>
       <Helmet>
@@ -25,6 +39,12 @@ const Blog = () => {
           content="Экспертные лонгриды для студентов и наставников: оформление ВКР по ГОСТ, расчёты в КОМПАС-3D и APM FEM, материалы, допуски и посадки, защита диплома в УрФУ."
         />
         <link rel="canonical" href={`${SITE_URL}/blog`} />
+        <script type="application/ld+json">
+          {JSON.stringify(breadcrumbsLd([["Блог", "/blog"]]))}
+        </script>
+        {itemListLd && (
+          <script type="application/ld+json">{JSON.stringify(itemListLd)}</script>
+        )}
       </Helmet>
 
       <div className="max-w-[1100px] mx-auto px-4 py-8 md:py-12 pt-20 md:pt-24">

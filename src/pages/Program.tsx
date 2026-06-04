@@ -12,6 +12,7 @@
  */
 import Seo from "@/components/Seo";
 import { PROGRAM_MODULES } from "@/data/program-modules";
+import { absUrl, breadcrumbsLd, courseLd, getPageSeo } from "@/lib/seo";
 import ProgramHero from "@/components/program/ProgramHero";
 import ProgramNav from "@/components/program/ProgramNav";
 import ProgramModuleCard from "@/components/program/ProgramModuleCard";
@@ -19,9 +20,20 @@ import ReviewProcess from "@/components/program/ReviewProcess";
 import ProgramCta from "@/components/program/ProgramCta";
 
 const Program = () => {
+  const seo = getPageSeo("/program");
+  const jsonLd = [
+    courseLd({
+      name: "Наставничество по дипломному проекту (ВКР) — машиностроение",
+      description: seo.description,
+      url: absUrl("/program"),
+      hasParts: PROGRAM_MODULES.map((m) => `${m.num}. ${m.title}`),
+    }),
+    breadcrumbsLd([["Программа", "/program"]]),
+  ];
+
   return (
     <main className="min-h-screen grid-bg">
-      <Seo />
+      <Seo jsonLd={jsonLd} />
       <ProgramHero />
       <ProgramNav modules={PROGRAM_MODULES} />
 

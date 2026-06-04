@@ -96,6 +96,7 @@ def _handle_sitemap(conn):
         ("/contacts", "monthly", "0.9"),
         ("/vacancies", "monthly", "0.6"),
         ("/blog", "weekly", "0.9"),
+        ("/cae", "weekly", "0.9"),
     ]
     parts = ['<?xml version="1.0" encoding="UTF-8"?>',
              '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
