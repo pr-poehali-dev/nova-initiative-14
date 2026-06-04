@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { HelmetProvider } from "@/lib/helmet-shim";
 import { useEffect } from "react";
 import Navigation from "./components/Navigation";
@@ -38,7 +38,7 @@ import CaeNewProject from "./pages/CaeNewProject";
 import CaeEditor from "./pages/CaeEditor";
 import CaeDemoEditor from "./pages/CaeDemoEditor";
 import CaeChangelog from "./pages/CaeChangelog";
-import CaeRoadmap from "./pages/CaeRoadmap";
+import RoadmapView from "./pages/RoadmapView";
 import AdGenerator from "./pages/AdGenerator";
 import NotFound from "./pages/NotFound";
 import { useVisitorTracking, getVisitorData } from "./hooks/useVisitorTracking";
@@ -144,7 +144,8 @@ const App = () => (
                 <Route path="/cae/projects/:id" element={<CaeEditor />} />
                 <Route path="/cae/demo" element={<CaeDemoEditor />} />
                 <Route path="/cae/changelog" element={<CaeChangelog />} />
-                <Route path="/cae/roadmap" element={<CaeRoadmap />} />
+                <Route path="/roadmaps/:slug" element={<RoadmapView />} />
+                <Route path="/cae/roadmap" element={<Navigate to="/roadmaps/plm" replace />} />
                 <Route path="/oauth/callback" element={<OAuthCallback />} />
                 <Route path="/admin/generator" element={<AdGenerator />} />
                 <Route path="*" element={<NotFound />} />

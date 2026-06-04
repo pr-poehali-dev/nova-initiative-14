@@ -1,23 +1,26 @@
 import { Helmet } from "@/lib/helmet-shim";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  PLM_ROADMAP,
+  getRoadmap,
   STATUS_META,
   roadmapStats,
   type RoadmapStatus,
-} from "@/lib/plmRoadmap";
+} from "@/lib/roadmaps";
 
 /**
- * ВНУТРЕННЯЯ дорожная карта развития сервиса в сторону PLM (тикет №43).
- * Доступна ТОЛЬКО администратору и владельцу продукта — вход из личного
- * кабинета. Скрыта от поисковых роботов (noindex,nofollow).
+ * ВНУТРЕННЯЯ страница-просмотрщик любой дорожной карты по slug
+ * (/roadmaps/:slug). Доступна ТОЛЬКО администратору и владельцу — вход из
+ * личного кабинета. Скрыта от поисковых роботов (noindex,nofollow).
+ *
+ * Данные всех карт лежат в едином реестре src/lib/roadmaps.ts.
  */
-export default function CaeRoadmap() {
+export default function RoadmapView() {
   const { user, loading } = useAuth();
   const nav = useNavigate();
-  const stats = roadmapStats();
+  const { slug } = useParams();
+  const rm = getRoadmap(slug);
 
   if (loading) {
     return (
@@ -33,50 +36,64 @@ export default function CaeRoadmap() {
     return null;
   }
 
+  if (!rm) {
+    return (
+      <div className="max-w-[800px] mx-auto px-4 pt-24 pb-16 text-center">
+        <Icon name="MapPinOff" size={32} className="text-[var(--drawing-line-thin)] mx-auto mb-3" />
+        <p className="font-gost-upright font-bold mb-2">Карта не найдена</p>
+        <Link to="/account" className="text-[var(--drawing-accent)] hover:underline text-sm">
+          ← Вернуться в кабинет
+        </Link>
+      </div>
+    );
+  }
+
+  const stats = roadmapStats(rm);
+
   return (
     <>
       <Helmet>
-        <title>Внутренняя дорожная карта PLM · Диплом-Инж.рф</title>
+        <title>{rm.title} · внутренняя дорожная карта · Диплом-Инж.рф</title>
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
 
       <div className="max-w-[880px] mx-auto px-4 pt-20 md:pt-24 pb-16">
+        <Link
+          to="/account"
+          className="inline-flex items-center gap-1 font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)] hover:text-[var(--drawing-accent)] mb-4"
+        >
+          <Icon name="ArrowLeft" size={12} /> Все дорожные карты
+        </Link>
+
         <div className="flex items-center gap-2 mb-2">
           <span className="inline-flex items-center gap-1 bg-[var(--drawing-line)] text-[var(--drawing-bg)] px-2 py-0.5 font-gost text-[10px] uppercase tracking-wider">
             <Icon name="Lock" size={11} /> Внутренний документ
           </span>
           <p className="font-gost text-[11px] uppercase tracking-[0.3em] text-[var(--drawing-line-thin)]">
-            CAE → PLM
+            {rm.eyebrow}
           </p>
         </div>
+
         <h1 className="font-gost-upright text-2xl md:text-3xl font-black uppercase tracking-wide mb-3">
-          Дорожная карта развития
+          {rm.title}
         </h1>
-        <p className="text-sm text-[var(--drawing-line-thin)] mb-6 leading-relaxed max-w-2xl">
-          Внутренний план развития сервиса в сторону PLM-платформы: совместная
-          работа над проектом, деление конструкции на модули, автоматический
-          расчёт соединений, спецификация и пояснительная записка, оценка
-          стоимости. Видно, что уже готово, что в работе и что впереди.
+        <p className="text-sm text-[var(--drawing-line-thin)] mb-4 leading-relaxed max-w-2xl">
+          {rm.description}
         </p>
 
-        {/* Сводка по статусам */}
-        <div className="flex flex-wrap gap-3 mb-10 text-xs font-gost">
-          <span className="border border-green-700 text-green-700 px-2 py-1 uppercase tracking-wider inline-flex items-center gap-1">
-            <Icon name="CheckCircle2" size={12} /> Готово: {stats.done}
+        {/* Пометка с расположением исходного файла */}
+        <div className="flex flex-wrap items-center gap-3 mb-8 text-xs font-gost">
+          <span className="inline-flex items-center gap-1.5 border border-[var(--drawing-line)]/40 px-2 py-1 text-[var(--drawing-line-thin)]">
+            <Icon name="FileCode" size={12} />
+            Источник:&nbsp;<code className="font-mono text-[var(--drawing-line)]">{rm.source}</code>
           </span>
-          <span className="border border-[var(--drawing-line)] text-[var(--drawing-line-thin)] px-2 py-1 uppercase tracking-wider inline-flex items-center gap-1">
-            <Icon name="ListChecks" size={12} /> Всего задач: {stats.total}
+          <span className="inline-flex items-center gap-1 border border-green-700 text-green-700 px-2 py-1 uppercase tracking-wider">
+            <Icon name="CheckCircle2" size={12} /> Готово: {stats.done}/{stats.total}
           </span>
-          <Link
-            to="/cae/changelog"
-            className="border border-[var(--drawing-accent)] text-[var(--drawing-accent)] px-2 py-1 uppercase tracking-wider inline-flex items-center gap-1 hover:bg-[var(--drawing-accent)]/5"
-          >
-            <Icon name="History" size={12} /> Журнал версий
-          </Link>
         </div>
 
         <div className="space-y-10">
-          {PLM_ROADMAP.map((phase, i) => (
+          {rm.phases.map((phase) => (
             <section key={phase.key} id={phase.key}>
               <div className="flex items-start gap-3 mb-3">
                 <div className="shrink-0 w-9 h-9 border-2 border-[var(--drawing-line)] flex items-center justify-center bg-[var(--drawing-bg)]">
@@ -102,7 +119,7 @@ export default function CaeRoadmap() {
                   const meta = STATUS_META[task.status as RoadmapStatus];
                   return (
                     <li
-                      key={`${i}-${j}`}
+                      key={`${phase.key}-${j}`}
                       className="border-l-2 border-[var(--drawing-line)]/20 pl-3 py-0.5"
                     >
                       <div className="flex flex-wrap items-center gap-2">
