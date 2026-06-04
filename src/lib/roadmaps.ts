@@ -451,8 +451,91 @@ const CAE_3D_ROADMAP: Roadmap = {
   ],
 };
 
+// ============================================================
+// КАРТА 6 — Выход на MVP (источник: docs/webapp/roadmap-ui.md, аудит 85/100)
+// ============================================================
+const MVP_ROADMAP: Roadmap = {
+  slug: "mvp",
+  title: "Выход на MVP",
+  eyebrow: "Готовность к запуску",
+  description:
+    "Чек-лист готовности к публичному запуску по итогам комплексного аудита (оценка 85/100). Четыре блока: расчётное ядро CAE, честность контента, структура/навигация, UI и тёмная тема. Сначала закрываем блокеры доверия, остальное — на постзапуск.",
+  icon: "Rocket",
+  state: "active",
+  source: "docs/webapp/roadmap-ui.md · «Аудит качества перед МВП» (2026-05-29)",
+  phases: [
+    {
+      key: "core",
+      title: "Блок A. Расчётное ядро CAE (критично)",
+      icon: "Cpu",
+      horizon: "Готовность ~92%",
+      summary: "Честность расчёта недопустимо нарушать. Все критичные ошибки ядра закрыты.",
+      tasks: [
+        { title: "A1 · σ-Мизес по двум точкам сечения", status: "done", note: "Крайнее волокно |σN|+σизг и нейтральная ось √(σN²+3τ²). solver.py." },
+        { title: "A2 · Учёт Qz в 3D-сдвиге", status: "done", note: "τ=√(τy²+τz²), двухосный изгиб консервативно." },
+        { title: "A3 · Мизес→Трэска как верхняя оценка", status: "done", note: "Коэффициент 1.1547 с явной меткой. checks/shared.ts." },
+        { title: "A4 · Знак M_y(x) в 3D", status: "done", note: "dM_y/dx = −Q_z." },
+        { title: "A5 · W и предупреждение по несимметричным сечениям", status: "done" },
+      ],
+    },
+    {
+      key: "honesty",
+      title: "Блок B. Честность контента (блокеры доверия)",
+      icon: "ShieldCheck",
+      horizon: "Закрыть до запуска",
+      summary: "Контент не должен обещать того, чего нет. Главные открытые блокеры — здесь.",
+      tasks: [
+        { title: "B1 · Нелинейный P-Δ + честный лендинг", status: "done", note: "Убраны несуществующие упругопластичность и бенчмарки." },
+        { title: "B2 · Цифра «95% покупают диплом» без источника", status: "next", note: "src/pages/About.tsx — убрать или обосновать. Блокер." },
+        { title: "B3 · Пустые контакты-fallback", status: "next", note: "src/hooks/useContacts.ts — при сбое API нет связи. Блокер." },
+        { title: "B4 · Гарантия возврата на /pricing", status: "later", note: "Сейчас только в FAQ." },
+        { title: "B5 · Согласовать сроки ответа («2 часа» vs «48/12 ч»)", status: "later" },
+      ],
+    },
+    {
+      key: "structure",
+      title: "Блок C. Структура и навигация",
+      icon: "Network",
+      horizon: "Частично",
+      summary: "Маршруты, доступы и SEO-полнота.",
+      tasks: [
+        { title: "C1 · Закрыть доступ к /admin/generator", status: "done", note: "Открыт только админу и владельцу." },
+        { title: "C2 · Добавить /privacy и /offer в sitemap.xml", status: "later" },
+        { title: "C3 · Ссылка на /cae в футере", status: "later" },
+        { title: "C4 · Lazy-loading маршрутов", status: "later", note: "Сейчас все импорты статические." },
+      ],
+    },
+    {
+      key: "ui-theme",
+      title: "Блок D. UI и тёмная тема",
+      icon: "Moon",
+      horizon: "Полировка",
+      summary: "Единый стиль и корректная тёмная тема на всех экранах.",
+      tasks: [
+        { title: "D1 · NotFound под тёмную тему", status: "next", note: "Сейчас bg-gray-100/text-blue-500 ломают айдентику." },
+        { title: "D2 · Кнопка Google под тёмную тему", status: "next", note: "Hardcoded bg-white." },
+        { title: "D3 · Убрать hardcoded color в .btn-drawing-accent:hover", status: "later" },
+        { title: "D4 · Зелёный реакций в демо через переменную темы", status: "later" },
+      ],
+    },
+    {
+      key: "post-launch",
+      title: "Постзапуск (M10+)",
+      icon: "Clock",
+      horizon: "После старта",
+      summary: "Защита от обхода лимитов и инфраструктурные доработки — не блокируют запуск.",
+      tasks: [
+        { title: "Серверный контроль демо (FingerprintJS + SmartCaptcha)", status: "research", note: "M10: cae_demo_attempts." },
+        { title: "Rate-limit solver-а по IP", status: "later", note: "M10." },
+        { title: "Мягкая плашка при детекте VPN", status: "later" },
+      ],
+    },
+  ],
+};
+
 /** Все дорожные карты в одном месте. Первая — основная (PLM). */
 export const ROADMAPS: Roadmap[] = [
+  MVP_ROADMAP,
   PLM_ROADMAP,
   CAE_3D_ROADMAP,
   UI_ROADMAP,
