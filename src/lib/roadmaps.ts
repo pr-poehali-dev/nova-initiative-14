@@ -369,9 +369,92 @@ const STRATEGY_ROADMAP: Roadmap = {
   ],
 };
 
+// ============================================================
+// КАРТА 5 — 3D CAE-редактор (источник: код CAE; кнопка «3D» пока отключена)
+// ============================================================
+const CAE_3D_ROADMAP: Roadmap = {
+  slug: "cae-3d",
+  title: "3D CAE-редактор",
+  eyebrow: "Пространственный расчёт",
+  description:
+    "Полноценный трёхмерный расчёт рам: backend уже считает 3D (6 степеней свободы, кручение, два изгиба, P-Δ), осталось довести фронт — 3D-канву, ввод пространственной модели и эпюры по двум плоскостям. Кнопка «Создать 3D» пока отключена до верификации.",
+  icon: "Box",
+  state: "active",
+  source: "backend/cae-solver/* · src/components/cae/* · src/lib/cae/types.ts",
+  phases: [
+    {
+      key: "solver-3d",
+      title: "Этап 1. Расчётное ядро 3D (готово)",
+      icon: "Cpu",
+      horizon: "Сделано",
+      summary: "Backend полностью считает 3D-линейную статику. На это опирается весь дальнейший UI.",
+      tasks: [
+        { title: "6 степеней свободы на узел", status: "done", note: "ux, uy, uz, rx, ry, rz (dof_per_node=6)." },
+        { title: "Матрица жёсткости 3D с кручением", status: "done", note: "12×12, осевая + 2 изгиба + кручение GJ/L, Тимошенко." },
+        { title: "3D-нагрузки (qy, qz, точечные, трапеция)", status: "done", note: "С эквивалентными моментами My/Mz." },
+        { title: "Эпюры N, Qy, Qz, T, My, Mz", status: "done", note: "Solver возвращает все 7 эпюр + σ_vm." },
+        { title: "Двухосный изгиб в напряжениях", status: "done", note: "σ от My и Mz, консервативная оценка волокна." },
+        { title: "P-Δ нелинейность в 3D", status: "done", note: "Геометрическая матрица жёсткости beam_geometric_k_3d." },
+      ],
+    },
+    {
+      key: "verify-3d",
+      title: "Этап 2. Верификация 3D",
+      icon: "ClipboardCheck",
+      horizon: "Ближайшее",
+      summary: "До открытия 3D пользователям нужно подтвердить расчёт на эталонных пространственных задачах.",
+      tasks: [
+        { title: "Эталонные 3D-задачи (кручение, косой изгиб)", status: "next", note: "Расширить cae-verify пространственными примерами." },
+        { title: "Сверка с аналитикой/литературой (допуск 5%)", status: "next" },
+        { title: "Снять блокировку кнопки «Создать 3D»", status: "next", note: "src/pages/CaeProjects.tsx — кнопка пока disabled «скоро»." },
+      ],
+    },
+    {
+      key: "canvas-3d",
+      title: "Этап 3. 3D-канва (визуализация)",
+      icon: "Boxes",
+      horizon: "Крупный этап",
+      summary: "Сейчас схема рисуется в 2D SVG; Z-координаты не отображаются. Нужна настоящая 3D-сцена.",
+      tasks: [
+        { title: "Подключить three.js / R3F", status: "research", note: "В package.json 3D-движка пока нет." },
+        { title: "3D-сцена: стержни, узлы, опоры в пространстве", status: "later" },
+        { title: "Орбита-камера, виды (изометрия, спереди/сбоку/сверху)", status: "later" },
+        { title: "Выбор и подсветка элементов в 3D", status: "later" },
+      ],
+    },
+    {
+      key: "input-3d",
+      title: "Этап 4. Ввод 3D-модели",
+      icon: "MousePointerClick",
+      horizon: "Крупный этап",
+      summary: "Дать пользователю реально задать пространственную конструкцию. Сейчас UI ограничен плоскостью.",
+      tasks: [
+        { title: "Ввод и правка Z-координаты узла", status: "later", note: "Панель узла показывает только x, y." },
+        { title: "Опоры по 6 DOF (uz, rx, ry)", status: "later", note: "Сейчас доступны ux, uy, rz." },
+        { title: "Нагрузки Fz, Mx, My и qz", status: "later", note: "Сейчас Fx, Fy, Mz и qy." },
+        { title: "Ориентация (поворот) сечения вокруг оси стержня", status: "later" },
+      ],
+    },
+    {
+      key: "diagrams-3d",
+      title: "Этап 5. Эпюры и результаты 3D",
+      icon: "ChartSpline",
+      horizon: "После канвы",
+      summary: "Данные для 3D-эпюр уже приходят с бэка; нужны переключатели и отрисовка по двум плоскостям.",
+      tasks: [
+        { title: "Переключатели эпюр Qz, My, T", status: "later", note: "Сейчас в UI только Qy и Mz." },
+        { title: "Эпюра прогиба uz", status: "later" },
+        { title: "Деформированная форма в 3D", status: "later", note: "Сейчас deformed по uy (2D)." },
+        { title: "PDF-отчёт с 3D-схемой и эпюрами", status: "later" },
+      ],
+    },
+  ],
+};
+
 /** Все дорожные карты в одном месте. Первая — основная (PLM). */
 export const ROADMAPS: Roadmap[] = [
   PLM_ROADMAP,
+  CAE_3D_ROADMAP,
   UI_ROADMAP,
   ARCH_ROADMAP,
   STRATEGY_ROADMAP,
