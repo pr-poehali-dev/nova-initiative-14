@@ -14,6 +14,7 @@ import EditorTutorial from "@/components/cae/editor/EditorTutorial";
 import EditorWelcomeDialog from "@/components/cae/editor/EditorWelcomeDialog";
 import EditorAnalysisSettingsDialog from "@/components/cae/editor/EditorAnalysisSettingsDialog";
 import EditorLeftPanel from "@/components/cae/editor/EditorLeftPanel";
+import DraftRestoreBanner from "@/components/cae/editor/DraftRestoreBanner";
 import { DEFAULT_ANALYSIS_SETTINGS } from "@/lib/cae-model";
 import { useCaeProject } from "./cae-editor/useCaeProject";
 import { useCaeActions } from "./cae-editor/useCaeActions";
@@ -44,6 +45,9 @@ const CaeEditor = () => {
     redo,
     canUndo,
     canRedo,
+    draftFound,
+    restoreDraft,
+    discardDraft,
   } = useCaeProject(projectId);
 
   const {
@@ -191,6 +195,14 @@ const CaeEditor = () => {
           onSave={onSave}
           onSolve={onSolve}
         />
+
+        {draftFound && (
+          <DraftRestoreBanner
+            savedAt={draftFound.savedAt}
+            onRestore={restoreDraft}
+            onDiscard={discardDraft}
+          />
+        )}
 
         <div className="max-w-[1400px] mx-auto px-3 py-3 grid gap-3 lg:grid-cols-[240px_1fr_300px]">
           {/* Левая панель инструментов — на десктопе сбоку, на мобилке в виде вкладки */}

@@ -10,6 +10,7 @@ import {
 } from "@/lib/cae-model";
 import { setUnsavedChanges } from "@/lib/reloadGuard";
 import { getDisciplinePreference } from "@/lib/cae/discipline-preference";
+import { saveDraft, loadDraft, clearDraft, type CaeDraft } from "@/lib/cae/draft";
 import { useCaeHistory } from "./useCaeHistory";
 
 export function useCaeProject(projectId: number) {
@@ -26,6 +27,8 @@ export function useCaeProject(projectId: number) {
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Черновик из localStorage, найденный при загрузке проекта (тикет №49).
+  const [draftFound, setDraftFound] = useState<CaeDraft | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -43,6 +46,10 @@ export function useCaeProject(projectId: number) {
         }
         setProjectName(r.data.project.name);
         setVersionId(r.data.version_id);
+        // Проверяем локальный черновик: если он есть, покажем баннер с
+        // предложением восстановить несохранённые изменения (тикет №49).
+        const draft = loadDraft(projectId);
+        if (draft) setDraftFound(draft);
         const m = r.data.model as FrameModel | Record<string, never>;
         if (m && (m as FrameModel).meta) {
           // Чиним возможные дефекты старых сохранённых моделей (дубли id
@@ -78,6 +85,29 @@ export function useCaeProject(projectId: number) {
     };
   }, [dirty]);
 
+  // Автосохранение черновика в localStorage при изменениях (тикет №49).
+  // Дебаунс 800 мс, чтобы не писать на каждое микро-движение. Пишем только
+  // когда есть несохранённые правки и проект уже загружен.
+  useEffect(() => {
+    if (!projectId || !dirty || loadingModel) return;
+    const t = setTimeout(() => saveDraft(projectId, model), 800);
+    return () => clearTimeout(t);
+  }, [model, dirty, projectId, loadingModel]);
+
+  /** Восстановить модель из найденного черновика. */
+  const restoreDraft = useCallback(() => {
+    if (!draftFound) return;
+    resetHistory(normalizeModel(draftFound.model));
+    setDirty(true);
+    setDraftFound(null);
+  }, [draftFound, resetHistory]);
+
+  /** Отказаться от черновика и удалить его. */
+  const discardDraft = useCallback(() => {
+    if (projectId) clearDraft(projectId);
+    setDraftFound(null);
+  }, [projectId]);
+
   /** Главная точка мутации модели — пишется в историю */
   const updateModel = useCallback((next: FrameModel) => {
     pushModel(next);
@@ -98,6 +128,8 @@ export function useCaeProject(projectId: number) {
       setVersionId(r.data.version_id);
       setLastSaved(new Date().toLocaleTimeString("ru-RU"));
       setDirty(false);
+      // Успешно сохранили на сервер — локальный черновик больше не нужен.
+      clearDraft(projectId);
     } else {
       setLoadError(r.message || "Ошибка сохранения");
     }
@@ -122,5 +154,8 @@ export function useCaeProject(projectId: number) {
     redo,
     canUndo,
     canRedo,
+    draftFound,
+    restoreDraft,
+    discardDraft,
   };
 }
