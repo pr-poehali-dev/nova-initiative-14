@@ -88,6 +88,12 @@ export default function CaeChangelog() {
                       <Icon name={meta.icon} size={10} fallback="Sparkles" />
                       {meta.label}
                     </span>
+                    {e.is_internal && (
+                      <span className="inline-flex items-center gap-1 font-gost text-[9px] uppercase tracking-wider border border-[var(--drawing-line)] bg-[var(--drawing-line)] text-[var(--drawing-bg)] px-1.5 py-0.5">
+                        <Icon name="Lock" size={9} />
+                        Внутреннее
+                      </span>
+                    )}
                     <span className="font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)] ml-auto">
                       {formatDate(e.released_at)}
                     </span>
@@ -115,17 +121,26 @@ function AdminAddEntry({ onAdded }: { onAdded: () => void }) {
   const [category, setCategory] = useState<ChangelogCategory>("feature");
   const [body, setBody] = useState("");
   const [notify, setNotify] = useState(true);
+  const [isInternal, setIsInternal] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const submit = async () => {
     if (!version.trim() || !title.trim()) return;
     setSaving(true);
-    const res = await createChangelogEntry({ version, title, category, body, notify });
+    const res = await createChangelogEntry({
+      version,
+      title,
+      category,
+      body,
+      notify: isInternal ? false : notify,
+      is_internal: isInternal,
+    });
     setSaving(false);
     if (res.ok) {
       setVersion("");
       setTitle("");
       setBody("");
+      setIsInternal(false);
       setOpen(false);
       onAdded();
     } else {
@@ -183,8 +198,34 @@ function AdminAddEntry({ onAdded }: { onAdded: () => void }) {
         rows={3}
         className="drawing-input text-sm w-full bg-[var(--drawing-bg)] text-[var(--drawing-line)]"
       />
-      <label className="flex items-center gap-2 text-xs text-[var(--drawing-line)] cursor-pointer">
-        <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
+      <label className="flex items-start gap-2 text-xs text-[var(--drawing-line)] cursor-pointer">
+        <input
+          type="checkbox"
+          checked={isInternal}
+          onChange={(e) => setIsInternal(e.target.checked)}
+          className="mt-0.5"
+        />
+        <span>
+          <span className="inline-flex items-center gap-1 font-bold">
+            <Icon name="Lock" size={11} />
+            Внутренняя запись (только для админов)
+          </span>
+          <span className="block text-[var(--drawing-line-thin)]">
+            Не показывается обычным пользователям и не рассылается уведомлением.
+          </span>
+        </span>
+      </label>
+      <label
+        className={`flex items-center gap-2 text-xs cursor-pointer ${
+          isInternal ? "text-[var(--drawing-line-thin)] opacity-50" : "text-[var(--drawing-line)]"
+        }`}
+      >
+        <input
+          type="checkbox"
+          checked={notify && !isInternal}
+          disabled={isInternal}
+          onChange={(e) => setNotify(e.target.checked)}
+        />
         Уведомить всех пользователей (колокольчик)
       </label>
       <div className="flex gap-2">

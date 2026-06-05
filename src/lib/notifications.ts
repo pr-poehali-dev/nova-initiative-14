@@ -100,6 +100,8 @@ export interface ChangelogEntry {
   category: ChangelogCategory;
   body: string | null;
   released_at: string | null;
+  /** Внутренняя (админская) запись. Видна только администраторам. */
+  is_internal?: boolean;
 }
 
 export function listChangelog(limit = 50) {
@@ -114,6 +116,8 @@ export function createChangelogEntry(input: {
   category?: ChangelogCategory;
   body?: string;
   notify?: boolean;
+  /** Внутренняя запись — только для админов, без рассылки уведомления. */
+  is_internal?: boolean;
 }) {
   return call<{ ok: boolean; id: number }>("changelog-create", "POST", input);
 }

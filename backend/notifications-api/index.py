@@ -173,15 +173,23 @@ def _is_admin(conn, user_id: int) -> bool:
         return bool(row and row[0])
 
 
-def action_changelog_list(conn, limit: int) -> dict:
-    """Публичный журнал версий CAE (для страницы /cae/changelog)."""
+def action_changelog_list(conn, limit: int, include_internal: bool = False) -> dict:
+    """
+    Журнал версий CAE.
+
+    Публично (include_internal=False) — только записи с is_internal = FALSE.
+    Для администратора (include_internal=True) — все записи, с флагом is_internal,
+    чтобы UI мог пометить внутренние новости бейджем.
+    """
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-        cur.execute(
-            "SELECT id, version, title, category, body, released_at "
+        sql = (
+            "SELECT id, version, title, category, body, released_at, is_internal "
             "FROM cae_changelog WHERE is_published = TRUE "
-            "ORDER BY released_at DESC, id DESC LIMIT %s",
-            (limit,),
         )
+        if not include_internal:
+            sql += "AND is_internal = FALSE "
+        sql += "ORDER BY released_at DESC, id DESC LIMIT %s"
+        cur.execute(sql, (limit,))
         rows = cur.fetchall()
     return _resp(200, {'changelog': [{
         'id': int(r['id']),
@@ -190,16 +198,24 @@ def action_changelog_list(conn, limit: int) -> dict:
         'category': r['category'],
         'body': r['body'],
         'released_at': r['released_at'].isoformat() if r['released_at'] else None,
+        'is_internal': bool(r['is_internal']),
     } for r in rows]})
 
 
 def action_changelog_create(conn, body: dict) -> dict:
-    """Админ добавляет запись в журнал версий + broadcast-уведомление всем."""
+    """
+    Админ добавляет запись в журнал версий.
+
+    Если is_internal = True — запись видна только администраторам и НЕ рассылается
+    broadcast-уведомлением (внутренняя новость про админ-функционал).
+    """
     version = (body.get('version') or '').strip()[:20]
     title = (body.get('title') or '').strip()[:200]
     category = (body.get('category') or 'feature').strip()
     text = (body.get('body') or '').strip()
-    notify = bool(body.get('notify', True))
+    is_internal = bool(body.get('is_internal', False))
+    # Внутренние записи никогда не рассылаем всем, даже если notify=true.
+    notify = bool(body.get('notify', True)) and not is_internal
     if category not in ('feature', 'fix', 'improvement', 'breaking'):
         category = 'feature'
     if not version or not title:
@@ -207,9 +223,9 @@ def action_changelog_create(conn, body: dict) -> dict:
 
     with conn.cursor() as cur:
         cur.execute(
-            "INSERT INTO cae_changelog (version, title, category, body) "
-            "VALUES (%s, %s, %s, %s) RETURNING id",
-            (version, title, category, text or None),
+            "INSERT INTO cae_changelog (version, title, category, body, is_internal) "
+            "VALUES (%s, %s, %s, %s, %s) RETURNING id",
+            (version, title, category, text or None, is_internal),
         )
         cid = int(cur.fetchone()[0])
         if notify:
@@ -232,6 +248,7 @@ def handler(event: dict, context) -> dict:
     action = (params.get('action') or '').strip()
 
     # Публичный action — журнал версий доступен без авторизации.
+    # Если запрос пришёл от администратора — добавляем внутренние записи.
     if action == 'changelog-list':
         conn = _connect()
         try:
@@ -239,7 +256,15 @@ def handler(event: dict, context) -> dict:
                 limit = min(int(params.get('limit') or 50), 200)
             except ValueError:
                 limit = 50
-            return action_changelog_list(conn, limit)
+            include_internal = False
+            viewer = _auth_user(event)
+            if viewer:
+                try:
+                    if _is_admin(conn, int(viewer['sub'])):
+                        include_internal = True
+                except (KeyError, ValueError, TypeError):
+                    include_internal = False
+            return action_changelog_list(conn, limit, include_internal)
         finally:
             conn.close()
 

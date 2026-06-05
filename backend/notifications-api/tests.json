@@ -21,6 +21,12 @@
       "expectedStatus": 401,
       "expectedBody": { "error": "unauthorized" },
       "bodyMatcher": "partial"
+    },
+    {
+      "name": "Публичный журнал версий доступен без авторизации",
+      "method": "GET",
+      "path": "/?action=changelog-list&limit=5",
+      "expectedStatus": 200
     }
   ]
 }

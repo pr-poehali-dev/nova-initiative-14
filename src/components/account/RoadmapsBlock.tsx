@@ -57,13 +57,13 @@ export default function RoadmapsBlock() {
                 <p className="font-gost text-[11px] text-[var(--drawing-line-thin)] leading-snug mt-0.5">
                   {rm.description}
                 </p>
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
-                  <span className="font-gost text-[9px] uppercase tracking-wider text-green-700">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 max-w-full">
+                  <span className="font-gost text-[9px] uppercase tracking-wider text-green-700 shrink-0">
                     Готово {stats.done}/{stats.total}
                   </span>
-                  <span className="inline-flex items-center gap-1 font-mono text-[9px] text-[var(--drawing-line-thin)] truncate">
-                    <Icon name="FileCode" size={9} />
-                    {rm.source}
+                  <span className="inline-flex items-center gap-1 font-mono text-[9px] text-[var(--drawing-line-thin)] min-w-0 max-w-full">
+                    <Icon name="FileCode" size={9} className="shrink-0" />
+                    <span className="truncate">{rm.source}</span>
                   </span>
                 </div>
               </div>
