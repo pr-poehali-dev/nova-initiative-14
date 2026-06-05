@@ -32,6 +32,14 @@ from actions import (
     action_userinfo,
     action_verify_email,
 )
+from account_actions import (
+    action_admin_award_points,
+    action_admin_set_role,
+    action_admin_toggle_active,
+    action_admin_users,
+    action_change_password,
+    action_update_profile,
+)
 from config import CORS
 from db_helpers import client_ip, current_user_id, json_response, user_agent
 from oauth import (
@@ -142,6 +150,40 @@ def handler(event: dict, context) -> dict:
             if not uid:
                 return json_response(401, {'error': 'unauthorized'})
             return action_unlink_identity(conn, uid, body)
+
+        # === Профиль (личный кабинет, требуют Bearer-токен) ===
+        if action == 'update-profile' and method == 'POST':
+            uid = current_user_id(event)
+            if not uid:
+                return json_response(401, {'error': 'unauthorized'})
+            return action_update_profile(conn, uid, body)
+        if action == 'change-password' and method == 'POST':
+            uid = current_user_id(event)
+            if not uid:
+                return json_response(401, {'error': 'unauthorized'})
+            return action_change_password(conn, uid, body)
+
+        # === Админ: управление пользователями (требуют is_admin) ===
+        if action == 'admin-users' and method == 'GET':
+            uid = current_user_id(event)
+            if not uid:
+                return json_response(401, {'error': 'unauthorized'})
+            return action_admin_users(conn, uid, params)
+        if action == 'admin-set-role' and method == 'POST':
+            uid = current_user_id(event)
+            if not uid:
+                return json_response(401, {'error': 'unauthorized'})
+            return action_admin_set_role(conn, uid, body)
+        if action == 'admin-toggle-active' and method == 'POST':
+            uid = current_user_id(event)
+            if not uid:
+                return json_response(401, {'error': 'unauthorized'})
+            return action_admin_toggle_active(conn, uid, body)
+        if action == 'admin-award-points' and method == 'POST':
+            uid = current_user_id(event)
+            if not uid:
+                return json_response(401, {'error': 'unauthorized'})
+            return action_admin_award_points(conn, uid, body)
 
         return json_response(404, {'error': 'unknown_action'})
     except Exception as e:

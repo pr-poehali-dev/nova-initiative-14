@@ -102,6 +102,47 @@
       "path": "/?action=identity-unlink",
       "body": {"provider": "google"},
       "expectedStatus": 401
+    },
+    {
+      "name": "Обновление профиля без токена",
+      "method": "POST",
+      "path": "/?action=update-profile",
+      "body": {"full_name": "Тест"},
+      "expectedStatus": 401
+    },
+    {
+      "name": "Смена пароля без токена",
+      "method": "POST",
+      "path": "/?action=change-password",
+      "body": {"new_password": "newpassword123"},
+      "expectedStatus": 401
+    },
+    {
+      "name": "Список пользователей без токена",
+      "method": "GET",
+      "path": "/?action=admin-users",
+      "expectedStatus": 401
+    },
+    {
+      "name": "Смена роли без токена",
+      "method": "POST",
+      "path": "/?action=admin-set-role",
+      "body": {"user_id": 1, "field": "is_admin", "value": true},
+      "expectedStatus": 401
+    },
+    {
+      "name": "Блокировка без токена",
+      "method": "POST",
+      "path": "/?action=admin-toggle-active",
+      "body": {"user_id": 1, "value": false},
+      "expectedStatus": 401
+    },
+    {
+      "name": "Начисление баллов без токена",
+      "method": "POST",
+      "path": "/?action=admin-award-points",
+      "body": {"user_id": 1, "points": 10},
+      "expectedStatus": 401
     }
   ]
 }

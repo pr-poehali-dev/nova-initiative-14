@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
+import AdminUsersTab from "@/components/account/AdminUsersTab";
 import {
   adminListTickets,
   adminUpdateTicket,
@@ -23,7 +24,7 @@ import {
  * Кнопки плейсхолдеров видны, но помечены «в разработке» и неактивны.
  */
 export default function AdminPanel() {
-  const [tab, setTab] = useState<"tickets" | "marketing" | "users" | "points" | "content">("tickets");
+  const [tab, setTab] = useState<"tickets" | "marketing" | "users" | "content">("tickets");
   return (
     <section className="mb-8 border-[2.5px] border-[var(--drawing-accent)] bg-[var(--drawing-bg)] relative">
       <div className="absolute -top-px -left-px w-3 h-3 border-t-[2.5px] border-l-[2.5px] border-[var(--drawing-accent)]" />
@@ -40,17 +41,15 @@ export default function AdminPanel() {
 
       <div className="px-4 pt-3 flex flex-wrap gap-1 border-b border-[var(--drawing-line)]/20">
         <TabBtn active={tab === "tickets"} onClick={() => setTab("tickets")} label="Тикеты" />
+        <TabBtn active={tab === "users"} onClick={() => setTab("users")} label="Пользователи" />
         <TabBtn active={tab === "marketing"} onClick={() => setTab("marketing")} label="Маркетинг" />
-        <TabBtn active={tab === "users"} onClick={() => setTab("users")} label="Пользователи" wip />
-        <TabBtn active={tab === "points"} onClick={() => setTab("points")} label="Очки и ачивки" wip />
         <TabBtn active={tab === "content"} onClick={() => setTab("content")} label="Контент" wip />
       </div>
 
       <div className="p-4">
         {tab === "tickets" && <TicketsTab />}
+        {tab === "users" && <AdminUsersTab />}
         {tab === "marketing" && <MarketingTab />}
-        {tab === "users" && <PlaceholderTab title="Управление пользователями" />}
-        {tab === "points" && <PlaceholderTab title="Ручное начисление баллов" />}
         {tab === "content" && <PlaceholderTab title="Управление контентом (статьи, кейсы)" />}
       </div>
     </section>

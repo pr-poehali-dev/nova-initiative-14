@@ -373,3 +373,84 @@ export async function oauthStartLink(provider: OAuthProvider, accessToken: strin
   if (!res.ok) throw new Error(`oauth-start ${res.status}`);
   return (await res.json()) as { authorize_url: string; provider: OAuthProvider };
 }
+
+// ──────────────────────────── Профиль ────────────────────────────
+
+/** Авторизованный POST к sso-auth с авто-обновлением токена. */
+async function authCall<T = unknown>(action: string, body: Record<string, unknown>) {
+  const res = await authorizedFetch(`${API}?action=${action}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  let data: unknown = null;
+  try { data = await res.json(); } catch { /* ignore */ }
+  const obj = (data as Record<string, unknown>) || {};
+  return {
+    ok: res.ok,
+    status: res.status,
+    data: data as T,
+    error: (obj.error as string) || undefined,
+    message: (obj.message as string) || undefined,
+  };
+}
+
+/** Сменить отображаемое имя. Возвращает обновлённый профиль. */
+export async function updateProfile(fullName: string) {
+  return authCall<{ ok: boolean; user: SsoUser }>("update-profile", { full_name: fullName });
+}
+
+/** Сменить пароль. Если пароль уже есть — нужен currentPassword. */
+export async function changePassword(newPassword: string, currentPassword?: string) {
+  return authCall<{ ok: boolean; message?: string }>("change-password", {
+    new_password: newPassword,
+    current_password: currentPassword || "",
+  });
+}
+
+// ──────────────────────────── Админ ────────────────────────────
+
+export interface AdminUser {
+  id: number;
+  email: string;
+  full_name: string | null;
+  is_active: boolean;
+  is_admin: boolean;
+  is_owner: boolean;
+  email_verified: boolean;
+  total_points: number;
+  created_at: string | null;
+  last_login_at: string | null;
+}
+
+/** Список пользователей для админки (с поиском). */
+export async function adminListUsers(q = "") {
+  const url = `${API}?action=admin-users${q ? `&q=${encodeURIComponent(q)}` : ""}`;
+  const res = await authorizedFetch(url, { method: "GET" });
+  let data: unknown = null;
+  try { data = await res.json(); } catch { /* ignore */ }
+  return {
+    ok: res.ok,
+    status: res.status,
+    data: data as { users: AdminUser[] } | null,
+  };
+}
+
+/** Выдать/снять флаг роли (is_admin | is_owner). */
+export async function adminSetRole(userId: number, field: "is_admin" | "is_owner", value: boolean) {
+  return authCall<{ ok: boolean }>("admin-set-role", { user_id: userId, field, value });
+}
+
+/** Заблокировать/разблокировать вход пользователя. */
+export async function adminToggleActive(userId: number, value: boolean) {
+  return authCall<{ ok: boolean }>("admin-toggle-active", { user_id: userId, value });
+}
+
+/** Начислить (или списать) баллы пользователю. */
+export async function adminAwardPoints(userId: number, points: number, note: string) {
+  return authCall<{ ok: boolean; total_points: number }>("admin-award-points", {
+    user_id: userId,
+    points,
+    note,
+  });
+}

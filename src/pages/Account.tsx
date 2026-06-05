@@ -8,6 +8,8 @@ import PointsAchievementsBlock from "@/components/account/PointsAchievementsBloc
 import MyTicketsBlock from "@/components/account/MyTicketsBlock";
 import LoginMethodsBlock from "@/components/account/LoginMethodsBlock";
 import DisciplinePreferenceBlock from "@/components/account/DisciplinePreferenceBlock";
+import ProfileEditBlock from "@/components/account/ProfileEditBlock";
+import SubscriptionBlock from "@/components/account/SubscriptionBlock";
 import RoadmapsBlock from "@/components/account/RoadmapsBlock";
 import AdminPanel from "@/components/account/AdminPanel";
 import InviteFriendModal from "@/components/cae/InviteFriendModal";
@@ -73,42 +75,8 @@ const Account = () => {
         {/* Дорожные карты — для администратора и владельца */}
         {(user.is_admin || user.is_owner) && <RoadmapsBlock />}
 
-        {/* Моя подписка — вверху кабинета */}
-        <section className="drawing-frame p-6 bg-[var(--drawing-bg)] mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Icon name="CreditCard" size={18} />
-            <h2 className="font-gost-upright text-sm uppercase tracking-widest">Моя подписка</h2>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 text-sm">
-            <div>
-              <p className="font-gost text-[var(--drawing-line-thin)] text-xs uppercase tracking-wider mb-1">
-                Наставничество
-              </p>
-              <p>
-                <Link to="/pricing" className="text-[var(--drawing-accent)] hover:underline">
-                  Подобрать тариф &rarr;
-                </Link>
-              </p>
-            </div>
-            <div>
-              <p className="font-gost text-[var(--drawing-line-thin)] text-xs uppercase tracking-wider mb-1">
-                CAE-калькулятор
-              </p>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="inline-flex items-center gap-1 bg-[var(--drawing-accent)] text-white px-2 py-0.5 font-gost text-[10px] uppercase tracking-wider">
-                  <Icon name="FlaskConical" size={10} />
-                  Альфа-тест
-                </span>
-                <span className="font-gost text-xs text-[var(--drawing-line)]">
-                  расчёты бесплатно
-                </span>
-              </div>
-              <p className="text-[var(--drawing-line-thin)] text-xs mt-1">
-                Все функции открыты на&nbsp;время альфа-тестирования.
-              </p>
-            </div>
-          </div>
-        </section>
+        {/* Моя подписка — реальный статус доступа */}
+        <SubscriptionBlock />
 
         {/* Мои проекты — отдельный блок */}
         <section className="drawing-frame p-6 bg-[var(--drawing-bg)] mb-6">
@@ -140,31 +108,8 @@ const Account = () => {
         <MyTicketsBlock onNewTicket={() => setSupportOpen(true)} />
 
         <div className="grid gap-5 md:grid-cols-2 [&>*]:min-w-0">
-          {/* Профиль */}
-          <section className="drawing-frame p-6 bg-[var(--drawing-bg)]">
-            <div className="flex items-center gap-2 mb-4">
-              <Icon name="User" size={18} />
-              <h2 className="font-gost-upright text-sm uppercase tracking-widest">Профиль</h2>
-            </div>
-            <dl className="space-y-2 text-sm">
-              <div className="flex justify-between gap-2">
-                <dt className="font-gost text-[var(--drawing-line-thin)]">Email</dt>
-                <dd className="font-mono break-all text-right">{user.email}</dd>
-              </div>
-              <div className="flex justify-between gap-2">
-                <dt className="font-gost text-[var(--drawing-line-thin)]">Имя</dt>
-                <dd className="text-right">{user.full_name || "—"}</dd>
-              </div>
-              <div className="flex justify-between gap-2">
-                <dt className="font-gost text-[var(--drawing-line-thin)]">Email подтверждён</dt>
-                <dd className="text-right">{user.email_verified ? "✓ да" : "✗ нет"}</dd>
-              </div>
-              <div className="flex justify-between gap-2">
-                <dt className="font-gost text-[var(--drawing-line-thin)]">Роли</dt>
-                <dd className="text-right">{user.roles.join(", ") || "—"}</dd>
-              </div>
-            </dl>
-          </section>
+          {/* Профиль — редактирование имени и смена пароля */}
+          <ProfileEditBlock />
 
           {/* Способы входа */}
           <LoginMethodsBlock />
