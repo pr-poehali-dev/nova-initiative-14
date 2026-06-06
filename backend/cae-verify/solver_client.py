@@ -99,10 +99,60 @@ def shear_at(response: dict, element_id: str, where: str) -> float:
 
 
 def find_reaction(response: dict, node_id: str, key: str) -> float:
-    """Реакция в указанном узле по компоненте (fx / fy / mz)."""
+    """
+    Реакция в указанном узле по компоненте.
+    Для 2D: fx / fy / mz. Для 3D дополнительно: fz / mx / my.
+    """
     for r in response.get("reactions", []):
         if r.get("node_id") == node_id:
             return r.get(key, 0.0)
+    return 0.0
+
+
+# === 3D-хелперы ===
+
+def find_max_abs_diagram(response: dict, kind: str) -> float:
+    """
+    Максимум |value| эпюры заданного вида по всем элементам.
+    kind ∈ {N, Qy, Qz, T, My, Mz, sigma_vm}. Универсальная замена для
+    усилий, которых нет в max_values (Qz, T, и для единообразия My).
+    """
+    m = 0.0
+    for el in response.get("elements", []):
+        for v in el.get("diagrams", {}).get(kind, []):
+            if abs(v) > m:
+                m = abs(v)
+    return m
+
+
+def diagram_at(response: dict, element_id: str, kind: str, where: str) -> float:
+    """
+    Значение эпюры произвольного вида в характерной точке элемента СО ЗНАКОМ.
+    kind — ключ в diagrams (N, Qy, Qz, T, My, Mz). where = start | mid | end.
+    """
+    for el in response.get("elements", []):
+        if el.get("element_id") != element_id:
+            continue
+        arr = el.get("diagrams", {}).get(kind, [])
+        if not arr:
+            return 0.0
+        if where == "start":
+            return float(arr[0])
+        if where == "end":
+            return float(arr[-1])
+        if where == "mid":
+            return float(arr[len(arr) // 2])
+    return 0.0
+
+
+def nodal_dof(response: dict, node_id: str, dof: str) -> float:
+    """
+    Узловое перемещение/поворот по DOF (ux, uy, uz, rx, ry, rz).
+    Нужно для проверки угла закручивания (rx) и прогиба uz в 3D.
+    """
+    for n in response.get("nodal_displacements", []):
+        if n.get("node_id") == node_id:
+            return float(n.get(dof, 0.0))
     return 0.0
 
 

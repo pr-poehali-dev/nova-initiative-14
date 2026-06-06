@@ -15,7 +15,7 @@
 """
 import math
 
-from constants import E, I, I20, STEEL
+from constants import E, G, I, I20, I_T, I_Y, I_Z, STEEL
 
 
 def build_cantilever_point_load(L: float = 2.0, P: float = 10000.0) -> dict:
@@ -497,6 +497,146 @@ def build_truss_triangle(L: float = 3.0, P: float = 10000.0) -> dict:
     }
 
 
+# ============================================================
+# 3D-ЭТАЛОНЫ (пространственный расчёт: кручение, изгиб в xz, косой изгиб)
+# ============================================================
+
+def build_cantilever_torsion(L: float = 2.0, T: float = 1000.0) -> dict:
+    """
+    Тест 10 (3D): КОНСОЛЬ + КРУТЯЩИЙ МОМЕНТ НА КОНЦЕ.
+    Свободное кручение стержня (Сен-Венан): φ = T·L/(G·I_t).
+    Эпюра T постоянна и равна T; реактивный момент в заделке |mx| = T.
+    Проверяет работу жёсткости на кручение GJ/L.
+    """
+    phi = T * L / (G * I_T)
+    return {
+        "name": "3D консоль, кручение на конце",
+        "scheme": "3D Cantilever + tip torque (Mx)",
+        "expected": {
+            "rotation_x_rad": phi,                 # угол закручивания свободного конца
+            "max_torque_nm": T,                    # |T| = const = T
+            "reaction_mx_abs_nm": T,               # момент в заделке по модулю
+        },
+        "model": {
+            "meta": {"dim": "3d"},
+            "materials": [STEEL],
+            "sections": [I20],
+            "nodes": [
+                {"id": "n1", "coords": [0, 0, 0]},
+                {"id": "n2", "coords": [L, 0, 0]},
+            ],
+            "elements": [
+                # ref_vector=[0,1,0] фиксирует локальные оси сечения по глобальным
+                # Y/Z (предсказуемая ориентация для горизонтального стержня).
+                {"id": "e1", "node_start": "n1", "node_end": "n2",
+                 "material_id": "steel", "section_id": "i20",
+                 "ref_vector": [0, 1, 0]},
+            ],
+            "boundary_conditions": [
+                {"id": "bc1", "node_id": "n1", "type": "fixed",
+                 "constrained_dofs": ["ux", "uy", "uz", "rx", "ry", "rz"]},
+            ],
+            "loads": [
+                # Крутящий момент вокруг продольной оси стержня X.
+                {"id": "ld1", "type": "nodal_force", "node_id": "n2",
+                 "force": [0, 0, 0], "moment": [T, 0, 0]},
+            ],
+        },
+        "node_probe": "n2",
+    }
+
+
+def build_cantilever_bending_xz(L: float = 2.0, P: float = 10000.0) -> dict:
+    """
+    Тест 11 (3D): КОНСОЛЬ + СИЛА ПО ОСИ Z (изгиб в плоскости xz).
+    Полный аналог 2D-консоли, но в другой плоскости: управляется I_y.
+    δ_z = P·L³/(3·E·I_y), |My|_max = P·L, реакции |fz| = P, |my| = P·L.
+    Изгиб в xz даёт усилия My и Qz — проверяем «вторую плоскость».
+    """
+    delta_z = P * L**3 / (3 * E * I_Y)
+    return {
+        "name": "3D консоль, сила по Z (изгиб в xz)",
+        "scheme": "3D Cantilever + tip Pz (bending in xz)",
+        "expected": {
+            "displacement_uz_abs_m": delta_z,      # прогиб конца по Z
+            "max_my_nm": P * L,                    # макс. изгибающий момент My
+            "max_qz_n": P,                         # поперечная сила Qz = P
+            "reaction_fz_abs_n": P,                # реакция по Z в заделке
+            "reaction_my_abs_nm": P * L,           # реактивный момент My в заделке
+        },
+        "model": {
+            "meta": {"dim": "3d"},
+            "materials": [STEEL],
+            "sections": [I20],
+            "nodes": [
+                {"id": "n1", "coords": [0, 0, 0]},
+                {"id": "n2", "coords": [L, 0, 0]},
+            ],
+            "elements": [
+                {"id": "e1", "node_start": "n1", "node_end": "n2",
+                 "material_id": "steel", "section_id": "i20",
+                 "ref_vector": [0, 1, 0]},
+            ],
+            "boundary_conditions": [
+                {"id": "bc1", "node_id": "n1", "type": "fixed",
+                 "constrained_dofs": ["ux", "uy", "uz", "rx", "ry", "rz"]},
+            ],
+            "loads": [
+                {"id": "ld1", "type": "nodal_force", "node_id": "n2",
+                 "force": [0, 0, -P], "moment": [0, 0, 0]},
+            ],
+        },
+        "node_probe": "n2",
+    }
+
+
+def build_cantilever_skew_bending(L: float = 2.0, Py: float = 8000.0, Pz: float = 6000.0) -> dict:
+    """
+    Тест 12 (3D): КОСОЙ (ДВУХОСНЫЙ) ИЗГИБ КОНСОЛИ.
+    Сила одновременно по Y и Z — изгиб в обеих плоскостях независимо.
+    По принципу суперпозиции:
+      δ_y = Py·L³/(3·E·I_z),  δ_z = Pz·L³/(3·E·I_y),
+      |Mz|_max = Py·L,        |My|_max = Pz·L.
+    Главная цель — убедиться, что плоскости НЕ «протекают» друг в друга
+    (ошибка связности матрицы жёсткости дала бы расхождение).
+    """
+    delta_y = Py * L**3 / (3 * E * I_Z)
+    delta_z = Pz * L**3 / (3 * E * I_Y)
+    return {
+        "name": "3D консоль, косой изгиб (Py+Pz)",
+        "scheme": "3D Cantilever + biaxial bending",
+        "expected": {
+            "displacement_uy_abs_m": delta_y,
+            "displacement_uz_abs_m": delta_z,
+            "max_mz_nm": Py * L,
+            "max_my_nm": Pz * L,
+        },
+        "model": {
+            "meta": {"dim": "3d"},
+            "materials": [STEEL],
+            "sections": [I20],
+            "nodes": [
+                {"id": "n1", "coords": [0, 0, 0]},
+                {"id": "n2", "coords": [L, 0, 0]},
+            ],
+            "elements": [
+                {"id": "e1", "node_start": "n1", "node_end": "n2",
+                 "material_id": "steel", "section_id": "i20",
+                 "ref_vector": [0, 1, 0]},
+            ],
+            "boundary_conditions": [
+                {"id": "bc1", "node_id": "n1", "type": "fixed",
+                 "constrained_dofs": ["ux", "uy", "uz", "rx", "ry", "rz"]},
+            ],
+            "loads": [
+                {"id": "ld1", "type": "nodal_force", "node_id": "n2",
+                 "force": [0, -Py, -Pz], "moment": [0, 0, 0]},
+            ],
+        },
+        "node_probe": "n2",
+    }
+
+
 def all_tests() -> list[dict]:
     """Полный набор верификационных тестов в порядке возрастания сложности."""
     return [
@@ -510,4 +650,8 @@ def all_tests() -> list[dict]:
         build_two_point_loads(),                 # 7
         build_two_span_continuous(),             # 8
         build_truss_triangle(),                  # 9
+        # — 3D-эталоны —
+        build_cantilever_torsion(),              # 10
+        build_cantilever_bending_xz(),           # 11
+        build_cantilever_skew_bending(),         # 12
     ]

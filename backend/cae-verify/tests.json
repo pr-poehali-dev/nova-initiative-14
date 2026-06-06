@@ -12,6 +12,39 @@
       "bodyMatcher": "partial"
     },
     {
+      "name": "3D кручение консоли (тест 10) PASS",
+      "method": "GET",
+      "path": "/?test=10",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "verdict": "PASS",
+        "total": 1
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "3D изгиб в xz (тест 11) PASS",
+      "method": "GET",
+      "path": "/?test=11",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "verdict": "PASS",
+        "total": 1
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "3D косой изгиб (тест 12) PASS",
+      "method": "GET",
+      "path": "/?test=12",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "verdict": "PASS",
+        "total": 1
+      },
+      "bodyMatcher": "partial"
+    },
+    {
       "name": "CORS preflight",
       "method": "OPTIONS",
       "path": "/",
