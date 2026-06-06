@@ -5,6 +5,55 @@
  */
 import type { BoundaryCondition, DofName, FrameModel } from "./types";
 
+/**
+ * Автоматический опорный вектор ориентации сечения для 3D-элемента.
+ *
+ * Решатель строит локальные оси так: z_local = normalize(x_local × ref_vector),
+ * y_local = z_local × x_local. Чтобы изгиб в горизонтальной/вертикальной
+ * плоскости рамы (xy) шёл по СИЛЬНОЙ оси сечения I_z — как в 2D-режиме —
+ * нужно, чтобы локальная z совпала с глобальной Z = [0,0,1].
+ *
+ * Для оси элемента d=[dx,dy,dz] это достигается вектором, перпендикулярным
+ * оси в плоскости xy: ref = [-dy, dx, 0] (тогда x × ref ∝ [0,0,1]).
+ *
+ * Вырожденный случай — вертикальный стержень (dx=dy=0): ось перпендикулярна
+ * плоскости xy. Берём ref = [1, 0, 0], что даёт устойчивую ориентацию
+ * (изгиб в плоскости xz по I_z), совпадающую со сверкой 2D↔3D для колонн.
+ */
+export function autoRefVector(
+  start: [number, number, number],
+  end: [number, number, number],
+): [number, number, number] {
+  const dx = end[0] - start[0];
+  const dy = end[1] - start[1];
+  if (Math.abs(dx) < 1e-9 && Math.abs(dy) < 1e-9) {
+    // Вертикальный стержень (вдоль Z) — ось в плоскости xy не определена.
+    return [1, 0, 0];
+  }
+  return [-dy, dx, 0];
+}
+
+/**
+ * Проставляет элементам 3D-модели авто-ref_vector там, где он не задан явно,
+ * чтобы плоские рамы в 3D считались по сильной оси (как 2D). Для 2D-моделей и
+ * элементов с уже заданным ref_vector — возвращает модель без изменений
+ * (идемпотентно).
+ */
+export function withAutoRefVector(model: FrameModel): FrameModel {
+  if (model.meta?.dim !== "3d") return model;
+  const nodeById = new Map(model.nodes.map((n) => [n.id, n]));
+  let changed = false;
+  const elements = model.elements.map((e) => {
+    if (e.ref_vector) return e;
+    const a = nodeById.get(e.node_start);
+    const b = nodeById.get(e.node_end);
+    if (!a || !b) return e;
+    changed = true;
+    return { ...e, ref_vector: autoRefVector(a.coords, b.coords) };
+  });
+  return changed ? { ...model, elements } : model;
+}
+
 export function genId(prefix: string, existing: { id: string }[]): string {
   const used = new Set(existing.map((x) => x.id));
   let i = 1;

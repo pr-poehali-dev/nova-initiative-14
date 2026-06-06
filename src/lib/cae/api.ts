@@ -5,6 +5,7 @@
 import func2url from "../../../backend/func2url.json";
 import { authorizedFetch } from "@/lib/auth";
 import type { FrameModel, SolverResponse } from "./types";
+import { withAutoRefVector } from "./utils";
 
 const CAE_API = (func2url as Record<string, string>)["cae-api"];
 const CAE_SOLVER = (func2url as Record<string, string>)["cae-solver"];
@@ -82,10 +83,13 @@ export function saveProjectModel(
  */
 function withAnalysisType(model: FrameModel): FrameModel {
   const analysisType = model.analysis_settings?.analysis_type ?? "linear";
+  // Для 3D подставляем авто-ориентацию сечения (ref_vector), чтобы плоские
+  // рамы считались по сильной оси, как в 2D.
+  const oriented = withAutoRefVector(model);
   return {
-    ...model,
+    ...oriented,
     analysis_options: {
-      ...model.analysis_options,
+      ...oriented.analysis_options,
       analysis_type: analysisType,
     },
   };

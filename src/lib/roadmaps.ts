@@ -433,7 +433,8 @@ const CAE_3D_ROADMAP: Roadmap = {
         { title: "Ввод и правка Z-координаты узла", status: "later", note: "Панель узла показывает только x, y." },
         { title: "Опоры по 6 DOF (uz, rx, ry)", status: "later", note: "Сейчас доступны ux, uy, rz." },
         { title: "Нагрузки Fz, Mx, My и qz", status: "later", note: "Сейчас Fx, Fy, Mz и qy." },
-        { title: "Ориентация (поворот) сечения вокруг оси стержня", status: "next", note: "ВАЖНО: при сверке 2D↔3D дефолтный ref_vector гнёт плоскую раму по слабой оси I_y. Нужен осознанный выбор/дефолт ref_vector." },
+        { title: "Авто-ориентация сечения (ref_vector) для плоских рам", status: "done", note: "withAutoRefVector: плоская рама в 3D считается по сильной оси I_z, совпадает с 2D бит-в-бит." },
+        { title: "Ручной поворот сечения вокруг оси стержня в UI", status: "later", note: "Дать пользователю менять ref_vector осознанно (для пространственных рам)." },
       ],
     },
     {
