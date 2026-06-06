@@ -6,6 +6,7 @@
  *  - FrameCanvas
  *  - баннер ошибки решателя/загрузки
  */
+import { lazy, Suspense } from "react";
 import Icon from "@/components/ui/icon";
 import FrameCanvas, {
   type EditorMode,
@@ -17,6 +18,9 @@ import type { LabelOffsetsApi } from "@/pages/cae-editor/useLabelOffsets";
 import type { ValidationIssue } from "@/lib/cae-validate";
 import CanvasFloatingControls from "./CanvasFloatingControls";
 import MobileCanvasHud from "./MobileCanvasHud";
+
+// 3D-сцена тяжёлая (three.js) — грузим лениво только для 3D-проектов.
+const FrameScene3D = lazy(() => import("@/components/cae/FrameScene3D"));
 
 interface Props {
   model: FrameModel;
@@ -164,27 +168,48 @@ const EditorCanvasArea = ({
       </button>
     </div>
 
-    <FrameCanvas
-      model={model}
-      setModel={updateModel}
-      mode={mode}
-      gridStep={gridStep}
-      selectedNodeIds={selectedNodeIds}
-      selectedElementIds={selectedElementIds}
-      onSelectNodes={setSelectedNodeIds}
-      onSelectElements={setSelectedElementIds}
-      onCanvasClick={onCanvasClick}
-      onMoveNode={moveNode}
-      result={result}
-      showDiagram={showDiagram}
-      diagramScale={diagramScale}
-      fitRequestId={fitRequestId}
-      arrowScale={arrowScale}
-      fontScale={fontScale}
-      labelOffsets={labelOffsets}
-      elementLimit={elementLimit}
-      onRequestContext={onRequestContext}
-    />
+    {model.meta?.dim === "3d" ? (
+      <Suspense
+        fallback={
+          <div className="absolute inset-0 flex items-center justify-center font-gost text-xs text-[var(--drawing-line-thin)]">
+            Загружаем 3D-сцену…
+          </div>
+        }
+      >
+        <FrameScene3D
+          model={model}
+          selectedNodeIds={selectedNodeIds}
+          selectedElementIds={selectedElementIds}
+          onSelectNodes={setSelectedNodeIds}
+          onSelectElements={setSelectedElementIds}
+          result={result}
+          showDeformed={showDiagram === "deformed"}
+          fitRequestId={fitRequestId}
+        />
+      </Suspense>
+    ) : (
+      <FrameCanvas
+        model={model}
+        setModel={updateModel}
+        mode={mode}
+        gridStep={gridStep}
+        selectedNodeIds={selectedNodeIds}
+        selectedElementIds={selectedElementIds}
+        onSelectNodes={setSelectedNodeIds}
+        onSelectElements={setSelectedElementIds}
+        onCanvasClick={onCanvasClick}
+        onMoveNode={moveNode}
+        result={result}
+        showDiagram={showDiagram}
+        diagramScale={diagramScale}
+        fitRequestId={fitRequestId}
+        arrowScale={arrowScale}
+        fontScale={fontScale}
+        labelOffsets={labelOffsets}
+        elementLimit={elementLimit}
+        onRequestContext={onRequestContext}
+      />
+    )}
 
     {/* Плавающие иконки правого края: валидация, подсказка, глаз, эпюры.
         Показываем и на мобиле — это самые частые действия, чтобы не
