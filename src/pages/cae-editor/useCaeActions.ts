@@ -26,6 +26,7 @@ import {
   deleteSelection,
   duplicateSelection,
   moveNode as moveNodePure,
+  setNodeCoord as setNodeCoordPure,
   setNodeConnection as setNodeConnectionPure,
 } from "./actions/nodeActions";
 import {
@@ -35,8 +36,10 @@ import {
 } from "./actions/bcActions";
 import {
   setNodalForce,
+  setNodalForceVec as setNodalForceVecPure,
   removeNodalLoad,
   setNodalMoment as setNodalMomentPure,
+  setNodalMomentVec as setNodalMomentVecPure,
   setDistributedLoad as setDistributedLoadPure,
   addInSpanPoint as addInSpanPointPure,
   updateInSpanPoint as updateInSpanPointPure,
@@ -127,6 +130,12 @@ export function useCaeActions(
     updateModel(moveNodePure(model, nodeId, x, y));
   };
 
+  /** Точная установка одной координаты выбранного узла (0=x,1=y,2=z). */
+  const setNodeCoord = (axis: 0 | 1 | 2, value: number) => {
+    if (!selectedNodeId) return;
+    updateModel(setNodeCoordPure(model, selectedNodeId, axis, value));
+  };
+
   const setNodeConnection = (connection: NodeConnectionType) => {
     if (!selectedNodeId) return;
     updateModel(setNodeConnectionPure(model, selectedNodeId, connection));
@@ -165,6 +174,36 @@ export function useCaeActions(
   const setNodalMoment = (mz: number) => {
     if (!selectedNodeId) return;
     updateModel(setNodalMomentPure(model, selectedNodeId, mz));
+  };
+
+  /** Установить одну компоненту узловой силы (0=Fx,1=Fy,2=Fz) — для 3D. */
+  const setNodalForceComponent = (axis: 0 | 1 | 2, value: number) => {
+    if (!selectedNodeId) return;
+    const cur = model.loads.find(
+      (l) => l.type === "nodal_force" && l.node_id === selectedNodeId,
+    );
+    const f: [number, number, number] = [
+      cur?.force?.[0] ?? 0,
+      cur?.force?.[1] ?? 0,
+      cur?.force?.[2] ?? 0,
+    ];
+    f[axis] = value;
+    updateModel(setNodalForceVecPure(model, selectedNodeId, f));
+  };
+
+  /** Установить одну компоненту узлового момента (0=Mx,1=My,2=Mz) — для 3D. */
+  const setNodalMomentComponent = (axis: 0 | 1 | 2, value: number) => {
+    if (!selectedNodeId) return;
+    const cur = model.loads.find(
+      (l) => l.type === "nodal_force" && l.node_id === selectedNodeId,
+    );
+    const m: [number, number, number] = [
+      cur?.moment?.[0] ?? 0,
+      cur?.moment?.[1] ?? 0,
+      cur?.moment?.[2] ?? 0,
+    ];
+    m[axis] = value;
+    updateModel(setNodalMomentVecPure(model, selectedNodeId, m));
   };
 
   const toggleCustomDof = (dof: DofName) => {
@@ -210,6 +249,7 @@ export function useCaeActions(
     deleteSelected,
     duplicateSelected,
     moveNode,
+    setNodeCoord,
     selectAll,
     clearSelection,
     setNodeConnection,
@@ -218,6 +258,8 @@ export function useCaeActions(
     addNodalLoad,
     removeLoadOnNode,
     setNodalMoment,
+    setNodalForceComponent,
+    setNodalMomentComponent,
     toggleCustomDof,
     pickMaterialForElement,
     pickSectionForElement,

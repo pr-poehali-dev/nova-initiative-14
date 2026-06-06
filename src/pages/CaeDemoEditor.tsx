@@ -151,6 +151,9 @@ const CaeDemoEditor = () => {
     addNodalLoad,
     removeLoadOnNode,
     setNodalMoment,
+    setNodeCoord,
+    setNodalForceComponent,
+    setNodalMomentComponent,
     toggleCustomDof,
     pickMaterialForElement,
     pickSectionForElement,
@@ -439,6 +442,9 @@ const CaeDemoEditor = () => {
           toggleCustomDof={toggleCustomDof}
           addNodalLoad={addNodalLoad}
           setNodalMoment={setNodalMoment}
+          setNodeCoord={setNodeCoord}
+          setNodalForceComponent={setNodalForceComponent}
+          setNodalMomentComponent={setNodalMomentComponent}
           removeLoadOnNode={removeLoadOnNode}
           setNodeConnection={setNodeConnection}
           setMatPickerOpen={setMatPickerOpen}

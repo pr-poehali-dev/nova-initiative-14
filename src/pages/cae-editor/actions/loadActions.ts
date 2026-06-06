@@ -27,22 +27,36 @@ export function setNodalForce(
   fx: number,
   fy: number,
 ): FrameModel {
-  fx = num(fx);
-  fy = num(fy);
+  // 2D-обёртка: сохраняем Fz существующей нагрузки (если был).
+  const existing = model.loads.find(
+    (l) => l.type === "nodal_force" && l.node_id === nodeId,
+  );
+  const fz = existing?.force?.[2] ?? 0;
+  return setNodalForceVec(model, nodeId, [fx, fy, fz]);
+}
+
+/**
+ * Установить полный вектор узловой силы [Fx, Fy, Fz] (3D).
+ * Сохраняет уже заданный момент нагрузки. Создаёт нагрузку, если её нет.
+ */
+export function setNodalForceVec(
+  model: FrameModel,
+  nodeId: string,
+  force: [number, number, number],
+): FrameModel {
+  const f: [number, number, number] = [num(force[0]), num(force[1]), num(force[2])];
   const existing = model.loads.find(
     (l) => l.type === "nodal_force" && l.node_id === nodeId,
   );
   let loads = model.loads;
   if (existing) {
-    loads = loads.map((l) =>
-      l === existing ? { ...l, force: [fx, fy, 0] as [number, number, number] } : l,
-    );
+    loads = loads.map((l) => (l === existing ? { ...l, force: f } : l));
   } else {
     const ld: ModelLoad = {
       id: genId("L", model.loads),
       type: "nodal_force",
       node_id: nodeId,
-      force: [fx, fy, 0],
+      force: f,
       moment: [0, 0, 0],
     };
     loads = [...loads, ld];
@@ -60,15 +74,31 @@ export function removeNodalLoad(model: FrameModel, nodeId: string): FrameModel {
 
 /** Установить узловой момент Mz (создаёт нагрузку с force=0,0,0 если её нет). */
 export function setNodalMoment(model: FrameModel, nodeId: string, mz: number): FrameModel {
-  mz = num(mz);
+  // 2D-обёртка: сохраняем Mx, My существующей нагрузки.
+  const existing = model.loads.find(
+    (l) => l.type === "nodal_force" && l.node_id === nodeId,
+  );
+  const mx = existing?.moment?.[0] ?? 0;
+  const my = existing?.moment?.[1] ?? 0;
+  return setNodalMomentVec(model, nodeId, [mx, my, mz]);
+}
+
+/**
+ * Установить полный вектор узлового момента [Mx, My, Mz] (3D).
+ * Сохраняет уже заданную силу нагрузки. Создаёт нагрузку, если её нет.
+ */
+export function setNodalMomentVec(
+  model: FrameModel,
+  nodeId: string,
+  moment: [number, number, number],
+): FrameModel {
+  const m: [number, number, number] = [num(moment[0]), num(moment[1]), num(moment[2])];
   const existing = model.loads.find(
     (l) => l.type === "nodal_force" && l.node_id === nodeId,
   );
   let loads = model.loads;
   if (existing) {
-    loads = loads.map((l) =>
-      l === existing ? { ...l, moment: [0, 0, mz] as [number, number, number] } : l,
-    );
+    loads = loads.map((l) => (l === existing ? { ...l, moment: m } : l));
   } else {
     loads = [
       ...loads,
@@ -77,7 +107,7 @@ export function setNodalMoment(model: FrameModel, nodeId: string, mz: number): F
         type: "nodal_force",
         node_id: nodeId,
         force: [0, 0, 0],
-        moment: [0, 0, mz],
+        moment: m,
       },
     ];
   }

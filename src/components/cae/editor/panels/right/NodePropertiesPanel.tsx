@@ -11,12 +11,13 @@ import NumericInput from "./NumericInput";
 
 /**
  * Правая панель свойств УЗЛА:
- *  - координаты
+ *  - координаты (x, y; для 3D ещё z) с точным вводом
  *  - тип опоры (защемление, шарнир, катки, ползун, ручное)
- *  - узловые нагрузки (Fx, Fy, Mz)
+ *  - узловые нагрузки (Fx, Fy, Mz; для 3D ещё Fz, Mx, My)
  *  - удаление узла
  */
 export default function NodePropertiesPanel({
+  dim = "2d",
   selectedNode,
   nodeBC,
   nodeLoad,
@@ -27,10 +28,14 @@ export default function NodePropertiesPanel({
   toggleCustomDof,
   addNodalLoad,
   setNodalMoment,
+  setNodeCoord,
+  setNodalForceComponent,
+  setNodalMomentComponent,
   removeLoadOnNode,
   setNodeConnection,
   deleteSelected,
 }: {
+  dim?: "2d" | "3d";
   selectedNode: ModelNode;
   nodeBC: BoundaryCondition | undefined;
   nodeLoad: ModelLoad | undefined;
@@ -41,19 +46,54 @@ export default function NodePropertiesPanel({
   toggleCustomDof: (d: DofName) => void;
   addNodalLoad: (fx: number, fy: number) => void;
   setNodalMoment: (mz: number) => void;
+  setNodeCoord: (axis: 0 | 1 | 2, value: number) => void;
+  setNodalForceComponent: (axis: 0 | 1 | 2, value: number) => void;
+  setNodalMomentComponent: (axis: 0 | 1 | 2, value: number) => void;
   removeLoadOnNode: () => void;
   setNodeConnection: (c: NodeConnectionType) => void;
   deleteSelected: () => void;
 }) {
+  const is3d = dim === "3d";
+  // Набор DOF для ручного закрепления: 3 для 2D, 6 для 3D.
+  const customDofs: DofName[] = is3d
+    ? ["ux", "uy", "uz", "rx", "ry", "rz"]
+    : ["ux", "uy", "rz"];
   return (
     <div className="border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] p-3">
       <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-2">
         Узел {selectedNode.id}
       </p>
-      <p className="font-mono text-[11px] mb-3">
-        x = {Number.isFinite(selectedNode.coords?.[0]) ? selectedNode.coords[0].toFixed(2) : "—"} м<br />
-        y = {Number.isFinite(selectedNode.coords?.[1]) ? selectedNode.coords[1].toFixed(2) : "—"} м
-      </p>
+      <div className={`grid ${is3d ? "grid-cols-3" : "grid-cols-2"} gap-1.5 mb-3`}>
+        <label className="text-[10px] font-gost">
+          x, м
+          <NumericInput
+            value={selectedNode.coords?.[0] ?? 0}
+            step={0.1}
+            onCommit={(v) => setNodeCoord(0, v)}
+            className="drawing-input mt-0.5 font-mono text-[11px]"
+          />
+        </label>
+        <label className="text-[10px] font-gost">
+          y, м
+          <NumericInput
+            value={selectedNode.coords?.[1] ?? 0}
+            step={0.1}
+            onCommit={(v) => setNodeCoord(1, v)}
+            className="drawing-input mt-0.5 font-mono text-[11px]"
+          />
+        </label>
+        {is3d && (
+          <label className="text-[10px] font-gost">
+            z, м
+            <NumericInput
+              value={selectedNode.coords?.[2] ?? 0}
+              step={0.1}
+              onCommit={(v) => setNodeCoord(2, v)}
+              className="drawing-input mt-0.5 font-mono text-[11px]"
+            />
+          </label>
+        )}
+      </div>
 
       <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-1.5">
         Опора
@@ -94,7 +134,7 @@ export default function NodePropertiesPanel({
             Закрепления вручную:
           </p>
           <div className="grid grid-cols-3 gap-1">
-            {(["ux", "uy", "rz"] as DofName[]).map((d) => {
+            {customDofs.map((d) => {
               const checked = nodeBC?.constrained_dofs.includes(d) || false;
               return (
                 <label
@@ -158,13 +198,15 @@ export default function NodePropertiesPanel({
       <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-1.5 mt-2">
         Узловые нагрузки
       </p>
-      <div className="grid grid-cols-2 gap-1.5 mb-1.5">
+      <div className={`grid ${is3d ? "grid-cols-3" : "grid-cols-2"} gap-1.5 mb-1.5`}>
         <label className="text-[10px] font-gost">
           Fx, Н
           <NumericInput
             value={nodeLoad?.force?.[0] ?? 0}
             step={100}
-            onCommit={(v) => addNodalLoad(v, nodeLoad?.force?.[1] ?? 0)}
+            onCommit={(v) =>
+              is3d ? setNodalForceComponent(0, v) : addNodalLoad(v, nodeLoad?.force?.[1] ?? 0)
+            }
             className="drawing-input mt-0.5 font-mono text-[11px]"
           />
         </label>
@@ -173,20 +215,65 @@ export default function NodePropertiesPanel({
           <NumericInput
             value={nodeLoad?.force?.[1] ?? 0}
             step={100}
-            onCommit={(v) => addNodalLoad(nodeLoad?.force?.[0] ?? 0, v)}
+            onCommit={(v) =>
+              is3d ? setNodalForceComponent(1, v) : addNodalLoad(nodeLoad?.force?.[0] ?? 0, v)
+            }
             className="drawing-input mt-0.5 font-mono text-[11px]"
           />
         </label>
+        {is3d && (
+          <label className="text-[10px] font-gost">
+            Fz, Н
+            <NumericInput
+              value={nodeLoad?.force?.[2] ?? 0}
+              step={100}
+              onCommit={(v) => setNodalForceComponent(2, v)}
+              className="drawing-input mt-0.5 font-mono text-[11px]"
+            />
+          </label>
+        )}
       </div>
-      <label className="text-[10px] font-gost block mb-2">
-        Mz (момент), Н·м
-        <NumericInput
-          value={nodeLoad?.moment?.[2] ?? 0}
-          step={50}
-          onCommit={(v) => setNodalMoment(v)}
-          className="drawing-input mt-0.5 font-mono text-[11px]"
-        />
-      </label>
+      {is3d ? (
+        <div className="grid grid-cols-3 gap-1.5 mb-2">
+          <label className="text-[10px] font-gost">
+            Mx, Н·м
+            <NumericInput
+              value={nodeLoad?.moment?.[0] ?? 0}
+              step={50}
+              onCommit={(v) => setNodalMomentComponent(0, v)}
+              className="drawing-input mt-0.5 font-mono text-[11px]"
+            />
+          </label>
+          <label className="text-[10px] font-gost">
+            My, Н·м
+            <NumericInput
+              value={nodeLoad?.moment?.[1] ?? 0}
+              step={50}
+              onCommit={(v) => setNodalMomentComponent(1, v)}
+              className="drawing-input mt-0.5 font-mono text-[11px]"
+            />
+          </label>
+          <label className="text-[10px] font-gost">
+            Mz, Н·м
+            <NumericInput
+              value={nodeLoad?.moment?.[2] ?? 0}
+              step={50}
+              onCommit={(v) => setNodalMomentComponent(2, v)}
+              className="drawing-input mt-0.5 font-mono text-[11px]"
+            />
+          </label>
+        </div>
+      ) : (
+        <label className="text-[10px] font-gost block mb-2">
+          Mz (момент), Н·м
+          <NumericInput
+            value={nodeLoad?.moment?.[2] ?? 0}
+            step={50}
+            onCommit={(v) => setNodalMoment(v)}
+            className="drawing-input mt-0.5 font-mono text-[11px]"
+          />
+        </label>
+      )}
       {nodeLoad && (
         <button
           onClick={removeLoadOnNode}

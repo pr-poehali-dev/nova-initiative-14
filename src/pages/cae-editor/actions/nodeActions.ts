@@ -318,3 +318,23 @@ export function moveNode(model: FrameModel, nodeId: string, x: number, y: number
   );
   return { ...model, nodes };
 }
+
+/**
+ * Установить одну координату узла по оси (0=x, 1=y, 2=z). Используется для
+ * точного ввода координат в панели свойств, в т.ч. Z-координаты для 3D.
+ */
+export function setNodeCoord(
+  model: FrameModel,
+  nodeId: string,
+  axis: 0 | 1 | 2,
+  value: number,
+): FrameModel {
+  const v = Number.isFinite(value) ? value : 0;
+  const nodes = model.nodes.map((n) => {
+    if (n.id !== nodeId) return n;
+    const coords = [...n.coords] as [number, number, number];
+    coords[axis] = v;
+    return { ...n, coords };
+  });
+  return { ...model, nodes };
+}

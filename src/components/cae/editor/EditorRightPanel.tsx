@@ -34,6 +34,12 @@ interface Props {
   toggleCustomDof: (d: DofName) => void;
   addNodalLoad: (fx: number, fy: number) => void;
   setNodalMoment: (mz: number) => void;
+  /** Установка координаты узла по оси (0=x,1=y,2=z) — для точного ввода/3D. */
+  setNodeCoord: (axis: 0 | 1 | 2, value: number) => void;
+  /** Компонента узловой силы (0=Fx,1=Fy,2=Fz) — для 3D. */
+  setNodalForceComponent: (axis: 0 | 1 | 2, value: number) => void;
+  /** Компонента узлового момента (0=Mx,1=My,2=Mz) — для 3D. */
+  setNodalMomentComponent: (axis: 0 | 1 | 2, value: number) => void;
   removeLoadOnNode: () => void;
   setNodeConnection: (c: NodeConnectionType) => void;
   setMatPickerOpen: (v: boolean) => void;
@@ -60,6 +66,9 @@ const EditorRightPanel = ({
   toggleCustomDof,
   addNodalLoad,
   setNodalMoment,
+  setNodeCoord,
+  setNodalForceComponent,
+  setNodalMomentComponent,
   removeLoadOnNode,
   setNodeConnection,
   setMatPickerOpen,
@@ -74,6 +83,7 @@ const EditorRightPanel = ({
   if (selectedNode) {
     return (
       <NodePropertiesPanel
+        dim={model.meta?.dim ?? "2d"}
         selectedNode={selectedNode}
         nodeBC={nodeBC}
         nodeLoad={nodeLoad}
@@ -84,6 +94,9 @@ const EditorRightPanel = ({
         toggleCustomDof={toggleCustomDof}
         addNodalLoad={addNodalLoad}
         setNodalMoment={setNodalMoment}
+        setNodeCoord={setNodeCoord}
+        setNodalForceComponent={setNodalForceComponent}
+        setNodalMomentComponent={setNodalMomentComponent}
         removeLoadOnNode={removeLoadOnNode}
         setNodeConnection={setNodeConnection}
         deleteSelected={deleteSelected}

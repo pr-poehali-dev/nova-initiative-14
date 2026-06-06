@@ -53,6 +53,9 @@ interface Props {
   toggleCustomDof: (d: DofName) => void;
   addNodalLoad: (fx: number, fy: number) => void;
   setNodalMoment: (mz: number) => void;
+  setNodeCoord: (axis: 0 | 1 | 2, value: number) => void;
+  setNodalForceComponent: (axis: 0 | 1 | 2, value: number) => void;
+  setNodalMomentComponent: (axis: 0 | 1 | 2, value: number) => void;
   removeLoadOnNode: () => void;
   setNodeConnection: (c: NodeConnectionType) => void;
   setMatPickerOpen: (v: boolean) => void;
@@ -110,6 +113,9 @@ const ContextPropertiesPopup = ({
   toggleCustomDof,
   addNodalLoad,
   setNodalMoment,
+  setNodeCoord,
+  setNodalForceComponent,
+  setNodalMomentComponent,
   removeLoadOnNode,
   setNodeConnection,
   setMatPickerOpen,
@@ -311,6 +317,9 @@ const ContextPropertiesPopup = ({
             toggleCustomDof={toggleCustomDof}
             addNodalLoad={addNodalLoad}
             setNodalMoment={setNodalMoment}
+            setNodeCoord={setNodeCoord}
+            setNodalForceComponent={setNodalForceComponent}
+            setNodalMomentComponent={setNodalMomentComponent}
             removeLoadOnNode={removeLoadOnNode}
             setNodeConnection={setNodeConnection}
             setMatPickerOpen={setMatPickerOpen}
