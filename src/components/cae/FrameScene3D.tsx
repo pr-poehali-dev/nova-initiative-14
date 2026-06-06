@@ -17,6 +17,7 @@ import { useMemo, useState, useEffect } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls, GizmoHelper, GizmoViewcube, Line, Html } from "@react-three/drei";
 import * as THREE from "three";
+import Icon from "@/components/ui/icon";
 import type { FrameModel, SolverResponse } from "@/lib/cae-model";
 
 const ACCENT = "#c0392b";
@@ -41,28 +42,70 @@ interface Props {
 
 type Vec3 = [number, number, number];
 
+/** Именованные ракурсы быстрых видов. */
+type ViewName = "iso" | "front" | "back" | "left" | "right" | "top" | "bottom";
+
+/** Единичные направления камеры (откуда смотрим) для каждого вида.
+ *  Ось Y — вертикаль (вверх). */
+const VIEW_DIRS: Record<ViewName, Vec3> = {
+  iso: [1, 0.8, 1],
+  front: [0, 0, 1], // смотрим вдоль −Z (плоскость XY, как 2D)
+  back: [0, 0, -1],
+  right: [1, 0, 0],
+  left: [-1, 0, 0],
+  top: [0, 1, 0],
+  bottom: [0, -1, 0],
+};
+
 const vec = (c: [number, number, number]): Vec3 => [c[0], c[1], c[2]];
 
-/** Камера: подгонка под габариты модели по запросу. */
+/**
+ * Камера: автоподгонка под габариты и установка именованных ракурсов.
+ * Реагирует на fitRequestId (изометрия + фит) и на viewRequest (конкретный вид).
+ */
 function CameraFit({
   center,
   radius,
   fitRequestId,
+  viewRequest,
 }: {
   center: Vec3;
   radius: number;
   fitRequestId?: number;
+  viewRequest?: { view: ViewName; id: number };
 }) {
   const { camera } = useThree();
-  useEffect(() => {
+
+  const place = (dir: Vec3) => {
     const d = Math.max(radius * 2.2, 2);
-    camera.position.set(center[0] + d, center[1] + d * 0.8, center[2] + d);
+    const n = new THREE.Vector3(dir[0], dir[1], dir[2]).normalize();
+    camera.position.set(
+      center[0] + n.x * d,
+      center[1] + n.y * d,
+      center[2] + n.z * d,
+    );
     camera.near = d / 100;
     camera.far = d * 50;
+    // Для вида «сверху/снизу» подменяем up, иначе камера вырождается.
+    if (dir[0] === 0 && dir[2] === 0) {
+      camera.up.set(0, 0, dir[1] > 0 ? -1 : 1);
+    } else {
+      camera.up.set(0, 1, 0);
+    }
     camera.updateProjectionMatrix();
     camera.lookAt(center[0], center[1], center[2]);
+  };
+
+  useEffect(() => {
+    place(VIEW_DIRS.iso);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fitRequestId]);
+
+  useEffect(() => {
+    if (viewRequest) place(VIEW_DIRS[viewRequest.view]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewRequest?.id]);
+
   return (
     <OrbitControls target={center} enableDamping dampingFactor={0.1} makeDefault />
   );
@@ -175,7 +218,38 @@ export default function FrameScene3D({
     onSelectElements([id]);
   };
 
+  // Запрос быстрого вида: меняем id, чтобы триггерить эффект камеры даже при
+  // повторном выборе того же вида.
+  const [viewRequest, setViewRequest] = useState<{ view: ViewName; id: number }>();
+  const setView = (view: ViewName) =>
+    setViewRequest((p) => ({ view, id: (p?.id ?? 0) + 1 }));
+
+  const VIEW_BUTTONS: { view: ViewName; label: string; title: string }[] = [
+    { view: "iso", label: "ISO", title: "Изометрия" },
+    { view: "front", label: "Спер.", title: "Спереди (плоскость XY)" },
+    { view: "right", label: "Сбоку", title: "Сбоку (плоскость ZY)" },
+    { view: "top", label: "Сверху", title: "Сверху (план XZ)" },
+  ];
+
   return (
+    <div className="absolute inset-0">
+      {/* Быстрые виды — компактная панель снизу слева. */}
+      <div className="absolute bottom-2 left-2 z-10 flex bg-[var(--drawing-bg)] text-[var(--drawing-line)] border border-[var(--drawing-line)] shadow-sm">
+        {VIEW_BUTTONS.map((b, i) => (
+          <button
+            key={b.view}
+            onClick={() => setView(b.view)}
+            title={b.title}
+            className={`px-2.5 py-1.5 font-gost text-[10px] uppercase tracking-wider hover:bg-[var(--drawing-paper)] active:bg-[var(--drawing-paper)] flex items-center gap-1 ${
+              i > 0 ? "border-l border-[var(--drawing-line)]" : ""
+            }`}
+          >
+            {b.view === "iso" && <Icon name="Box" size={12} />}
+            {b.label}
+          </button>
+        ))}
+      </div>
+
     <Canvas
       camera={{ fov: 45, position: [5, 4, 5] }}
       onPointerMissed={() => {
@@ -308,7 +382,12 @@ export default function FrameScene3D({
         </Html>
       )}
 
-      <CameraFit center={center} radius={radius} fitRequestId={fitRequestId} />
+      <CameraFit
+        center={center}
+        radius={radius}
+        fitRequestId={fitRequestId}
+        viewRequest={viewRequest}
+      />
 
       <GizmoHelper alignment="bottom-right" margin={[60, 60]}>
         <GizmoViewcube
@@ -319,6 +398,7 @@ export default function FrameScene3D({
         />
       </GizmoHelper>
     </Canvas>
+    </div>
   );
 }
 
