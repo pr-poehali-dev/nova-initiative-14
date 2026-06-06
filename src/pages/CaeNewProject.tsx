@@ -1,11 +1,11 @@
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Helmet } from "@/lib/helmet-shim";
 import Icon from "@/components/ui/icon";
 import { useAuth } from "@/contexts/AuthContext";
 import { SITE_URL } from "@/lib/seo";
 import { createProject } from "@/lib/cae";
-import { saveProjectModel } from "@/lib/cae-model";
+import { saveProjectModel, emptyModel } from "@/lib/cae-model";
 import TemplateGallery from "@/components/cae/TemplateGallery";
 import { FRAME_TEMPLATES, type FrameTemplate } from "@/lib/cae-catalog";
 import AlphaTestBanner from "@/components/AlphaTestBanner";
@@ -13,6 +13,10 @@ import AlphaTestBanner from "@/components/AlphaTestBanner";
 const CaeNewProject = () => {
   const { user, loading: authLoading } = useAuth();
   const nav = useNavigate();
+  const [params] = useSearchParams();
+  // 3D доступен только админам/владельцу. Прочий запрос ?type=3d игнорируем.
+  const wants3d = params.get("type") === "3d";
+  const is3d = wants3d && Boolean(user?.is_admin || user?.is_owner);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [tpl, setTpl] = useState<FrameTemplate>(FRAME_TEMPLATES[0]);
@@ -34,7 +38,7 @@ const CaeNewProject = () => {
     const r = await createProject({
       name: finalName,
       description: description.trim(),
-      project_type: "frame_2d",
+      project_type: is3d ? "frame_3d" : "frame_2d",
     });
 
     if (!r.ok || !r.data?.project) {
@@ -45,8 +49,13 @@ const CaeNewProject = () => {
 
     const proj = r.data.project;
 
-    // Если выбран шаблон с готовой моделью — сохраняем её
-    if (tpl.id !== "empty") {
+    // 2D: шаблоны типовых схем. 3D: шаблонов пока нет — создаём пустую 3D-модель.
+    if (is3d) {
+      const sr = await saveProjectModel(proj.id, emptyModel("3d"), "Пустая 3D-модель");
+      if (!sr.ok) {
+        setError("Проект создан, но 3D-модель не инициализировалась.");
+      }
+    } else if (tpl.id !== "empty") {
       const model = tpl.build();
       const sr = await saveProjectModel(proj.id, model, `Из шаблона: ${tpl.name}`);
       if (!sr.ok) {
@@ -75,14 +84,25 @@ const CaeNewProject = () => {
         </Link>
 
         <p className="font-gost text-[11px] uppercase tracking-[0.3em] text-[var(--drawing-line-thin)] mt-4 mb-2">
-          CAE · Создание проекта
+          CAE · Создание проекта{is3d ? " · 3D" : ""}
         </p>
         <h1 className="font-gost-upright text-2xl md:text-3xl font-black uppercase tracking-wide mb-2">
-          Новый проект
+          {is3d ? "Новый 3D-проект" : "Новый проект"}
         </h1>
         <p className="text-sm text-[var(--drawing-line-thin)] mb-6">
-          Выберите шаблон типовой задачи или начните с&nbsp;нуля. Шаблон создаст готовую расчётную схему с&nbsp;опорами и&nbsp;нагрузкой —&nbsp;останется только посчитать.
+          {is3d
+            ? "Пространственная рама (6 степеней свободы на узел). Создаём пустую 3D-модель — узлы, стержни и нагрузки задаются в редакторе."
+            : "Выберите шаблон типовой задачи или начните с\u00a0нуля. Шаблон создаст готовую расчётную схему с\u00a0опорами и\u00a0нагрузкой\u00a0— останется только посчитать."}
         </p>
+
+        {is3d && (
+          <div className="border-2 border-amber-700/50 bg-amber-50/30 p-4 mb-6 flex items-start gap-3">
+            <Icon name="Lock" size={16} className="text-amber-700 mt-0.5 shrink-0" />
+            <p className="text-sm text-amber-800">
+              <strong>Режим для администраторов.</strong> 3D-редактор пока доступен только админам и&nbsp;владельцу для проверки. Расчётное ядро верифицировано на эталонных задачах; визуальный 3D-редактор ещё дорабатывается.
+            </p>
+          </div>
+        )}
 
         <AlphaTestBanner size="compact" className="mb-8" hideCta />
 
@@ -118,12 +138,14 @@ const CaeNewProject = () => {
             </div>
           </div>
 
-          <div>
-            <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-3">
-              Шаблон расчётной схемы
-            </p>
-            <TemplateGallery selectedId={tpl.id} onSelect={setTpl} />
-          </div>
+          {!is3d && (
+            <div>
+              <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-3">
+                Шаблон расчётной схемы
+              </p>
+              <TemplateGallery selectedId={tpl.id} onSelect={setTpl} />
+            </div>
+          )}
 
           {error && (
             <div className="border-l-2 border-[var(--drawing-accent)] pl-3 py-2 text-sm text-[var(--drawing-accent)]">

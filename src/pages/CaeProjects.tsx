@@ -105,15 +105,33 @@ const CaeProjects = () => {
               <Icon name="Plus" size={14} className="mr-1.5" />
               Создать 2D
             </Link>
-            <button
-              disabled
-              className="btn-drawing text-xs inline-flex opacity-50 cursor-not-allowed"
-              title="3D-редактор в разработке — верификация расчётов на эталонных задачах ещё не пройдена"
-            >
-              <Icon name="Box" size={14} className="mr-1.5" />
-              Создать 3D
-              <span className="ml-1.5 font-gost text-[9px] uppercase tracking-wider text-amber-700">скоро</span>
-            </button>
+            {user?.is_admin || user?.is_owner ? (
+              // Доступ к 3D пока открыт ТОЛЬКО админам и владельцу — расчётное
+              // ядро верифицировано, но 3D-редактор ещё дорабатывается.
+              // TODO: открыть всем пользователям после готовности 3D-канвы и ввода.
+              <Link
+                to="/cae/projects/new?type=3d"
+                className="btn-drawing text-xs inline-flex border-amber-700 text-amber-700 hover:bg-amber-700 hover:text-white transition-colors"
+                title="Доступ к 3D открыт только администраторам и владельцу. Не забыть открыть пользователям после готовности 3D-редактора."
+              >
+                <Icon name="Box" size={14} className="mr-1.5" />
+                Создать 3D
+                <span className="ml-1.5 inline-flex items-center gap-1 font-gost text-[9px] uppercase tracking-wider">
+                  <Icon name="Lock" size={9} />
+                  только админам
+                </span>
+              </Link>
+            ) : (
+              <button
+                disabled
+                className="btn-drawing text-xs inline-flex opacity-50 cursor-not-allowed"
+                title="3D-редактор в разработке — скоро откроем доступ"
+              >
+                <Icon name="Box" size={14} className="mr-1.5" />
+                Создать 3D
+                <span className="ml-1.5 font-gost text-[9px] uppercase tracking-wider text-amber-700">скоро</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setInviteOpen(true)}
