@@ -28,6 +28,55 @@ export function addNodeAt(model: FrameModel, worldX: number, worldY: number): Ac
 }
 
 /**
+ * Создать узел по точным координатам (x, y, z). Для 3D-проектов узлы
+ * добавляются через панель точным вводом, т.к. рисование мышью в 3D-сцене
+ * ещё не реализовано (тикет #51).
+ */
+export function addNodeAtCoords(
+  model: FrameModel,
+  x: number,
+  y: number,
+  z: number,
+): ActionResult {
+  const id = genId("n", model.nodes);
+  const safe = (v: number) => (Number.isFinite(v) ? v : 0);
+  const n: ModelNode = { id, coords: [safe(x), safe(y), safe(z)] };
+  return { model: { ...model, nodes: [...model.nodes, n] }, nodeIds: [id] };
+}
+
+/**
+ * Соединить два узла новым стержнем. Возвращает модель без изменений, если
+ * узлов не ровно два, они совпадают или стержень между ними уже есть.
+ * Материал/сечение берутся первыми из каталога модели (как при рисовании в 2D).
+ */
+export function connectNodes(model: FrameModel, nodeIds: string[]): ActionResult {
+  if (nodeIds.length !== 2 || nodeIds[0] === nodeIds[1]) {
+    return { model };
+  }
+  const [a, b] = nodeIds;
+  const haveBoth =
+    model.nodes.some((n) => n.id === a) && model.nodes.some((n) => n.id === b);
+  if (!haveBoth) return { model };
+  const exists = model.elements.some(
+    (el) =>
+      (el.node_start === a && el.node_end === b) ||
+      (el.node_start === b && el.node_end === a),
+  );
+  if (exists) return { model };
+  const newEl: ModelElement = {
+    id: genId("e", model.elements),
+    node_start: a,
+    node_end: b,
+    material_id: model.materials[0]?.id || "steel",
+    section_id: model.sections[0]?.id || "i20",
+  };
+  return {
+    model: { ...model, elements: [...model.elements, newEl] },
+    elementIds: [newEl.id],
+  };
+}
+
+/**
  * Проекция точки (px,py) на отрезок [a→b]. Возвращает точку проекции,
  * параметр t∈[0,1] вдоль отрезка и расстояние от точки до отрезка.
  */

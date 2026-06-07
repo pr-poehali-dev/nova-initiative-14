@@ -17,12 +17,19 @@ export default function NumericInput({
   step = 100,
   placeholder = "",
   className = "drawing-input mb-3 font-mono text-[11px]",
+  signToggle = false,
 }: {
   value: number;
   onCommit: (v: number) => void;
   step?: number;
   placeholder?: string;
   className?: string;
+  /**
+   * Показать кнопку «±» для смены знака. Нужна на мобильных: многие
+   * клавиатуры с inputMode="decimal" не выводят минус, из-за чего нельзя
+   * задать отрицательную нагрузку/координату (тикет #54).
+   */
+  signToggle?: boolean;
 }) {
   const [text, setText] = useState(String(value));
   const [focused, setFocused] = useState(false);
@@ -33,7 +40,23 @@ export default function NumericInput({
     if (!focused) setText(String(value));
   }, [value, focused]);
 
-  return (
+  // Сменить знак текущего значения (по кнопке ±). Работает и для
+  // промежуточного состояния в фокусе, и для зафиксированного значения.
+  const toggleSign = () => {
+    if (focused) {
+      setText((t) => {
+        if (t === "" || t === "-" || t === ".") return "-";
+        return t.startsWith("-") ? t.slice(1) : `-${t}`;
+      });
+      inputRef.current?.focus();
+    } else {
+      const next = -value;
+      setText(String(next));
+      onCommit(next);
+    }
+  };
+
+  const input = (
     <input
       ref={inputRef}
       type="text"
@@ -80,5 +103,25 @@ export default function NumericInput({
       className={className}
       placeholder={placeholder}
     />
+  );
+
+  if (!signToggle) return input;
+
+  // Поле + кнопка смены знака. Кнопка не уводит фокус с поля (preventDefault
+  // на mousedown), чтобы на мобиле клавиатура не закрывалась.
+  return (
+    <div className="flex items-stretch gap-1">
+      <div className="flex-1 min-w-0">{input}</div>
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={toggleSign}
+        title="Сменить знак (+/−)"
+        aria-label="Сменить знак"
+        className="shrink-0 px-2 min-h-[40px] lg:min-h-0 border border-[var(--drawing-line)] font-mono text-[13px] leading-none flex items-center justify-center hover:bg-[var(--drawing-paper)] active:bg-[var(--drawing-paper)] self-start"
+      >
+        ±
+      </button>
+    </div>
   );
 }

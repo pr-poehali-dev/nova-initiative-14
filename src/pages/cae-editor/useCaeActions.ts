@@ -27,6 +27,8 @@ import {
   duplicateSelection,
   moveNode as moveNodePure,
   setNodeCoord as setNodeCoordPure,
+  addNodeAtCoords as addNodeAtCoordsPure,
+  connectNodes as connectNodesPure,
   setNodeConnection as setNodeConnectionPure,
 } from "./actions/nodeActions";
 import {
@@ -134,6 +136,28 @@ export function useCaeActions(
   const setNodeCoord = (axis: 0 | 1 | 2, value: number) => {
     if (!selectedNodeId) return;
     updateModel(setNodeCoordPure(model, selectedNodeId, axis, value));
+  };
+
+  /** Добавить узел по точным координатам (для 3D-панели, тикет #51). */
+  const addNodeAtCoords = (x: number, y: number, z: number) => {
+    if (nodeLimit !== undefined && model.nodes.length >= nodeLimit) {
+      onNodeLimitReached?.();
+      return;
+    }
+    const r = addNodeAtCoordsPure(model, x, y, z);
+    updateModel(r.model);
+    if (r.nodeIds) setSelectedNodeIds(r.nodeIds);
+  };
+
+  /** Соединить два выбранных узла стержнем (для 3D-панели, тикет #51). */
+  const connectSelectedNodes = () => {
+    const r = connectNodesPure(model, selectedNodeIds);
+    if (r.model === model) return;
+    updateModel(r.model);
+    if (r.elementIds) {
+      setSelectedElementIds(r.elementIds);
+      setSelectedNodeIds([]);
+    }
   };
 
   const setNodeConnection = (connection: NodeConnectionType) => {
@@ -250,6 +274,8 @@ export function useCaeActions(
     duplicateSelected,
     moveNode,
     setNodeCoord,
+    addNodeAtCoords,
+    connectSelectedNodes,
     selectAll,
     clearSelection,
     setNodeConnection,

@@ -41,15 +41,33 @@ export default function InSpanForm({ onAdd }: { onAdd: (pos: number, py: number)
         </label>
         <label className="text-[10px] font-gost">
           Py, Н
-          <input
-            type="number"
-            inputMode="numeric"
-            step={100}
-            value={py}
-            onChange={(e) => setPy(parseFloat(e.target.value))}
-            onKeyDown={onKey}
-            className="drawing-input font-mono text-[11px] mt-0.5"
-          />
+          <div className="flex items-stretch gap-1 mt-0.5">
+            <input
+              type="text"
+              inputMode="decimal"
+              pattern="-?[0-9]*[.,]?[0-9]*"
+              step={100}
+              value={py}
+              onChange={(e) => {
+                const raw = e.target.value.replace(/,/g, ".");
+                if (raw === "" || raw === "-" || /^-?[0-9]*\.?[0-9]*$/.test(raw)) {
+                  setPy(raw === "" || raw === "-" ? 0 : parseFloat(raw));
+                }
+              }}
+              onKeyDown={onKey}
+              className="drawing-input font-mono text-[11px] flex-1 min-w-0"
+            />
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setPy((v) => -(Number.isFinite(v) ? v : 0))}
+              title="Сменить знак (+/−)"
+              aria-label="Сменить знак"
+              className="shrink-0 px-2 min-h-[40px] lg:min-h-0 border border-[var(--drawing-line)] font-mono text-[13px] leading-none flex items-center justify-center hover:bg-[var(--drawing-paper)] active:bg-[var(--drawing-paper)]"
+            >
+              ±
+            </button>
+          </div>
         </label>
       </div>
       <p className="text-[9px] font-gost text-[var(--drawing-line-thin)] leading-snug">

@@ -261,14 +261,19 @@ const FrameCanvas = ({
         svgRef={svgRef}
       />
 
-      <CanvasDiagramTooltip
-        model={model}
-        result={result}
-        showDiagram={showDiagram}
-        cursorWorld={cursorWorld}
-        toScreenX={toScreenX}
-        toScreenY={toScreenY}
-      />
+      {/* Tooltip эпюры под курсором — интерактивный слой. Помечаем data-pdf-hide,
+          чтобы он НЕ попадал в снимок схемы для PDF-отчёта, если в момент
+          экспорта пользователь навёл курсор на эпюру (тикет #52). */}
+      <g data-pdf-hide="tooltip">
+        <CanvasDiagramTooltip
+          model={model}
+          result={result}
+          showDiagram={showDiagram}
+          cursorWorld={cursorWorld}
+          toScreenX={toScreenX}
+          toScreenY={toScreenY}
+        />
+      </g>
     </svg>
   );
 };

@@ -617,7 +617,16 @@ function drawDiagramOverScheme(
     const dy = b.coords[1] - a.coords[1];
     const len = Math.sqrt(dx * dx + dy * dy);
     if (len < 1e-9) continue;
-    const nx = -dy / len, ny = dx / len; // нормаль в МИРЕ
+    // Нормаль в МИРЕ. Ориентацию фиксируем детерминированно по геометрии, а не
+    // по порядку узлов (тикет #53): нормаль «смотрит вверх» (ny ≥ 0), для строго
+    // горизонтальных стержней — вправо (nx ≥ 0). Иначе сторона эпюры зависела бы
+    // от направления рисования стержня, и одинаковые балки, нарисованные в разные
+    // стороны, получали бы зеркальные эпюры на главной схеме отчёта.
+    let nx = -dy / len, ny = dx / len;
+    if (ny < -1e-9 || (Math.abs(ny) <= 1e-9 && nx < 0)) {
+      nx = -nx;
+      ny = -ny;
+    }
     let vals: number[] = [];
     if (kind === "N") vals = er.diagrams.N;
     else if (kind === "Qy") vals = er.diagrams.Qy;
@@ -1002,7 +1011,13 @@ function drawSingleElementUnfolded(
       if (v < vMin) vMin = v;
       if (v > vMax) vMax = v;
     }
-    if (vMin === 0 && vMax === 0) {
+    // Эпюру считаем нулевой не только при строгом 0, но и при пренебрежимо
+    // малых значениях — численный шум решателя (порядка 1e-9…1e-6). Иначе
+    // эпюра Qy/Mz с величиной ~1e-10 рисовалась как «ненулевая» с подписью
+    // «0.0 Н», тогда как N часто строго 0 и подписывалась «нулевая» — это и
+    // вызывало путаницу (тикет #52). Порог: 0.5 Н / 0.5 Н·м.
+    const NEGLIGIBLE = 0.5;
+    if (Math.max(Math.abs(vMin), Math.abs(vMax)) < NEGLIGIBLE) {
       // Нулевая эпюра
       doc.setDrawColor(...C.ink);
       doc.setLineWidth(0.5);

@@ -130,6 +130,8 @@ const CaeEditor = () => {
     removeLoadOnNode,
     setNodalMoment,
     setNodeCoord,
+    addNodeAtCoords,
+    connectSelectedNodes,
     setNodalForceComponent,
     setNodalMomentComponent,
     toggleCustomDof,
@@ -238,6 +240,8 @@ const CaeEditor = () => {
             setSelectedElementIds={setSelectedElementIds}
             onCanvasClick={onCanvasClick}
             moveNode={moveNode}
+            addNodeAtCoords={addNodeAtCoords}
+            connectSelectedNodes={connectSelectedNodes}
             result={result}
             showDiagram={showDiagram}
             diagramScale={diagramScale}

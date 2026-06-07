@@ -204,6 +204,7 @@ export default function NodePropertiesPanel({
           <NumericInput
             value={nodeLoad?.force?.[0] ?? 0}
             step={100}
+            signToggle={!is3d}
             onCommit={(v) =>
               is3d ? setNodalForceComponent(0, v) : addNodalLoad(v, nodeLoad?.force?.[1] ?? 0)
             }
@@ -215,6 +216,7 @@ export default function NodePropertiesPanel({
           <NumericInput
             value={nodeLoad?.force?.[1] ?? 0}
             step={100}
+            signToggle={!is3d}
             onCommit={(v) =>
               is3d ? setNodalForceComponent(1, v) : addNodalLoad(nodeLoad?.force?.[0] ?? 0, v)
             }
@@ -269,6 +271,7 @@ export default function NodePropertiesPanel({
           <NumericInput
             value={nodeLoad?.moment?.[2] ?? 0}
             step={50}
+            signToggle
             onCommit={(v) => setNodalMoment(v)}
             className="drawing-input mt-0.5 font-mono text-[11px]"
           />

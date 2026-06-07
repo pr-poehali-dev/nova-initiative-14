@@ -123,14 +123,15 @@ export function useCaeDemoProject() {
   }, []);
 
   const onReset = useCallback(() => {
+    // Сбрасываем только МОДЕЛЬ (чертёж), но НЕ счётчик расчётов.
+    // Иначе кнопка «Сбросить» обнуляла лимит из 2 пробных расчётов —
+    // пользователь мог считать бесконечно (тикет #50).
     localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(SOLVE_COUNT_KEY);
     const tpl = FRAME_TEMPLATES.find((t) => t.id === "simply_supported");
     const fresh = tpl ? tpl.build() : emptyModel("2d");
     resetHistory(fresh);
     setDirty(false);
     setLastSaved(null);
-    setSolveCount(0);
   }, [resetHistory]);
 
   return {

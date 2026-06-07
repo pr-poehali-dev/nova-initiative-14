@@ -18,6 +18,7 @@ import type { LabelOffsetsApi } from "@/pages/cae-editor/useLabelOffsets";
 import type { ValidationIssue } from "@/lib/cae-validate";
 import CanvasFloatingControls from "./CanvasFloatingControls";
 import MobileCanvasHud from "./MobileCanvasHud";
+import Scene3DBuilder from "./Scene3DBuilder";
 
 // 3D-сцена тяжёлая (three.js) — грузим лениво только для 3D-проектов.
 const FrameScene3D = lazy(() => import("@/components/cae/FrameScene3D"));
@@ -36,6 +37,10 @@ interface Props {
   setSelectedElementIds: (ids: string[]) => void;
   onCanvasClick: (worldX: number, worldY: number) => void;
   moveNode: (nodeId: string, x: number, y: number) => void;
+  /** Добавить узел по точным координатам (панель построения 3D, тикет #51). */
+  addNodeAtCoords?: (x: number, y: number, z: number) => void;
+  /** Соединить два выбранных узла стержнем (панель построения 3D, тикет #51). */
+  connectSelectedNodes?: () => void;
   result: SolverResponse | null;
   showDiagram: DiagramKind;
   diagramScale: number;
@@ -88,6 +93,8 @@ const EditorCanvasArea = ({
   setSelectedElementIds,
   onCanvasClick,
   moveNode,
+  addNodeAtCoords,
+  connectSelectedNodes,
   result,
   showDiagram,
   diagramScale,
@@ -186,6 +193,13 @@ const EditorCanvasArea = ({
           showDeformed={showDiagram === "deformed"}
           fitRequestId={fitRequestId}
         />
+        {addNodeAtCoords && connectSelectedNodes && (
+          <Scene3DBuilder
+            selectedNodeCount={selectedNodeIds.length}
+            onAddNode={addNodeAtCoords}
+            onConnect={connectSelectedNodes}
+          />
+        )}
       </Suspense>
     ) : (
       <FrameCanvas
