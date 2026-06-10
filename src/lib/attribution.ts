@@ -102,8 +102,12 @@ export function classifyAttribution(
   };
 
   // 1) QR-флаер — приоритетнее всего: человек пришёл с бумажного флаера.
+  // Если в ссылку QR зашита UTM-кампания (utm_campaign) — добавляем её в
+  // ярлык, чтобы различать конкретные флаеры/тиражи между собой.
   if (QR_FLYER_LABELS[path]) {
-    return { ...base, sourceType: "qr_flyer", sourceLabel: QR_FLYER_LABELS[path] };
+    const baseLabel = QR_FLYER_LABELS[path];
+    const label = utmCampaign ? `${baseLabel} · ${utmCampaign}` : baseLabel;
+    return { ...base, sourceType: "qr_flyer", sourceLabel: label };
   }
 
   // 2) UTM-метка — явно размеченная кампания.

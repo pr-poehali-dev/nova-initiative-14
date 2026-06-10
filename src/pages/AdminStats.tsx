@@ -81,12 +81,20 @@ const AdminStats = () => {
           <p className="font-gost text-[11px] uppercase tracking-[0.3em] text-[var(--drawing-line-thin)]">
             Админ · Аналитика
           </p>
-          <Link
-            to="/account"
-            className="font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)] hover:text-[var(--drawing-accent)] inline-flex items-center gap-1"
-          >
-            <Icon name="ArrowLeft" size={12} />К кабинету
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              to="/admin/qr"
+              className="font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)] hover:text-[var(--drawing-accent)] inline-flex items-center gap-1"
+            >
+              <Icon name="QrCode" size={12} />QR-флаеры
+            </Link>
+            <Link
+              to="/account"
+              className="font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)] hover:text-[var(--drawing-accent)] inline-flex items-center gap-1"
+            >
+              <Icon name="ArrowLeft" size={12} />К кабинету
+            </Link>
+          </div>
         </div>
         <h1 className="font-gost-upright text-2xl md:text-3xl font-black uppercase tracking-wide mb-4">
           Статистика посещений
