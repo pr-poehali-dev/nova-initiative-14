@@ -12,7 +12,8 @@ import QRCode from "qrcode";
 
 /** Фирменная палитра (из src/index.css). */
 const COLORS = {
-  bg: "#faf8f0",
+  // bg: "#faf8f0",
+  bg: "#ffffff",
   line: "#1a1a2e",
   lineThin: "#3a3a5e",
   accent: "#c0392b",
@@ -286,9 +287,9 @@ export function renderAd(canvas: HTMLCanvasElement, content: AdContent) {
   const margin = unit * 8;
 
   // Фон
-  // ctx.fillStyle = p.bg;
+  ctx.fillStyle = p.bg;
   ctx.fillRect(0, 0, W, H);
-  // drawGrid(ctx, W, H, p.fg);
+  drawGrid(ctx, W, H, p.fg);
 
   // Рамка-чертёж
   ctx.strokeStyle = p.frame;
@@ -426,9 +427,9 @@ function renderQrFlyer(
   const margin = unit * 5;
 
   // Фон + сетка + рамка
-  // ctx.fillStyle = p.bg;
+  ctx.fillStyle = p.bg;
   ctx.fillRect(0, 0, W, H);
-  // drawGrid(ctx, W, H, p.fg);
+  drawGrid(ctx, W, H, p.fg);
   ctx.strokeStyle = p.frame;
   ctx.lineWidth = Math.max(2, unit * 0.5);
   ctx.strokeRect(margin, margin, W - margin * 2, H - margin * 2);
