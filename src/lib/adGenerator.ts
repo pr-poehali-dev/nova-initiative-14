@@ -536,7 +536,7 @@ function renderQrFlyer(
     // Пояснение (перенос по ширине колонки)
     if (block?.note) {
       ctx.fillStyle = p.fg;
-      const noteSize = unit * 2.4;
+      const noteSize = unit * 2.8;
       ctx.font = `700 ${noteSize}px "Courier New", monospace`;
       const noteLines = wrapText(ctx, block.note, colW - unit * 2);
       for (const line of noteLines) {
