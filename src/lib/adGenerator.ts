@@ -460,7 +460,8 @@ function renderQrFlyer(
   // Eyebrow
   if (content.eyebrow.trim()) {
     ctx.fillStyle = p.muted;
-    ctx.font = `400 ${unit * 2.7}px "Courier New", monospace`;
+    // ctx.font = `400 ${unit * 2.7}px "Courier New", monospace`;
+    ctx.font = `400 ${unit * 3}px "Courier New", monospace`;
     ctx.fillText(content.eyebrow.toUpperCase(), cx, y);
     y += unit * 5;
   }
@@ -536,8 +537,8 @@ function renderQrFlyer(
     if (block?.note) {
       ctx.fillStyle = p.fg;
       // const noteSize = unit * 2.4;
-      const noteSize = unit * 4;
-      ctx.font = `400 ${noteSize}px "Courier New", monospace`;
+      const noteSize = unit * 3.2;
+      ctx.font = `700 ${noteSize}px "Courier New", monospace`;
       const noteLines = wrapText(ctx, block.note, colW - unit * 2);
       for (const line of noteLines) {
         cy += noteSize * 1.35;
