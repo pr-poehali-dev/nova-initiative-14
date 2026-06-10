@@ -428,7 +428,7 @@ function renderQrFlyer(
   // Фон + сетка + рамка
   ctx.fillStyle = p.bg;
   ctx.fillRect(0, 0, W, H);
-  drawGrid(ctx, W, H, p.fg);
+  // drawGrid(ctx, W, H, p.fg);
   ctx.strokeStyle = p.frame;
   ctx.lineWidth = Math.max(2, unit * 0.5);
   ctx.strokeRect(margin, margin, W - margin * 2, H - margin * 2);
