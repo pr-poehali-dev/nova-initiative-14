@@ -171,7 +171,8 @@ function palette(theme: AdTheme): Palette {
       return {
         bg: COLORS.bg,
         fg: COLORS.line,
-        muted: COLORS.lineThin,
+        // muted: COLORS.lineThin,
+        muted: COLORS.line,
         accent: COLORS.accent,
         frame: COLORS.line,
       };
