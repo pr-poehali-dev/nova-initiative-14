@@ -34,11 +34,41 @@ export interface AdFormatSpec {
 
 /** Доступные форматы материалов. */
 export const AD_FORMATS: AdFormatSpec[] = [
-  { key: "post", label: "Пост 1080×1080", width: 1080, height: 1080, hint: "Telegram, VK, Instagram" },
-  { key: "story", label: "Сториз 1080×1920", width: 1080, height: 1920, hint: "Stories / Reels 9:16" },
-  { key: "cover", label: "Обложка 1200×630", width: 1200, height: 630, hint: "Блог, OG-превью" },
-  { key: "leaflet", label: "Листовка A5", width: 1748, height: 2480, hint: "Печать, A5 300 dpi" },
-  { key: "flyer_quarter", label: "Флаер 1/4 A4 (QR)", width: 1240, height: 1748, hint: "Печать, 105×148 мм 300 dpi · 4 шт на листе A4" },
+  {
+    key: "post",
+    label: "Пост 1080×1080",
+    width: 1080,
+    height: 1080,
+    hint: "Telegram, VK, Instagram",
+  },
+  {
+    key: "story",
+    label: "Сториз 1080×1920",
+    width: 1080,
+    height: 1920,
+    hint: "Stories / Reels 9:16",
+  },
+  {
+    key: "cover",
+    label: "Обложка 1200×630",
+    width: 1200,
+    height: 630,
+    hint: "Блог, OG-превью",
+  },
+  {
+    key: "leaflet",
+    label: "Листовка A5",
+    width: 1748,
+    height: 2480,
+    hint: "Печать, A5 300 dpi",
+  },
+  {
+    key: "flyer_quarter",
+    label: "Флаер 1/4 A4 (QR)",
+    width: 1240,
+    height: 1748,
+    hint: "Печать, 105×148 мм 300 dpi · 4 шт на листе A4",
+  },
 ];
 
 /** Один QR-блок на флаере: ссылка + подпись + пояснение. */
@@ -119,17 +149,39 @@ interface Palette {
 function palette(theme: AdTheme): Palette {
   switch (theme) {
     case "dark":
-      return { bg: COLORS.line, fg: COLORS.bg, muted: "#9aa0c0", accent: COLORS.accent, frame: COLORS.bg };
+      return {
+        bg: COLORS.line,
+        fg: COLORS.bg,
+        muted: "#9aa0c0",
+        accent: COLORS.accent,
+        frame: COLORS.bg,
+      };
     case "accent":
-      return { bg: COLORS.accent, fg: "#ffffff", muted: "rgba(255,255,255,0.78)", accent: "#ffffff", frame: "#ffffff" };
+      return {
+        bg: COLORS.accent,
+        fg: "#ffffff",
+        muted: "rgba(255,255,255,0.78)",
+        accent: "#ffffff",
+        frame: "#ffffff",
+      };
     case "light":
     default:
-      return { bg: COLORS.bg, fg: COLORS.line, muted: COLORS.lineThin, accent: COLORS.accent, frame: COLORS.line };
+      return {
+        bg: COLORS.bg,
+        fg: COLORS.line,
+        muted: COLORS.lineThin,
+        accent: COLORS.accent,
+        frame: COLORS.line,
+      };
   }
 }
 
 /** Перенос текста по ширине с учётом ручных переносов \n. */
-function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+function wrapText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+): string[] {
   const lines: string[] = [];
   for (const paragraph of text.split("\n")) {
     if (paragraph.trim() === "") {
@@ -153,7 +205,12 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
 }
 
 /** Рисует «чертёжную» сетку фона. */
-function drawGrid(ctx: CanvasRenderingContext2D, w: number, h: number, color: string) {
+function drawGrid(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  color: string,
+) {
   ctx.save();
   ctx.strokeStyle = color;
   ctx.globalAlpha = 0.08;
@@ -175,7 +232,15 @@ function drawGrid(ctx: CanvasRenderingContext2D, w: number, h: number, color: st
 }
 
 /** Угловые засечки в стиле чертёжной рамки. */
-function drawCorners(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, color: string, size: number) {
+function drawCorners(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  color: string,
+  size: number,
+) {
   ctx.save();
   ctx.strokeStyle = color;
   ctx.lineWidth = Math.max(3, size / 8);
@@ -208,7 +273,8 @@ export function renderAd(canvas: HTMLCanvasElement, content: AdContent) {
     renderQrFlyer(canvas, content, null);
     return;
   }
-  const spec = AD_FORMATS.find((f) => f.key === content.format) || AD_FORMATS[0];
+  const spec =
+    AD_FORMATS.find((f) => f.key === content.format) || AD_FORMATS[0];
   const { width: W, height: H } = spec;
   canvas.width = W;
   canvas.height = H;
@@ -228,7 +294,15 @@ export function renderAd(canvas: HTMLCanvasElement, content: AdContent) {
   ctx.strokeStyle = p.frame;
   ctx.lineWidth = Math.max(2, unit * 0.4);
   ctx.strokeRect(margin, margin, W - margin * 2, H - margin * 2);
-  drawCorners(ctx, margin, margin, W - margin * 2, H - margin * 2, p.accent, unit * 4);
+  drawCorners(
+    ctx,
+    margin,
+    margin,
+    W - margin * 2,
+    H - margin * 2,
+    p.accent,
+    unit * 4,
+  );
 
   const contentX = margin + unit * 6;
   const contentW = W - margin * 2 - unit * 12;
@@ -321,7 +395,11 @@ export function renderAd(canvas: HTMLCanvasElement, content: AdContent) {
     ctx.font = `400 ${unit * 2.8}px "Courier New", monospace`;
     const siteText = content.site;
     const siteW = ctx.measureText(siteText).width;
-    ctx.fillText(siteText, W - margin - unit * 6 - siteW, ctaYTop + ctaH / 2 + unit * 1);
+    ctx.fillText(
+      siteText,
+      W - margin - unit * 6 - siteW,
+      ctaYTop + ctaH / 2 + unit * 1,
+    );
   }
 }
 
@@ -354,7 +432,15 @@ function renderQrFlyer(
   ctx.strokeStyle = p.frame;
   ctx.lineWidth = Math.max(2, unit * 0.5);
   ctx.strokeRect(margin, margin, W - margin * 2, H - margin * 2);
-  drawCorners(ctx, margin, margin, W - margin * 2, H - margin * 2, p.accent, unit * 4);
+  drawCorners(
+    ctx,
+    margin,
+    margin,
+    W - margin * 2,
+    H - margin * 2,
+    p.accent,
+    unit * 4,
+  );
 
   const cx = W / 2;
   let y = margin + unit * 9;
@@ -457,7 +543,9 @@ function renderQrFlyer(
 
   // === Адрес снизу ===
   if (content.address?.trim()) {
-    const addrY = H - margin - unit * 8;
+    // Было: const addrY = H - margin - unit * 8;
+    // Стало (поднимаем базовую точку выше):
+    const addrY = H - margin - unit * 13;
     ctx.strokeStyle = p.frame;
     ctx.lineWidth = unit * 0.3;
     ctx.beginPath();
@@ -505,7 +593,10 @@ function makeQrImage(url: string): Promise<HTMLImageElement> {
  * рисует макет с ними. Для остальных форматов просто вызывает renderAd.
  * Используется и для превью, и перед экспортом, чтобы QR точно были в кадре.
  */
-export async function renderAdAsync(canvas: HTMLCanvasElement, content: AdContent) {
+export async function renderAdAsync(
+  canvas: HTMLCanvasElement,
+  content: AdContent,
+) {
   if (content.format === "flyer_quarter" && content.qrBlocks) {
     const [a, b] = await Promise.all([
       makeQrImage(content.qrBlocks[0].url),
@@ -519,7 +610,10 @@ export async function renderAdAsync(canvas: HTMLCanvasElement, content: AdConten
 
 /** Имя файла без расширения по содержимому. */
 function fileBase(content: AdContent): string {
-  const safe = (content.title || "ad").replace(/\s+/g, "-").replace(/[^\wа-яё-]/gi, "").slice(0, 40);
+  const safe = (content.title || "ad")
+    .replace(/\s+/g, "-")
+    .replace(/[^\wа-яё-]/gi, "")
+    .slice(0, 40);
   return `diplom-inzh-${content.format}-${safe || "material"}`;
 }
 
