@@ -14,7 +14,8 @@ import QRCode from "qrcode";
 const COLORS = {
   // bg: "#faf8f0",
   bg: "#ffffff",
-  line: "#1a1a2e",
+  // line: "#1a1a2e",
+  line: "#000000",
   lineThin: "#3a3a5e",
   accent: "#c0392b",
   blue: "#2c3e80",
