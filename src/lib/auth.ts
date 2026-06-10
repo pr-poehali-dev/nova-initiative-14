@@ -292,11 +292,19 @@ export interface DailyStat {
   signups: number;
 }
 
+export interface PageStat {
+  path: string;
+  title: string;
+  unique: number;
+  total: number;
+}
+
 export interface AdminStats {
   period_days: number;
   totals: { visits: number; signups: number; sources: number };
   visits_by_source: SourceStat[];
   signups_by_source: SourceStat[];
+  top_pages: PageStat[];
   daily: DailyStat[];
 }
 

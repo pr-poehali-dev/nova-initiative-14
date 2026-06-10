@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "@/lib/helmet-shim";
-import { fetchArticle, formatRuDate, type Article } from "@/lib/articles";
+import { fetchArticle, fetchPageViews, formatRuDate, type Article } from "@/lib/articles";
 import { SITE_URL, breadcrumbsLd } from "@/lib/seo";
 import NotFound from "@/pages/NotFound";
 import ReadingProgress from "@/components/blog/ReadingProgress";
@@ -15,6 +15,7 @@ const BlogArticle = () => {
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [views, setViews] = useState<number | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -25,6 +26,21 @@ const BlogArticle = () => {
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
+  }, [slug]);
+
+  useEffect(() => {
+    if (!slug) return;
+    let alive = true;
+    // Небольшая задержка — чтобы наш собственный заход успел записаться.
+    const t = window.setTimeout(() => {
+      fetchPageViews(`/blog/${slug}`).then((r) => {
+        if (alive) setViews(r.unique);
+      });
+    }, 1200);
+    return () => {
+      alive = false;
+      window.clearTimeout(t);
+    };
   }, [slug]);
 
   if (notFound && !loading) return <NotFound />;
@@ -129,6 +145,9 @@ const BlogArticle = () => {
             <div className="eskd-meta">
               {formatRuDate(article.published_at)} · {article.reading_minutes} мин ·{" "}
               {article.author_name}
+              {views !== null && views > 0 && (
+                <> · прочитали {views}&nbsp;{views === 1 ? "раз" : "раз"}</>
+              )}
             </div>
           </header>
 

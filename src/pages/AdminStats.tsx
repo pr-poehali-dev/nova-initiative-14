@@ -4,7 +4,7 @@ import { Helmet } from "@/lib/helmet-shim";
 import Icon from "@/components/ui/icon";
 import { useAuth } from "@/contexts/AuthContext";
 import { SITE_URL } from "@/lib/seo";
-import { fetchAdminStats, type AdminStats } from "@/lib/auth";
+import { fetchAdminStats, type AdminStats, type PageStat } from "@/lib/auth";
 
 /** Дни-периоды для переключателя. */
 const PERIODS = [
@@ -159,6 +159,11 @@ const AdminStats = () => {
             <Section title="Откуда приходят регистрации (первое касание)">
               <SourceBars items={stats.signups_by_source} />
             </Section>
+
+            {/* Топ страниц и постов по посещаемости */}
+            <Section title="Топ страниц и постов по посещаемости">
+              <TopPages items={stats.top_pages ?? []} />
+            </Section>
           </>
         )}
       </div>
@@ -210,6 +215,49 @@ function SourceBars({ items }: { items: { sourceType: string; sourceLabel: strin
           </div>
           <span className="font-mono text-xs text-[var(--drawing-line)] w-10 text-right shrink-0">
             {it.count}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Таблица топ-страниц: уникальные посетители + всего просмотров. */
+function TopPages({ items }: { items: PageStat[] }) {
+  if (items.length === 0) return <Empty />;
+  const max = Math.max(1, ...items.map((i) => i.unique));
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-2 pb-1 border-b border-[var(--drawing-line)]/30">
+        <span className="flex-1 font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)]">
+          Страница / пост
+        </span>
+        <span className="w-16 text-right font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)]">
+          Уник.
+        </span>
+        <span className="w-16 text-right font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)]">
+          Всего
+        </span>
+      </div>
+      {items.map((it) => (
+        <div key={it.path} className="flex items-center gap-2 py-1">
+          <div className="flex-1 min-w-0">
+            <p className="font-gost text-xs text-[var(--drawing-line)] truncate" title={it.title}>
+              {it.title}
+            </p>
+            <div className="h-1 mt-0.5 bg-[var(--drawing-paper)]">
+              <div
+                className="h-full bg-[var(--drawing-accent)]"
+                style={{ width: `${(it.unique / max) * 100}%` }}
+              />
+            </div>
+            <p className="font-mono text-[9px] text-[var(--drawing-line-thin)] truncate">{it.path}</p>
+          </div>
+          <span className="w-16 text-right font-mono text-sm font-bold text-[var(--drawing-line)]">
+            {it.unique}
+          </span>
+          <span className="w-16 text-right font-mono text-xs text-[var(--drawing-line-thin)]">
+            {it.total}
           </span>
         </div>
       ))}

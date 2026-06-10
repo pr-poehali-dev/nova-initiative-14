@@ -332,6 +332,24 @@ def action_admin_stats(conn, admin_id: int, params: dict) -> dict:
         )
         signups_daily = {r['d']: r['cnt'] for r in cur.fetchall()}
 
+        # Топ страниц/постов по посещаемости: уникальные визитёры + всего просмотров
+        top_pages = []
+        try:
+            cur.execute(
+                "SELECT path, MAX(page_title) AS title, "
+                "COUNT(DISTINCT visitor_id) AS uniq, COUNT(*) AS total "
+                "FROM page_views "
+                f"WHERE created_at >= {since} "
+                "GROUP BY path ORDER BY uniq DESC, total DESC LIMIT 50"
+            )
+            top_pages = [
+                {'path': r['path'], 'title': r['title'] or r['path'],
+                 'unique': int(r['uniq']), 'total': int(r['total'])}
+                for r in cur.fetchall()
+            ]
+        except Exception:
+            top_pages = []
+
     # Собираем общий ряд по дням (объединение ключей)
     all_days = sorted(set(visits_daily) | set(signups_daily))
     daily = [
@@ -348,5 +366,6 @@ def action_admin_stats(conn, admin_id: int, params: dict) -> dict:
         },
         'visits_by_source': visits_by_source,
         'signups_by_source': signups_by_source,
+        'top_pages': top_pages,
         'daily': daily,
     })

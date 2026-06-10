@@ -5,6 +5,7 @@ import {
   getOrCreateFirstTouch,
   type Attribution,
 } from "@/lib/attribution";
+import func2url from "../../backend/func2url.json";
 
 const PAGE_NAMES: Record<string, string> = {
   "/": "Главная",
@@ -16,6 +17,68 @@ const PAGE_NAMES: Record<string, string> = {
   "/contacts": "Контакты",
   "/privacy": "Политика конфиденциальности",
 };
+
+const VISITOR_ID_KEY = "pv_visitor_id";
+
+/** Стабильный анонимный ID посетителя (для подсчёта уникальных). */
+export function getVisitorId(): string {
+  let id = localStorage.getItem(VISITOR_ID_KEY);
+  if (!id) {
+    id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+    try {
+      localStorage.setItem(VISITOR_ID_KEY, id);
+    } catch {
+      /* ignore */
+    }
+  }
+  return id;
+}
+
+/** Служебные пути, которые не считаем контентными страницами/постами. */
+const PV_SKIP = [
+  "/login", "/register", "/account", "/verify-email", "/forgot-password",
+  "/reset-password", "/oauth", "/admin",
+];
+
+function isPvTrackable(path: string): boolean {
+  return !PV_SKIP.some((p) => path === p || path.startsWith(p + "/"));
+}
+
+/** Отправляет один просмотр страницы в page-view (учёт посещаемости). */
+function recordPageView(path: string) {
+  if (!isPvTrackable(path)) return;
+  const url = (func2url as Record<string, string>)["page-view"];
+  if (!url) return;
+  let device = "Компьютер";
+  const ua = navigator.userAgent;
+  if (/Mobile|Android|iPhone/i.test(ua)) device = "Мобильный";
+  else if (/Tablet|iPad/i.test(ua)) device = "Планшет";
+
+  let sourceType = "direct";
+  try {
+    const raw = sessionStorage.getItem("vt_attribution");
+    if (raw) sourceType = (JSON.parse(raw) as Attribution).sourceType || "direct";
+  } catch {
+    /* ignore */
+  }
+
+  const payload = JSON.stringify({
+    path,
+    pageTitle: PAGE_NAMES[path] || document.title || path,
+    visitorId: getVisitorId(),
+    sourceType,
+    device,
+  });
+  try {
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(url, payload);
+    } else {
+      fetch(url, { method: "POST", body: payload, keepalive: true });
+    }
+  } catch {
+    /* ignore */
+  }
+}
 
 export interface VisitorData {
   pages: string[];
@@ -119,5 +182,9 @@ export function useVisitorTracking() {
       pages.push(pageName);
       sessionStorage.setItem(SESSION_KEY, JSON.stringify(pages));
     }
+    // Учёт посещаемости конкретной страницы/поста (по заголовку document.title
+    // даём небольшую задержку, чтобы страница успела его проставить).
+    const t = window.setTimeout(() => recordPageView(location.pathname), 600);
+    return () => window.clearTimeout(t);
   }, [location.pathname]);
 }

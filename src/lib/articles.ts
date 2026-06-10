@@ -51,6 +51,25 @@ export async function fetchArticle(slug: string): Promise<Article | null> {
   return res.json();
 }
 
+/** Публичный счётчик посещений страницы: уникальные читатели + всего просмотров. */
+export async function fetchPageViews(
+  path: string,
+): Promise<{ unique: number; total: number }> {
+  const url = (func2url as Record<string, string>)["page-view"];
+  if (!url) return { unique: 0, total: 0 };
+  try {
+    const res = await fetch(`${url}?path=${encodeURIComponent(path)}`, {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    if (!res.ok) return { unique: 0, total: 0 };
+    const d = await res.json();
+    return { unique: Number(d?.unique) || 0, total: Number(d?.total) || 0 };
+  } catch {
+    return { unique: 0, total: 0 };
+  }
+}
+
 export function formatRuDate(iso: string | null): string {
   if (!iso) return "";
   const d = new Date(iso);

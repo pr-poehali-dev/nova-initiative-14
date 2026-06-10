@@ -1,0 +1,45 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Record page view",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "path": "/blog/test-article",
+        "pageTitle": "Тестовая статья",
+        "visitorId": "test-visitor-1",
+        "sourceType": "direct",
+        "device": "Компьютер"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {"ok": true},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Skip non-trackable path",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "path": "/account",
+        "visitorId": "test-visitor-1"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {"ok": true, "saved": false},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Get count for path",
+      "method": "GET",
+      "path": "/?path=/blog/test-article",
+      "expectedStatus": 200,
+      "expectedBody": {"path": "/blog/test-article"},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
