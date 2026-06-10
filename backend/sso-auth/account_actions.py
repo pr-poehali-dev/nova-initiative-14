@@ -255,3 +255,98 @@ def action_admin_award_points(conn, admin_id: int, body: dict) -> dict:
         total = cur.fetchone()[0]
     conn.commit()
     return json_response(200, {'ok': True, 'total_points': total})
+
+
+def action_admin_stats(conn, admin_id: int, params: dict) -> dict:
+    """
+    Сводная статистика для админ-дашборда за период (по умолчанию 30 дней):
+      - totals: визиты, уникальные источники, регистрации;
+      - visits_by_source: распределение визитов по типу источника + ярлыку;
+      - signups_by_source: распределение регистраций по источнику (первое касание);
+      - daily: ряд по дням (визиты + регистрации) для графика.
+    Доступ только админу.
+    """
+    if not _is_admin(conn, admin_id):
+        return json_response(403, {'error': 'forbidden'})
+
+    try:
+        days = int(params.get('days') or 30)
+    except (TypeError, ValueError):
+        days = 30
+    days = max(1, min(days, 365))
+
+    import psycopg2.extras
+    rc = psycopg2.extras.RealDictCursor
+
+    since = f"now() - interval '{days} days'"
+
+    with conn.cursor(cursor_factory=rc) as cur:
+        # Тоталы
+        cur.execute(f"SELECT COUNT(*) AS c FROM site_visits WHERE created_at >= {since}")
+        visits_total = cur.fetchone()['c']
+        cur.execute(
+            f"SELECT COUNT(*) AS c FROM sso_users WHERE created_at >= {since}"
+        )
+        signups_total = cur.fetchone()['c']
+
+        # Визиты по источникам (тип + ярлык)
+        cur.execute(
+            "SELECT source_type, source_label, COUNT(*) AS cnt "
+            "FROM site_visits "
+            f"WHERE created_at >= {since} "
+            "GROUP BY source_type, source_label "
+            "ORDER BY cnt DESC LIMIT 50"
+        )
+        visits_by_source = [
+            {'sourceType': r['source_type'], 'sourceLabel': r['source_label'],
+             'count': r['cnt']}
+            for r in cur.fetchall()
+        ]
+
+        # Регистрации по источнику первого касания
+        cur.execute(
+            "SELECT COALESCE(signup_source_type, 'unknown') AS st, "
+            "COALESCE(signup_source_label, 'Неизвестно') AS sl, COUNT(*) AS cnt "
+            "FROM sso_users "
+            f"WHERE created_at >= {since} "
+            "GROUP BY st, sl ORDER BY cnt DESC LIMIT 50"
+        )
+        signups_by_source = [
+            {'sourceType': r['st'], 'sourceLabel': r['sl'], 'count': r['cnt']}
+            for r in cur.fetchall()
+        ]
+
+        # Ряд по дням: визиты
+        cur.execute(
+            "SELECT to_char(date_trunc('day', created_at), 'YYYY-MM-DD') AS d, "
+            "COUNT(*) AS cnt FROM site_visits "
+            f"WHERE created_at >= {since} GROUP BY d ORDER BY d"
+        )
+        visits_daily = {r['d']: r['cnt'] for r in cur.fetchall()}
+
+        # Ряд по дням: регистрации
+        cur.execute(
+            "SELECT to_char(date_trunc('day', created_at), 'YYYY-MM-DD') AS d, "
+            "COUNT(*) AS cnt FROM sso_users "
+            f"WHERE created_at >= {since} GROUP BY d ORDER BY d"
+        )
+        signups_daily = {r['d']: r['cnt'] for r in cur.fetchall()}
+
+    # Собираем общий ряд по дням (объединение ключей)
+    all_days = sorted(set(visits_daily) | set(signups_daily))
+    daily = [
+        {'date': d, 'visits': visits_daily.get(d, 0), 'signups': signups_daily.get(d, 0)}
+        for d in all_days
+    ]
+
+    return json_response(200, {
+        'period_days': days,
+        'totals': {
+            'visits': visits_total,
+            'signups': signups_total,
+            'sources': len(visits_by_source),
+        },
+        'visits_by_source': visits_by_source,
+        'signups_by_source': signups_by_source,
+        'daily': daily,
+    })

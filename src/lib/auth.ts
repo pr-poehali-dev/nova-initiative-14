@@ -1,4 +1,5 @@
 import func2url from "../../backend/func2url.json";
+import { readFirstTouch } from "@/lib/attribution";
 
 export interface SsoUser {
   id: number;
@@ -248,6 +249,8 @@ export async function register(
   fullName?: string,
   options?: RegisterOptions,
 ) {
+  // Источник ПЕРВОГО касания — для атрибуции регистрации (откуда пришёл).
+  const attribution = readFirstTouch();
   return call<TokenPair>("register", "POST", {
     email,
     password,
@@ -255,6 +258,7 @@ export async function register(
     ref_code: options?.refCode || "",
     marketing_consent: options?.marketingConsent || false,
     join_waitlist: options?.joinWaitlist || false,
+    attribution: attribution || undefined,
   });
 }
 
@@ -272,6 +276,43 @@ export async function logout(refreshToken: string) {
 
 export async function fetchUserInfo(accessToken: string) {
   return call<{ user: SsoUser }>("userinfo", "GET", undefined, accessToken);
+}
+
+// ───────────────── Админ-статистика посещений ─────────────────
+
+export interface SourceStat {
+  sourceType: string;
+  sourceLabel: string;
+  count: number;
+}
+
+export interface DailyStat {
+  date: string;
+  visits: number;
+  signups: number;
+}
+
+export interface AdminStats {
+  period_days: number;
+  totals: { visits: number; signups: number; sources: number };
+  visits_by_source: SourceStat[];
+  signups_by_source: SourceStat[];
+  daily: DailyStat[];
+}
+
+/** Сводная статистика посещений и регистраций по источникам (только админ). */
+export async function fetchAdminStats(
+  days = 30,
+): Promise<{ ok: boolean; status: number; data: AdminStats | null }> {
+  const url = `${API}?action=admin-stats&days=${days}`;
+  const res = await authorizedFetch(url);
+  let data: AdminStats | null = null;
+  try {
+    data = (await res.json()) as AdminStats;
+  } catch {
+    data = null;
+  }
+  return { ok: res.ok, status: res.status, data: res.ok ? data : null };
 }
 
 /**

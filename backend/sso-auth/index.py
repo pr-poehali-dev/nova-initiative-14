@@ -35,6 +35,7 @@ from actions import (
 from account_actions import (
     action_admin_award_points,
     action_admin_set_role,
+    action_admin_stats,
     action_admin_toggle_active,
     action_admin_users,
     action_change_password,
@@ -184,6 +185,11 @@ def handler(event: dict, context) -> dict:
             if not uid:
                 return json_response(401, {'error': 'unauthorized'})
             return action_admin_award_points(conn, uid, body)
+        if action == 'admin-stats' and method == 'GET':
+            uid = current_user_id(event)
+            if not uid:
+                return json_response(401, {'error': 'unauthorized'})
+            return action_admin_stats(conn, uid, params)
 
         return json_response(404, {'error': 'unknown_action'})
     except Exception as e:

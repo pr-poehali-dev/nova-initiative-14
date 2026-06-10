@@ -1,5 +1,10 @@
 import { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
+import {
+  classifyAttribution,
+  getOrCreateFirstTouch,
+  type Attribution,
+} from "@/lib/attribution";
 
 const PAGE_NAMES: Record<string, string> = {
   "/": "Главная",
@@ -20,6 +25,10 @@ export interface VisitorData {
   utmMedium: string;
   utmCampaign: string;
   device: string;
+  /** Источник текущего визита (тип + ярлык + путь входа). */
+  attribution: Attribution | null;
+  /** Путь, на который зашёл посетитель в этой сессии. */
+  landingPath: string;
 }
 
 const SESSION_KEY = "vt_pages";
@@ -44,6 +53,16 @@ export function getVisitorData(): VisitorData {
 
   const storedReferrer = sessionStorage.getItem("vt_referrer") || "";
 
+  // Источник текущей сессии (атрибуция захода) — сохраняется при старте.
+  let attribution: Attribution | null = null;
+  try {
+    const raw = sessionStorage.getItem("vt_attribution");
+    if (raw) attribution = JSON.parse(raw) as Attribution;
+  } catch {
+    /* ignore */
+  }
+  const landingPath = sessionStorage.getItem("vt_landing") || "";
+
   return {
     pages,
     referrer: storedReferrer,
@@ -52,6 +71,8 @@ export function getVisitorData(): VisitorData {
     utmMedium: sessionStorage.getItem("vt_utm_medium") || "",
     utmCampaign: sessionStorage.getItem("vt_utm_campaign") || "",
     device: getDevice(),
+    attribution,
+    landingPath,
   };
 }
 
@@ -74,6 +95,19 @@ export function useVisitorTracking() {
       if (utmSource) sessionStorage.setItem("vt_utm_source", utmSource);
       if (utmMedium) sessionStorage.setItem("vt_utm_medium", utmMedium);
       if (utmCampaign) sessionStorage.setItem("vt_utm_campaign", utmCampaign);
+
+      // Источник ПЕРВОГО касания — запоминаем навсегда (для атрибуции
+      // будущей регистрации). А источник ТЕКУЩЕГО визита — на сессию.
+      getOrCreateFirstTouch();
+      if (!sessionStorage.getItem("vt_attribution")) {
+        const attr = classifyAttribution(
+          window.location.pathname,
+          document.referrer || "",
+          window.location.search,
+        );
+        sessionStorage.setItem("vt_attribution", JSON.stringify(attr));
+        sessionStorage.setItem("vt_landing", window.location.pathname);
+      }
     }
   }, []);
 

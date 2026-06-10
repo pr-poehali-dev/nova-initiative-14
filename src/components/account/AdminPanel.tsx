@@ -77,6 +77,22 @@ function MarketingTab() {
   return (
     <div className="space-y-3">
       <Link
+        to="/admin/stats"
+        className="flex items-start gap-3 border-[1.5px] border-[var(--drawing-line)] hover:border-[var(--drawing-accent)] p-4 transition-colors group"
+      >
+        <Icon name="BarChart3" size={24} className="text-[var(--drawing-accent)] shrink-0 mt-0.5" />
+        <div className="min-w-0 flex-1">
+          <p className="font-gost-upright font-bold mb-0.5 group-hover:text-[var(--drawing-accent)] transition-colors">
+            Статистика посещений
+          </p>
+          <p className="font-gost text-[11px] text-[var(--drawing-line-thin)] leading-snug">
+            Сколько визитов и регистраций, откуда приходят посетители: QR-флаеры, поиск, соцсети, реклама.
+          </p>
+        </div>
+        <Icon name="ArrowRight" size={16} className="text-[var(--drawing-line-thin)] shrink-0 mt-1" />
+      </Link>
+
+      <Link
         to="/admin/generator"
         className="flex items-start gap-3 border-[1.5px] border-[var(--drawing-line)] hover:border-[var(--drawing-accent)] p-4 transition-colors group"
       >
@@ -86,7 +102,7 @@ function MarketingTab() {
             Генератор рекламы
           </p>
           <p className="font-gost text-[11px] text-[var(--drawing-line-thin)] leading-snug">
-            Посты, сториз, обложки и листовки A5 в фирменном стиле. Выгрузка в PNG, JPG, PDF.
+            Посты, сториз, обложки, листовки A5 и QR-флаеры у УрФУ. Выгрузка в PNG, JPG, PDF.
           </p>
         </div>
         <Icon name="ArrowRight" size={16} className="text-[var(--drawing-line-thin)] shrink-0 mt-1" />

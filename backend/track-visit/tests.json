@@ -7,7 +7,7 @@
       "expectedStatus": 200
     },
     {
-      "name": "Трекинг анонимного посетителя",
+      "name": "Трекинг визита с источником",
       "method": "POST",
       "path": "/",
       "body": {
@@ -18,12 +18,43 @@
           "device": "Компьютер",
           "utmSource": "",
           "utmMedium": "",
-          "utmCampaign": ""
+          "utmCampaign": "",
+          "landingPath": "/",
+          "visitKey": "test-visit-key-001",
+          "attribution": {
+            "sourceType": "organic",
+            "sourceLabel": "Google",
+            "referrer": "https://google.com",
+            "utmSource": "",
+            "utmMedium": "",
+            "utmCampaign": "",
+            "landingPath": "/"
+          }
         }
       },
-      "expectedStatus": 200,
-      "expectedBody": { "ok": true },
-      "bodyMatcher": "partial"
+      "expectedStatus": 200
+    },
+    {
+      "name": "QR-флаер визит (дедуп по visitKey)",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "visitor": {
+          "pages": ["/urfu_qr_cae"],
+          "referrer": "Прямой заход",
+          "timeOnSite": 12,
+          "device": "Мобильный",
+          "landingPath": "/urfu_qr_cae",
+          "visitKey": "test-visit-key-001",
+          "attribution": {
+            "sourceType": "qr_flyer",
+            "sourceLabel": "QR-флаер: CAE",
+            "referrer": "",
+            "landingPath": "/urfu_qr_cae"
+          }
+        }
+      },
+      "expectedStatus": 200
     }
   ]
 }

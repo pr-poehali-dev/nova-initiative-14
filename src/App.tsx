@@ -40,6 +40,7 @@ import CaeDemoEditor from "./pages/CaeDemoEditor";
 import CaeChangelog from "./pages/CaeChangelog";
 import RoadmapView from "./pages/RoadmapView";
 import AdGenerator from "./pages/AdGenerator";
+import AdminStats from "./pages/AdminStats";
 import UrfuQrCae from "./pages/UrfuQrCae";
 import UrfuQrDiplom from "./pages/UrfuQrDiplom";
 import NotFound from "./pages/NotFound";
@@ -89,12 +90,25 @@ function VisitorTracker() {
 
   useEffect(() => {
     const handleUnload = () => {
-      if (sessionStorage.getItem(FORM_SUBMITTED_KEY)) return;
       const data = getVisitorData();
       if (!data.pages.length) return;
       const url = (func2url as Record<string, string>)["track-visit"];
       if (!url) return;
-      navigator.sendBeacon(url, JSON.stringify({ visitor: data }));
+      // Ключ визита для дедупликации на бэке (стабилен в рамках сессии).
+      let visitKey = sessionStorage.getItem("vt_visit_key");
+      if (!visitKey) {
+        visitKey = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        sessionStorage.setItem("vt_visit_key", visitKey);
+      }
+      const visitor = {
+        ...data,
+        visitKey,
+        userAgent: navigator.userAgent,
+        // Анонимный лид в CRM создаём только если форму не отправляли,
+        // но визит для статистики пишем всегда.
+        formSubmitted: !!sessionStorage.getItem(FORM_SUBMITTED_KEY),
+      };
+      navigator.sendBeacon(url, JSON.stringify({ visitor }));
     };
     window.addEventListener("pagehide", handleUnload);
     return () => window.removeEventListener("pagehide", handleUnload);
@@ -150,6 +164,7 @@ const App = () => (
                 <Route path="/cae/roadmap" element={<Navigate to="/roadmaps/plm" replace />} />
                 <Route path="/oauth/callback" element={<OAuthCallback />} />
                 <Route path="/admin/generator" element={<AdGenerator />} />
+                <Route path="/admin/stats" element={<AdminStats />} />
                 <Route path="/urfu_qr_cae" element={<UrfuQrCae />} />
                 <Route path="/urfu_qr_diplom" element={<UrfuQrDiplom />} />
                 <Route path="*" element={<NotFound />} />

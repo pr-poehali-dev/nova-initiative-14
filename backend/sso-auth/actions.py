@@ -42,6 +42,15 @@ def action_register(conn, body: dict, ua: str, ip: str) -> dict:
     marketing_consent = bool(body.get('marketing_consent'))
     join_waitlist = bool(body.get('join_waitlist'))
 
+    # Источник ПЕРВОГО касания (атрибуция регистрации). Передаётся фронтом из
+    # localStorage (lib/attribution.ts). Если поля нет — остаётся NULL.
+    attr = body.get('attribution') or {}
+    sg_type = (attr.get('sourceType') or '')[:24] or None
+    sg_label = (attr.get('sourceLabel') or '')[:160] or None
+    sg_landing = (attr.get('landingPath') or '')[:255] or None
+    sg_utm_source = (attr.get('utmSource') or '')[:120] or None
+    sg_utm_campaign = (attr.get('utmCampaign') or '')[:120] or None
+
     if not EMAIL_RE.match(email):
         return json_response(400, {'error': 'invalid_email', 'message': 'Некорректный email'})
     if len(password) < 8:
@@ -69,9 +78,12 @@ def action_register(conn, body: dict, ua: str, ip: str) -> dict:
         password_hash = hash_password(password)
         cur.execute(
             "INSERT INTO sso_users "
-            "(email, password_hash, full_name, referred_by_user_id, marketing_consent) "
-            "VALUES (%s, %s, %s, %s, %s) RETURNING id",
-            (email, password_hash, full_name or None, referrer_id, marketing_consent),
+            "(email, password_hash, full_name, referred_by_user_id, marketing_consent, "
+            " signup_source_type, signup_source_label, signup_landing_path, "
+            " signup_utm_source, signup_utm_campaign) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
+            (email, password_hash, full_name or None, referrer_id, marketing_consent,
+             sg_type, sg_label, sg_landing, sg_utm_source, sg_utm_campaign),
         )
         user_id = cur.fetchone()[0]
         cur.execute(
