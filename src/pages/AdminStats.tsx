@@ -4,7 +4,12 @@ import { Helmet } from "@/lib/helmet-shim";
 import Icon from "@/components/ui/icon";
 import { useAuth } from "@/contexts/AuthContext";
 import { SITE_URL } from "@/lib/seo";
-import { fetchAdminStats, type AdminStats, type PageStat } from "@/lib/auth";
+import {
+  fetchAdminStats,
+  type AdminStats,
+  type PageStat,
+  type QrFlyerStat,
+} from "@/lib/auth";
 
 /** Дни-периоды для переключателя. */
 const PERIODS = [
@@ -168,6 +173,11 @@ const AdminStats = () => {
               <SourceBars items={stats.signups_by_source} />
             </Section>
 
+            {/* Разбивка по QR-флаерам */}
+            <Section title="Эффективность QR-флаеров (визиты → регистрации)">
+              <QrFlyers items={stats.qr_flyers ?? []} />
+            </Section>
+
             {/* Топ страниц и постов по посещаемости */}
             <Section title="Топ страниц и постов по посещаемости">
               <TopPages items={stats.top_pages ?? []} />
@@ -226,6 +236,57 @@ function SourceBars({ items }: { items: { sourceType: string; sourceLabel: strin
           </span>
         </div>
       ))}
+    </div>
+  );
+}
+
+/** Разбивка по QR-флаерам: визиты, регистрации и конверсия каждого тиража. */
+function QrFlyers({ items }: { items: QrFlyerStat[] }) {
+  if (items.length === 0) return <Empty />;
+  const max = Math.max(1, ...items.map((i) => i.visits));
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-2 pb-1 border-b border-[var(--drawing-line)]/30">
+        <span className="flex-1 font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)]">
+          Флаер / кампания
+        </span>
+        <span className="w-14 text-right font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)]">
+          Визиты
+        </span>
+        <span className="w-14 text-right font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)]">
+          Рег.
+        </span>
+        <span className="w-12 text-right font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)]">
+          Конв.
+        </span>
+      </div>
+      {items.map((it) => {
+        const conv = it.visits > 0 ? Math.round((it.signups / it.visits) * 100) : 0;
+        return (
+          <div key={it.label} className="flex items-center gap-2 py-1">
+            <div className="flex-1 min-w-0">
+              <p className="font-gost text-xs text-[var(--drawing-line)] truncate" title={it.label}>
+                {it.label}
+              </p>
+              <div className="h-1 mt-0.5 bg-[var(--drawing-paper)]">
+                <div
+                  className="h-full"
+                  style={{ width: `${(it.visits / max) * 100}%`, background: "#c0392b" }}
+                />
+              </div>
+            </div>
+            <span className="w-14 text-right font-mono text-sm font-bold text-[var(--drawing-line)]">
+              {it.visits}
+            </span>
+            <span className="w-14 text-right font-mono text-sm text-[var(--drawing-accent)]">
+              {it.signups}
+            </span>
+            <span className="w-12 text-right font-mono text-xs text-[var(--drawing-line-thin)]">
+              {it.visits > 0 ? `${conv}%` : "—"}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }

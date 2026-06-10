@@ -299,11 +299,18 @@ export interface PageStat {
   total: number;
 }
 
+export interface QrFlyerStat {
+  label: string;
+  visits: number;
+  signups: number;
+}
+
 export interface AdminStats {
   period_days: number;
   totals: { visits: number; signups: number; sources: number };
   visits_by_source: SourceStat[];
   signups_by_source: SourceStat[];
+  qr_flyers: QrFlyerStat[];
   top_pages: PageStat[];
   daily: DailyStat[];
 }

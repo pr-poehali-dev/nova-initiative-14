@@ -332,6 +332,33 @@ def action_admin_stats(conn, admin_id: int, params: dict) -> dict:
         )
         signups_daily = {r['d']: r['cnt'] for r in cur.fetchall()}
 
+        # Разбивка по QR-флаерам: визиты и регистрации каждого флаера/кампании.
+        # Источник в группе qr_flyer, ярлык включает кампанию (см. attribution.ts).
+        cur.execute(
+            "SELECT source_label, COUNT(*) AS cnt "
+            "FROM site_visits "
+            f"WHERE created_at >= {since} AND source_type = 'qr_flyer' "
+            "GROUP BY source_label ORDER BY cnt DESC LIMIT 50"
+        )
+        qr_visits = {r['source_label']: r['cnt'] for r in cur.fetchall()}
+
+        cur.execute(
+            "SELECT signup_source_label AS sl, COUNT(*) AS cnt "
+            "FROM sso_users "
+            f"WHERE created_at >= {since} AND signup_source_type = 'qr_flyer' "
+            "GROUP BY sl ORDER BY cnt DESC LIMIT 50"
+        )
+        qr_signups = {r['sl']: r['cnt'] for r in cur.fetchall()}
+
+        qr_flyers = [
+            {'label': label, 'visits': visits, 'signups': qr_signups.get(label, 0)}
+            for label, visits in sorted(qr_visits.items(), key=lambda x: -x[1])
+        ]
+        # Флаеры, давшие регистрации, но без визитов в периоде — тоже показываем.
+        for label, cnt in qr_signups.items():
+            if label not in qr_visits:
+                qr_flyers.append({'label': label, 'visits': 0, 'signups': cnt})
+
         # Топ страниц/постов по посещаемости: уникальные визитёры + всего просмотров
         top_pages = []
         try:
@@ -366,6 +393,7 @@ def action_admin_stats(conn, admin_id: int, params: dict) -> dict:
         },
         'visits_by_source': visits_by_source,
         'signups_by_source': signups_by_source,
+        'qr_flyers': qr_flyers,
         'top_pages': top_pages,
         'daily': daily,
     })
