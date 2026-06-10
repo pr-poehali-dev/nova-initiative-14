@@ -288,7 +288,7 @@ export function renderAd(canvas: HTMLCanvasElement, content: AdContent) {
   // Фон
   ctx.fillStyle = p.bg;
   ctx.fillRect(0, 0, W, H);
-  drawGrid(ctx, W, H, p.fg);
+  // drawGrid(ctx, W, H, p.fg);
 
   // Рамка-чертёж
   ctx.strokeStyle = p.frame;
