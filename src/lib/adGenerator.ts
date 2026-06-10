@@ -14,8 +14,8 @@ import QRCode from "qrcode";
 const COLORS = {
   // bg: "#faf8f0",
   bg: "#ffffff",
-  // line: "#1a1a2e",
-  line: "#000000",
+  line: "#1a1a2e",
+  // line: "#000000",
   lineThin: "#3a3a5e",
   accent: "#c0392b",
   blue: "#2c3e80",
@@ -536,8 +536,7 @@ function renderQrFlyer(
     // Пояснение (перенос по ширине колонки)
     if (block?.note) {
       ctx.fillStyle = p.fg;
-      // const noteSize = unit * 2.4;
-      const noteSize = unit * 3.2;
+      const noteSize = unit * 2.4;
       ctx.font = `700 ${noteSize}px "Courier New", monospace`;
       const noteLines = wrapText(ctx, block.note, colW - unit * 2);
       for (const line of noteLines) {
