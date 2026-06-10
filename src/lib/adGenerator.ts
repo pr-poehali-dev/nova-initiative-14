@@ -545,7 +545,7 @@ function renderQrFlyer(
   if (content.address?.trim()) {
     // Было: const addrY = H - margin - unit * 8;
     // Стало (поднимаем базовую точку выше):
-    const addrY = H - margin - unit * 14;
+    const addrY = H - margin - unit * 13;
     ctx.strokeStyle = p.frame;
     ctx.lineWidth = unit * 0.3;
     ctx.beginPath();
