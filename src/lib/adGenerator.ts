@@ -204,32 +204,27 @@ function wrapText(
   return lines;
 }
 
-/** Рисует «чертёжную» сетку фона. */
-function drawGrid(
-  ctx: CanvasRenderingContext2D,
-  w: number,
-  h: number,
-  color: string,
-) {
-  ctx.save();
-  ctx.strokeStyle = color;
-  ctx.globalAlpha = 0.08;
-  ctx.lineWidth = 1;
-  const step = Math.round(w / 24);
-  for (let x = step; x < w; x += step) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, h);
-    ctx.stroke();
-  }
-  for (let y = step; y < h; y += step) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(w, y);
-    ctx.stroke();
-  }
-  ctx.restore();
-}
+// /** Рисует «чертёжную» сетку фона. */
+// function drawGrid(ctx: CanvasRenderingContext2D, w: number, h: number, color: string) {
+//   ctx.save();
+//   ctx.strokeStyle = color;
+//   ctx.globalAlpha = 0.08;
+//   ctx.lineWidth = 1;
+//   const step = Math.round(w / 24);
+//   for (let x = step; x < w; x += step) {
+//     ctx.beginPath();
+//     ctx.moveTo(x, 0);
+//     ctx.lineTo(x, h);
+//     ctx.stroke();
+//   }
+//   for (let y = step; y < h; y += step) {
+//     ctx.beginPath();
+//     ctx.moveTo(0, y);
+//     ctx.lineTo(w, y);
+//     ctx.stroke();
+//   }
+//   ctx.restore();
+// }
 
 /** Угловые засечки в стиле чертёжной рамки. */
 function drawCorners(
