@@ -1,0 +1,32 @@
+/**
+ * Лендинг QR-флаера для CAE-сервиса (раздача у УрФУ).
+ * Маршрут: /urfu_qr_cae
+ */
+import UrfuFlyerLanding, {
+  type UrfuFlyerConfig,
+} from "@/components/landing/UrfuFlyerLanding";
+
+const CONFIG: UrfuFlyerConfig = {
+  path: "/urfu_qr_cae",
+  seoTitle: "CAE-расчёты балок, рам и ферм онлайн — бесплатно · Диплом-Инж.рф",
+  seoDescription:
+    "Онлайн-сервис расчёта балок, рам и ферм для студентов УрФУ. Постройте схему, задайте нагрузки и опоры, получите эпюры N, Q, M и PDF-отчёт. Сейчас бесплатно.",
+  eyebrow: "CAE-сервис · Екатеринбург",
+  title: "Расчёт балок, рам и ферм онлайн",
+  lead: "Постройте расчётную схему прямо в браузере, задайте нагрузки и опоры — и за минуту получите эпюры внутренних усилий и готовый PDF-отчёт по ЕСКД для приложения к диплому.",
+  freeNote:
+    "Сейчас сервис бесплатный — считайте балки, рамы и фермы без ограничений в период альфа-теста.",
+  points: [
+    { icon: "PenTool", text: "Редактор схемы: узлы, стержни, опоры и шарниры, каталог сечений ГОСТ" },
+    { icon: "Calculator", text: "Конечно-элементный расчёт: эпюры N, Q, M и напряжения по Мизесу" },
+    { icon: "FileText", text: "PDF-отчёт с формулами и рамкой — готов для ВКР" },
+  ],
+  ctaLabel: "Открыть CAE-сервис",
+  ctaTo: "/cae",
+  secondaryLabel: "Попробовать без регистрации",
+  secondaryTo: "/cae/demo",
+};
+
+export default function UrfuQrCae() {
+  return <UrfuFlyerLanding config={CONFIG} />;
+}

@@ -7,7 +7,8 @@ import { SITE_URL } from "@/lib/seo";
 import {
   AD_FORMATS,
   DEFAULT_AD,
-  renderAd,
+  QR_FLYER_PRESET,
+  renderAdAsync,
   exportPng,
   exportJpg,
   exportPdf,
@@ -41,10 +42,21 @@ const AdGenerator = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [ad, setAd] = useState<AdContent>(DEFAULT_AD);
 
-  // Перерисовываем превью при любом изменении контента
+  // Перерисовываем превью при любом изменении контента.
+  // Асинхронно — чтобы QR-флаер дорисовал QR-картинки.
   useEffect(() => {
-    if (canvasRef.current) renderAd(canvasRef.current, ad);
+    if (canvasRef.current) void renderAdAsync(canvasRef.current, ad);
   }, [ad]);
+
+  // Экспорт: сначала гарантированно перерисовываем (с QR), потом выгружаем.
+  const doExport = async (kind: "png" | "jpg" | "pdf") => {
+    const cv = canvasRef.current;
+    if (!cv) return;
+    await renderAdAsync(cv, ad);
+    if (kind === "png") exportPng(cv, ad);
+    else if (kind === "jpg") exportJpg(cv, ad);
+    else exportPdf(cv, ad);
+  };
 
   if (loading) {
     return (
@@ -62,6 +74,16 @@ const AdGenerator = () => {
 
   const set = (patch: Partial<AdContent>) => setAd((a) => ({ ...a, ...patch }));
   const spec = AD_FORMATS.find((f) => f.key === ad.format) || AD_FORMATS[0];
+  const isFlyer = ad.format === "flyer_quarter";
+
+  // Обновление одного поля в одном из двух QR-блоков флаера.
+  const setQr = (i: 0 | 1, patch: Partial<NonNullable<AdContent["qrBlocks"]>[number]>) =>
+    setAd((a) => {
+      const base = a.qrBlocks ?? QR_FLYER_PRESET.qrBlocks!;
+      const next = [base[0], base[1]] as NonNullable<AdContent["qrBlocks"]>;
+      next[i] = { ...next[i], ...patch };
+      return { ...a, qrBlocks: next };
+    });
 
   // Пресет «Новости»: тянет последние версии CAE из журнала и собирает пост
   // для соцсетей (отчёт об обновлениях за период) — одной кнопкой.
@@ -119,15 +141,26 @@ const AdGenerator = () => {
           {/* Форма */}
           <div className="space-y-4">
             <Field label="Готовые жанры">
-              <button
-                type="button"
-                onClick={applyNewsPreset}
-                className="btn-drawing text-xs inline-flex items-center border-[var(--drawing-accent)] text-[var(--drawing-accent)] w-full justify-center"
-                title="Собрать пост-отчёт об обновлениях из журнала версий CAE"
-              >
-                <Icon name="Newspaper" size={14} className="mr-1.5" />
-                Новости: дайджест обновлений CAE
-              </button>
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={applyNewsPreset}
+                  className="btn-drawing text-xs inline-flex items-center border-[var(--drawing-accent)] text-[var(--drawing-accent)] w-full justify-center"
+                  title="Собрать пост-отчёт об обновлениях из журнала версий CAE"
+                >
+                  <Icon name="Newspaper" size={14} className="mr-1.5" />
+                  Новости: дайджест обновлений CAE
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAd(QR_FLYER_PRESET)}
+                  className="btn-drawing text-xs inline-flex items-center border-[var(--drawing-accent)] text-[var(--drawing-accent)] w-full justify-center"
+                  title="Флаер 1/4 A4 с двумя QR (Диплом + CAE) для раздачи у УрФУ"
+                >
+                  <Icon name="QrCode" size={14} className="mr-1.5" />
+                  QR-флаер у УрФУ (1/4 A4)
+                </button>
+              </div>
             </Field>
 
             <Field label="Формат">
@@ -214,6 +247,60 @@ const AdGenerator = () => {
               </Field>
             </div>
 
+            {isFlyer && (
+              <div className="border-t border-[var(--drawing-line)]/20 pt-4 space-y-4">
+                <p className="font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-accent)]">
+                  QR-флаер · два кода
+                </p>
+
+                <Field label="Адрес (низ флаера)">
+                  <input
+                    value={ad.address ?? ""}
+                    onChange={(e) => set({ address: e.target.value })}
+                    className="drawing-input text-sm"
+                    placeholder="ул. Мира, 34 / ул. Малышева, 132 · Екатеринбург"
+                  />
+                </Field>
+
+                {([0, 1] as const).map((i) => {
+                  const blk = (ad.qrBlocks ?? QR_FLYER_PRESET.qrBlocks!)[i];
+                  return (
+                    <div
+                      key={i}
+                      className="border border-[var(--drawing-line)]/30 p-3 space-y-2"
+                    >
+                      <p className="font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)]">
+                        {i === 0 ? "Левый QR" : "Правый QR"}
+                      </p>
+                      <Field label="Подпись">
+                        <input
+                          value={blk.caption}
+                          onChange={(e) => setQr(i, { caption: e.target.value })}
+                          className="drawing-input text-sm"
+                          placeholder={i === 0 ? "Диплом" : "CAE"}
+                        />
+                      </Field>
+                      <Field label="Ссылка (QR)">
+                        <input
+                          value={blk.url}
+                          onChange={(e) => setQr(i, { url: e.target.value })}
+                          className="drawing-input text-sm"
+                        />
+                      </Field>
+                      <Field label="Пояснение">
+                        <textarea
+                          value={blk.note}
+                          onChange={(e) => setQr(i, { note: e.target.value })}
+                          rows={2}
+                          className="drawing-input text-sm resize-y"
+                        />
+                      </Field>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             <div className="border-t border-[var(--drawing-line)]/20 pt-4">
               <p className="font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)] mb-2">
                 Выгрузить макет
@@ -221,21 +308,21 @@ const AdGenerator = () => {
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => canvasRef.current && exportPng(canvasRef.current, ad)}
+                  onClick={() => void doExport("png")}
                   className="btn-drawing btn-drawing-accent text-xs inline-flex items-center"
                 >
                   <Icon name="Image" size={14} className="mr-1.5" />PNG
                 </button>
                 <button
                   type="button"
-                  onClick={() => canvasRef.current && exportJpg(canvasRef.current, ad)}
+                  onClick={() => void doExport("jpg")}
                   className="btn-drawing text-xs inline-flex items-center"
                 >
                   <Icon name="Image" size={14} className="mr-1.5" />JPG
                 </button>
                 <button
                   type="button"
-                  onClick={() => canvasRef.current && exportPdf(canvasRef.current, ad)}
+                  onClick={() => void doExport("pdf")}
                   className="btn-drawing text-xs inline-flex items-center"
                 >
                   <Icon name="FileText" size={14} className="mr-1.5" />PDF

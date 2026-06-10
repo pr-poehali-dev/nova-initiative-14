@@ -40,6 +40,8 @@ import CaeDemoEditor from "./pages/CaeDemoEditor";
 import CaeChangelog from "./pages/CaeChangelog";
 import RoadmapView from "./pages/RoadmapView";
 import AdGenerator from "./pages/AdGenerator";
+import UrfuQrCae from "./pages/UrfuQrCae";
+import UrfuQrDiplom from "./pages/UrfuQrDiplom";
 import NotFound from "./pages/NotFound";
 import { useVisitorTracking, getVisitorData } from "./hooks/useVisitorTracking";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -148,6 +150,8 @@ const App = () => (
                 <Route path="/cae/roadmap" element={<Navigate to="/roadmaps/plm" replace />} />
                 <Route path="/oauth/callback" element={<OAuthCallback />} />
                 <Route path="/admin/generator" element={<AdGenerator />} />
+                <Route path="/urfu_qr_cae" element={<UrfuQrCae />} />
+                <Route path="/urfu_qr_diplom" element={<UrfuQrDiplom />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </div>
