@@ -161,7 +161,8 @@ function palette(theme: AdTheme): Palette {
       return {
         bg: COLORS.accent,
         fg: "#ffffff",
-        muted: "rgba(255,255,255,0.78)",
+        // muted: "rgba(255,255,255,0.78)",
+        muted: "rgba(255,255,255,1)",
         accent: "#ffffff",
         frame: "#ffffff",
       };
