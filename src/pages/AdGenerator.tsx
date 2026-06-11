@@ -8,6 +8,9 @@ import {
   AD_FORMATS,
   DEFAULT_AD,
   QR_FLYER_PRESET,
+  QR_LANDINGS,
+  QR_CAMPAIGNS,
+  buildQrFlyerUrl,
   renderAdAsync,
   exportPng,
   exportJpg,
@@ -84,6 +87,22 @@ const AdGenerator = () => {
       next[i] = { ...next[i], ...patch };
       return { ...a, qrBlocks: next };
     });
+
+  // Текущий лендинг и кампания, вытащенные из ссылки QR-блока (для селекторов).
+  const parseQrUrl = (url: string): { landing: string; campaign: string } => {
+    try {
+      const u = new URL(url);
+      const landing =
+        QR_LANDINGS.find((l) => u.pathname === l.path)?.path ?? QR_LANDINGS[0].path;
+      return { landing, campaign: u.searchParams.get("utm_campaign") ?? "" };
+    } catch {
+      return { landing: QR_LANDINGS[0].path, campaign: "" };
+    }
+  };
+
+  // Меняем лендинг/кампанию QR-блока — пересобираем ссылку с UTM-метками.
+  const setQrTarget = (i: 0 | 1, landing: string, campaign: string) =>
+    setQr(i, { url: buildQrFlyerUrl(landing, campaign) });
 
   // Пресет «Новости»: тянет последние версии CAE из журнала и собирает пост
   // для соцсетей (отчёт об обновлениях за период) — одной кнопкой.
@@ -264,6 +283,7 @@ const AdGenerator = () => {
 
                 {([0, 1] as const).map((i) => {
                   const blk = (ad.qrBlocks ?? QR_FLYER_PRESET.qrBlocks!)[i];
+                  const { landing, campaign } = parseQrUrl(blk.url);
                   return (
                     <div
                       key={i}
@@ -280,7 +300,33 @@ const AdGenerator = () => {
                           placeholder={i === 0 ? "Диплом" : "CAE"}
                         />
                       </Field>
-                      <Field label="Ссылка (QR)">
+                      <Field label="Куда ведёт QR">
+                        <select
+                          value={landing}
+                          onChange={(e) => setQrTarget(i, e.target.value, campaign)}
+                          className="drawing-input text-sm"
+                        >
+                          {QR_LANDINGS.map((l) => (
+                            <option key={l.path} value={l.path}>
+                              {l.label}
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
+                      <Field label="Кампания (метка флаера)">
+                        <select
+                          value={campaign}
+                          onChange={(e) => setQrTarget(i, landing, e.target.value)}
+                          className="drawing-input text-sm"
+                        >
+                          {QR_CAMPAIGNS.map((c) => (
+                            <option key={c.value} value={c.value}>
+                              {c.label}
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
+                      <Field label="Ссылка (QR) — собирается автоматически">
                         <input
                           value={blk.url}
                           onChange={(e) => setQr(i, { url: e.target.value })}

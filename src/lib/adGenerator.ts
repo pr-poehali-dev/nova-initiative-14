@@ -83,6 +83,38 @@ export interface QrBlock {
   note: string;
 }
 
+/** QR-лендинги, которые аналитика распознаёт как источник «QR-флаер». */
+export const QR_LANDINGS = [
+  { path: "/urfu_qr_diplom", label: "Диплом — наставничество" },
+  { path: "/urfu_qr_cae", label: "CAE — расчёты онлайн" },
+] as const;
+
+/**
+ * Пресеты кампаний (тиражей/площадок) для UTM-меток QR. Выбор кампании
+ * в генераторе подставляет ссылку с utm_campaign, чтобы в статистике
+ * различать, с какого именно флаера пришёл человек.
+ */
+export const QR_CAMPAIGNS = [
+  { value: "", label: "Без кампании (базовый)" },
+  { value: "korpus_mehmash", label: "Корпус мехмаша" },
+  { value: "kafedra", label: "Кафедра" },
+  { value: "obshchaga", label: "Общежитие" },
+  { value: "dni_otkrytyh_dverei", label: "Дни открытых дверей" },
+  { value: "stend", label: "Стенд / доска объявлений" },
+] as const;
+
+/**
+ * Строит ссылку QR-лендинга с UTM-метками флаера.
+ * source/medium фиксированы для печатных флаеров, campaign — выбор тиража.
+ */
+export function buildQrFlyerUrl(landingPath: string, campaign: string): string {
+  const params = new URLSearchParams();
+  params.set("utm_source", "flyer_urfu");
+  params.set("utm_medium", "qr");
+  if (campaign) params.set("utm_campaign", campaign);
+  return `${QR_BASE_URL}${landingPath}?${params.toString()}`;
+}
+
 export interface AdContent {
   format: AdFormat;
   theme: AdTheme;
@@ -128,12 +160,12 @@ export const QR_FLYER_PRESET: AdContent = {
   address: "ул. Мира, 34 / ул. Малышева, 132 · Екатеринбург",
   qrBlocks: [
     {
-      url: `${QR_BASE_URL}/urfu_qr_diplom`,
+      url: `${QR_BASE_URL}/urfu_qr_diplom?utm_source=flyer_urfu&utm_medium=qr`,
       caption: "Диплом",
       note: "Наставничество по дипломному проекту: чертежи, расчёты, защита ВКР",
     },
     {
-      url: `${QR_BASE_URL}/urfu_qr_cae`,
+      url: `${QR_BASE_URL}/urfu_qr_cae?utm_source=flyer_urfu&utm_medium=qr`,
       caption: "CAE",
       note: "Расчёт балок, рам и ферм онлайн — сейчас бесплатно",
     },
