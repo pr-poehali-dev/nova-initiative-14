@@ -55,7 +55,7 @@ export default function ProgramModuleCard({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div>
           <div className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-3">
-            Что делаем
+            План работ
           </div>
           <ul className="space-y-2.5">
             {m.tasks.map((t, ti) => (

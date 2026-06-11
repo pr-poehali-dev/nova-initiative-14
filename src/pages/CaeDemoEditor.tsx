@@ -17,7 +17,7 @@ import EditorTutorial from "@/components/cae/editor/EditorTutorial";
 import EditorAnalysisSettingsDialog from "@/components/cae/editor/EditorAnalysisSettingsDialog";
 import EditorLeftPanel from "@/components/cae/editor/EditorLeftPanel";
 import { DEFAULT_ANALYSIS_SETTINGS } from "@/lib/cae-model";
-import { useCaeDemoProject, DEMO_ELEMENT_LIMIT } from "./cae-editor/useCaeDemoProject";
+import { useCaeDemoProject, DEMO_ELEMENT_LIMIT, getSolveCount } from "./cae-editor/useCaeDemoProject";
 import { useCaeActions } from "./cae-editor/useCaeActions";
 import { useCaeSolver } from "./cae-editor/useCaeSolver";
 import { useCaeKeyboard } from "./cae-editor/useCaeKeyboard";
@@ -91,7 +91,15 @@ const CaeDemoEditor = () => {
       setLimitModalOpen(true);
       return;
     }
-    await onSolveInternal();
+    const r = await onSolveInternal();
+    // Сервер сам считает лимит по IP (защита от обхода через инкогнито).
+    // 429 — лимит исчерпан на сервере: добиваем локальный счётчик до лимита
+    // и показываем модалку регистрации.
+    if (r.status === 429) {
+      while (getSolveCount() < solveLimit) onSolveUsed();
+      setLimitModalOpen(true);
+      return;
+    }
     onSolveUsed();
     // Если только что использовали последний расчёт — приглашаем зарегистрироваться
     if (solveCount + 1 >= solveLimit) {

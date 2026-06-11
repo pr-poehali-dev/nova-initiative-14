@@ -21,7 +21,7 @@ export function useCaeSolver(
   const issues = useMemo(() => validateModel(model), [model]);
   const blocked = useMemo(() => hasBlockingErrors(issues), [issues]);
 
-  const onSolve = async () => {
+  const onSolve = async (): Promise<{ status: number; ok: boolean }> => {
     setSolverError(null);
     setResult(null);
 
@@ -32,7 +32,7 @@ export function useCaeSolver(
           ? `Нельзя запустить расчёт: ${firstError.message}. Проверьте список проблем.`
           : "Нельзя запустить расчёт — модель содержит ошибки",
       );
-      return;
+      return { status: 0, ok: false };
     }
 
     setSolving(true);
@@ -40,6 +40,13 @@ export function useCaeSolver(
       ? await runDemoSolver(model)
       : await runSolver(model, projectId, versionId ?? undefined);
     setSolving(false);
+
+    // Серверный лимит демо исчерпан (429) — не показываем ошибку решателя,
+    // вызывающий код покажет модалку регистрации.
+    if (r.status === 429) {
+      return { status: 429, ok: false };
+    }
+
     if (r.ok && r.data && r.data.status === "ok") {
       setResult(r.data);
       setShowDiagram("Mz");
@@ -64,6 +71,7 @@ export function useCaeSolver(
         );
       }
     }
+    return { status: r.status, ok: Boolean(r.ok && r.data?.status === "ok") };
   };
 
   return {

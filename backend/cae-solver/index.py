@@ -30,6 +30,53 @@ CORS = {
 MAX_ELEMENTS_DEFAULT = 5000
 MAX_PAYLOAD_BYTES = 2 * 1024 * 1024  # 2 МБ
 
+# Серверный лимит демо-расчётов на один IP (защита от обхода через инкогнито).
+DEMO_SOLVE_LIMIT = 2
+
+
+def _client_ip(event: dict) -> str:
+    """IP клиента из requestContext.identity.sourceIp."""
+    ctx = event.get('requestContext') or {}
+    identity = ctx.get('identity') or {}
+    return (identity.get('sourceIp') or '')[:64]
+
+
+def _demo_check_and_count(ip: str) -> tuple[bool, int]:
+    """Проверяет и увеличивает счётчик демо-расчётов по IP за последние сутки.
+    Возвращает (allowed, used). allowed=False — лимит исчерпан.
+    Инкремент атомарный: считаем расчёт ещё до запуска решателя.
+    Счётчик сбрасывается, если с первого расчёта прошло больше суток —
+    так демо обновляется ежедневно, а тесты не упираются в исторический счёт."""
+    if not ip:
+        return True, 0
+    try:
+        conn = psycopg2.connect(os.environ['DATABASE_URL'])
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO cae_demo_usage (ip, solve_count, first_at) "
+                "VALUES (%s, 1, now()) "
+                "ON CONFLICT (ip) DO UPDATE SET "
+                "  solve_count = CASE "
+                "    WHEN cae_demo_usage.first_at < now() - interval '1 day' THEN 1 "
+                "    ELSE cae_demo_usage.solve_count + 1 END, "
+                "  first_at = CASE "
+                "    WHEN cae_demo_usage.first_at < now() - interval '1 day' THEN now() "
+                "    ELSE cae_demo_usage.first_at END, "
+                "  updated_at = now() "
+                "RETURNING solve_count",
+                (ip,),
+            )
+            used = cur.fetchone()[0]
+        conn.commit()
+        conn.close()
+        if used > DEMO_SOLVE_LIMIT:
+            return False, used - 1
+        return True, used
+    except Exception as e:
+        print(f'[cae-solver] demo limit error: {e!r}')
+        # При сбое БД не блокируем пользователя — лучше пропустить, чем сломать демо.
+        return True, 0
+
 
 def _json_response(status: int, body: dict) -> dict:
     return {'statusCode': status, 'headers': CORS, 'body': json.dumps(body, ensure_ascii=False)}
@@ -219,17 +266,33 @@ def handler(event: dict, context) -> dict:
 
     if action == 'demo':
         # Демо-режим без регистрации.
-        # Лимит расчётов (2 шт) контролируется на фронтенде через localStorage.
+        # Лимит расчётов жёстко контролируется на СЕРВЕРЕ по IP — чтобы его
+        # нельзя было обойти через инкогнито или очистку localStorage.
         # Узлов сколько угодно — нам важно дать почувствовать продукт целиком.
-        # Для авторизованных идёт action=solve.
+        # Для авторизованных идёт action=solve (без лимита в альфа-тесте).
         ok, msg = _validate_payload(payload)
         if not ok:
             return _json_response(400, {'error': 'validation_failed', 'message': msg})
+        ip = _client_ip(event)
+        allowed, used = _demo_check_and_count(ip)
+        if not allowed:
+            return _json_response(429, {
+                'error': 'demo_limit_reached',
+                'message': (
+                    f'Лимит демо-режима исчерпан: {DEMO_SOLVE_LIMIT} расчётов '
+                    f'без регистрации. Создайте бесплатный аккаунт, чтобы '
+                    f'считать без ограничений.'
+                ),
+                'limit': DEMO_SOLVE_LIMIT,
+                'used': used,
+            })
         try:
             t0 = time.time()
             response = run_solver(payload)
             response['duration_ms'] = int((time.time() - t0) * 1000)
             response['demo'] = True
+            response['demo_used'] = used
+            response['demo_limit'] = DEMO_SOLVE_LIMIT
             return _json_response(200, response)
         except Exception as e:
             import traceback

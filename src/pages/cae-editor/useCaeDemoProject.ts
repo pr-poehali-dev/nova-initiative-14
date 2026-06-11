@@ -42,7 +42,7 @@ function saveToStorage(model: FrameModel) {
   }
 }
 
-function getSolveCount(): number {
+export function getSolveCount(): number {
   try {
     return parseInt(localStorage.getItem(SOLVE_COUNT_KEY) ?? "0", 10) || 0;
   } catch {

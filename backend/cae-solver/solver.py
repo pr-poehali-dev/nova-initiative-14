@@ -713,6 +713,20 @@ class FrameSolver:
                     'шагов. Результат приближённый — конструкция близка к '
                     'критической нагрузке.'
                 )
+            else:
+                # P-Δ сошёлся, но эффект пренебрежимо мал — результат почти
+                # совпадает с линейным. Это нормально (нет значимого сжатия
+                # или перемещения малы). Поясняем, чтобы не было ощущения,
+                # будто нелинейный расчёт «не работает».
+                rel = float(pdelta_info.get('rel_change', 0.0))
+                if rel < 1e-3:
+                    warnings.append(
+                        'P-Δ эффект пренебрежимо мал: результат практически '
+                        'совпадает с линейным. Это нормально, когда нет '
+                        'значительного сжатия или перемещения малы. Разница '
+                        'видна на гибких сжатых стойках и рамах вблизи '
+                        'критической нагрузки.'
+                    )
 
         summary = {
             'dim': self.dim,
@@ -730,6 +744,7 @@ class FrameSolver:
                 'iterations': int(pdelta_info.get('iterations', 0)),
                 'converged': bool(pdelta_info.get('converged', False)),
                 'unstable': bool(pdelta_info.get('unstable', False)),
+                'rel_change': float(pdelta_info.get('rel_change', 0.0)),
             }
 
         return SolveResult(

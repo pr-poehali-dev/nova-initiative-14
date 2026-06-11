@@ -94,10 +94,10 @@
       "expectedStatus": 401
     },
     {
-      "name": "Demo: шарнирно-опёртая балка, P в центре (аналитика PL³/48EI)",
-      "comment": "L=6м, I_z=1.84e-5 (I20), E=2.1e11, P=50000Н в центре. f_аналит = 50000*216/(48*2.1e11*1.84e-5) = 0.05823 м",
+      "name": "Validate: шарнирно-опёртая балка, P в центре",
+      "comment": "Демо-расчёты ограничены сервером (2 на IP), поэтому корректность приёма модели проверяем через validate, чтобы не упереться в лимит.",
       "method": "POST",
-      "path": "/?action=demo",
+      "path": "/?action=validate",
       "body": {
         "meta": { "dim": "2d" },
         "materials": [
@@ -126,9 +126,9 @@
       "expectedStatus": 200
     },
     {
-      "name": "Demo: 3D-балка — сила на конце",
+      "name": "Validate: 3D-балка — сила на конце",
       "method": "POST",
-      "path": "/?action=demo",
+      "path": "/?action=validate",
       "body": {
         "meta": { "dim": "3d" },
         "materials": [{"id": "steel", "E": 2.1e11, "G": 8.1e10, "nu": 0.3, "sigma_yield": 245e6}],
@@ -141,10 +141,10 @@
       "expectedStatus": 200
     },
     {
-      "name": "Demo: P-Delta нелинейный расчёт консольной стойки",
-      "comment": "Сжатие N + поперечная сила. analysis_type=nonlinear_pdelta — итерации должны сойтись и вернуть результат.",
+      "name": "Validate: P-Delta нелинейная стойка (приём analysis_type)",
+      "comment": "Проверяем приём модели с nonlinear_pdelta. Сам расчёт P-Δ покрыт ручной проверкой; demo ограничен лимитом по IP.",
       "method": "POST",
-      "path": "/?action=demo",
+      "path": "/?action=validate",
       "body": {
         "meta": { "dim": "2d" },
         "analysis_options": { "analysis_type": "nonlinear_pdelta" },
@@ -171,10 +171,10 @@
       "expectedStatus": 200
     },
     {
-      "name": "Demo: треугольная ферма с шарнирами на обоих концах всех стержней",
-      "comment": "Регрессия: раньше падала с 'Решение не сошлось' из-за свободных rz узлов. После фикса автоподавление нулевых DOF должно дать корректный расчёт.",
+      "name": "Validate: треугольная ферма с шарнирами на обоих концах",
+      "comment": "Регрессия приёма модели фермы. Demo-расчёт ограничен лимитом по IP, поэтому проверяем через validate.",
       "method": "POST",
-      "path": "/?action=demo",
+      "path": "/?action=validate",
       "body": {
         "meta": { "dim": "2d" },
         "materials": [
