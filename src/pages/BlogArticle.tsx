@@ -8,7 +8,7 @@ import ReadingProgress from "@/components/blog/ReadingProgress";
 import ArticleToc from "@/components/blog/ArticleToc";
 import RelatedSections from "@/components/RelatedSections";
 
-const ORG_NAME = "Уральский федеральный университет (внеучебный материал)";
+const ORG_NAME = "Инженерный журнал Диплом-Инж.рф";
 const PROVERIL = "Диплом-Инж.рф";
 
 const BlogArticle = () => {
@@ -140,7 +140,6 @@ const BlogArticle = () => {
 
         <article className="eskd-page">
           <header className="eskd-title">
-            <div className="eskd-org">Министерство образования и науки Российской Федерации</div>
             <div className="eskd-org">{ORG_NAME}</div>
             <h1>{article.h1}</h1>
             <div className="eskd-meta">
