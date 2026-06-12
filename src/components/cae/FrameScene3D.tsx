@@ -295,6 +295,9 @@ export default function FrameScene3D({
     onSelectElements([id]);
   };
 
+  // Точка-«призрак» под курсором в режиме «Узел» — куда встанет узел.
+  const [ghost, setGhost] = useState<Vec3 | null>(null);
+
   // Запрос быстрого вида: меняем id, чтобы триггерить эффект камеры даже при
   // повторном выборе того же вида.
   const [viewRequest, setViewRequest] = useState<{ view: ViewName; id: number }>();
@@ -358,10 +361,44 @@ export default function FrameScene3D({
             const snap = (v: number) => Math.round(v / gridStep) * gridStep;
             onAddNodeAt(snap(p.x), 0, snap(p.z));
           }}
+          onPointerMove={(e) => {
+            const p = e.point;
+            const snap = (v: number) => Math.round(v / gridStep) * gridStep;
+            setGhost([snap(p.x), 0, snap(p.z)]);
+          }}
+          onPointerOut={() => setGhost(null)}
         >
           <planeGeometry args={[Math.max(radius * 6, 20), Math.max(radius * 6, 20)]} />
           <meshBasicMaterial transparent opacity={0} side={THREE.DoubleSide} />
         </mesh>
+      )}
+
+      {/* Призрак узла — подсветка точки привязки под курсором + столбик к полу. */}
+      {mode === "draw-node" && ghost && (
+        <group>
+          <mesh position={ghost}>
+            <sphereGeometry args={[markerScale * 1.4, 16, 16]} />
+            <meshBasicMaterial color={palette.accent} transparent opacity={0.55} />
+          </mesh>
+          <Html
+            position={ghost}
+            center
+            distanceFactor={radius * 8}
+            style={{ pointerEvents: "none" }}
+          >
+            <div
+              className="font-mono text-[10px] whitespace-nowrap px-1 py-0.5 border"
+              style={{
+                background: palette.bg,
+                color: palette.accent,
+                borderColor: palette.accent,
+                transform: "translateY(140%)",
+              }}
+            >
+              {ghost[0].toFixed(2)}, {ghost[2].toFixed(2)}
+            </div>
+          </Html>
+        </group>
       )}
 
       {/* Оси координат в начале (X-красная, Y-зелёная, Z-синяя). */}
