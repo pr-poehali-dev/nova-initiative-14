@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import Seo from "@/components/Seo";
+import RelatedSections from "@/components/RelatedSections";
 
 const cases = [
   {
@@ -257,6 +258,14 @@ const Cases = () => {
           </div>
         </div>
       </section>
+
+      <RelatedSections
+        links={[
+          { to: "/program", icon: "ListChecks", title: "Программа наставничества", text: "Из чего складывается работа над дипломом: 10 модулей от задания до защиты." },
+          { to: "/cae", icon: "Calculator", title: "CAE-сервис", text: "Считайте балки, рамы и фермы онлайн — как в кейсах выше, только своими руками." },
+          { to: "/experts", icon: "Users", title: "Наставники", text: "Практикующие инженеры-конструкторы, которые ведут студентов к защите." },
+        ]}
+      />
     </main>
   );
 };

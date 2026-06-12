@@ -18,6 +18,7 @@ import ProgramNav from "@/components/program/ProgramNav";
 import ProgramModuleCard from "@/components/program/ProgramModuleCard";
 import ReviewProcess from "@/components/program/ReviewProcess";
 import ProgramCta from "@/components/program/ProgramCta";
+import RelatedSections from "@/components/RelatedSections";
 
 const Program = () => {
   const seo = getPageSeo("/program");
@@ -45,6 +46,15 @@ const Program = () => {
 
       <ReviewProcess />
       <ProgramCta />
+
+      <RelatedSections
+        links={[
+          { to: "/cae", icon: "Calculator", title: "CAE-сервис", text: "Считайте балки, рамы и фермы онлайн — эпюры N/Q/M и PDF-отчёт по ЕСКД для приложения к ВКР." },
+          { to: "/cases", icon: "FileCheck", title: "Кейсы студентов", text: "Реальные истории: с чем приходили и как доводили дипломный проект до защиты." },
+          { to: "/pricing", icon: "Tags", title: "Тарифы", text: "Форматы наставничества под ваш срок и бюджет — от экспресса до сопровождения на 3 месяца." },
+          { to: "/blog", icon: "BookOpen", title: "Блог", text: "Разборы по расчётам, ЕСКД и подготовке к защите для будущих инженеров." },
+        ]}
+      />
     </main>
   );
 };

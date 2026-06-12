@@ -539,7 +539,7 @@ const MVP_ROADMAP: Roadmap = {
         { title: "2D-позиционирование CAE (3D — «скоро»)", status: "done", note: "Старт MVP в режиме 2D." },
         { title: "noscript-контент для краулеров без JS", status: "done", note: "H1, описание, ссылки в index.html." },
         { title: "robots: закрыть /roadmaps", status: "done" },
-        { title: "Перелинковка и тексты под ядро запросов", status: "next", note: "Развивать оба направления: наставничество и CAE." },
+        { title: "Перелинковка и тексты под ядро запросов", status: "done", note: "Блок «Смотрите также» (RelatedSections) связал /program, /cae, /blog, статьи и /cases между собой." },
         { title: "Регистрация в Я.Вебмастер и Google Search Console", status: "done", note: "Сайт подтверждён в обоих сервисах; sitemap отправлен, отслеживаем индексацию." },
         { title: "Контент-план блога под частотные запросы", status: "later" },
       ],

@@ -8,6 +8,7 @@ import { fetchCaeTariffs, joinWaitlist, type CaeTariff } from "@/lib/cae";
 import Notify3DForm from "@/components/cae/Notify3DForm";
 import TariffsSection from "@/components/cae/TariffsSection";
 import MentoringCrossSell from "@/components/cae/MentoringCrossSell";
+import RelatedSections from "@/components/RelatedSections";
 import AlphaTestBanner from "@/components/AlphaTestBanner";
 import { rememberRefCode } from "@/lib/referrals";
 
@@ -374,6 +375,14 @@ const CaeLanding = () => {
         )}
 
         <MentoringCrossSell />
+
+        <RelatedSections
+          links={[
+            { to: "/program", icon: "ListChecks", title: "Программа наставничества", text: "10 модулей дипломного проекта: от задания и расчётов до подготовки к защите ВКР." },
+            { to: "/cases", icon: "FileCheck", title: "Кейсы студентов", text: "Как студенты доводили расчётную и конструкторскую часть до защиты." },
+            { to: "/blog", icon: "BookOpen", title: "Блог инженера", text: "Разборы расчётов, эпюр, ЕСКД и типовых ошибок — полезно при работе в CAE." },
+          ]}
+        />
       </div>
     </>
   );

@@ -6,6 +6,7 @@ import { SITE_URL, breadcrumbsLd } from "@/lib/seo";
 import NotFound from "@/pages/NotFound";
 import ReadingProgress from "@/components/blog/ReadingProgress";
 import ArticleToc from "@/components/blog/ArticleToc";
+import RelatedSections from "@/components/RelatedSections";
 
 const ORG_NAME = "Уральский федеральный университет (внеучебный материал)";
 const PROVERIL = "Диплом-Инж.рф";
@@ -223,6 +224,18 @@ const BlogArticle = () => {
             </tbody>
           </table>
         </article>
+
+        <div className="max-w-[820px] mx-auto">
+          <RelatedSections
+            heading="Смотрите также"
+            className="!px-0 !py-12"
+            links={[
+              { to: "/cae", icon: "Calculator", title: "CAE-сервис", text: "Закрепите теорию на практике: расчёт балок, рам и ферм онлайн с эпюрами и PDF-отчётом." },
+              { to: "/program", icon: "ListChecks", title: "Программа наставничества", text: "10 модулей дипломного проекта — от задания до защиты ВКР." },
+              { to: "/cases", icon: "FileCheck", title: "Кейсы студентов", text: "Как студенты доводили дипломный проект до защиты." },
+            ]}
+          />
+        </div>
       </div>
     </>
   );

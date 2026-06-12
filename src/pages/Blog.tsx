@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Helmet } from "@/lib/helmet-shim";
 import { fetchArticles, formatRuDate, type ArticleListItem } from "@/lib/articles";
 import { SITE_URL, absUrl, breadcrumbsLd } from "@/lib/seo";
+import RelatedSections from "@/components/RelatedSections";
 
 const Blog = () => {
   const [articles, setArticles] = useState<ArticleListItem[]>([]);
@@ -90,6 +91,15 @@ const Blog = () => {
             </Link>
           ))}
         </div>
+
+        <RelatedSections
+          heading="Куда дальше"
+          links={[
+            { to: "/cae", icon: "Calculator", title: "CAE-сервис", text: "Примените теорию из статей на практике: расчёт балок, рам и ферм онлайн." },
+            { to: "/program", icon: "ListChecks", title: "Программа наставничества", text: "10 модулей дипломного проекта — от задания до защиты ВКР." },
+            { to: "/cases", icon: "FileCheck", title: "Кейсы студентов", text: "Реальные истории доведения дипломного проекта до защиты." },
+          ]}
+        />
       </div>
     </>
   );
