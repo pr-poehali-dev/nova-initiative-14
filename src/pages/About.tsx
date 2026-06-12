@@ -45,10 +45,10 @@ const About = () => {
             </div>
             <div className="border-t-2 md:border-t-0 md:border-l-2 border-[var(--drawing-bg)]/20 pt-5 md:pt-0 md:pl-10">
               <p className="font-gost-upright text-xl md:text-2xl font-bold tracking-tight leading-snug mb-2">
-                Мы&nbsp;учим, а&nbsp;не&nbsp;<span className="text-[var(--drawing-accent)]">делаем за&nbsp;вас</span>
+                Мы&nbsp;наставляем, а&nbsp;не&nbsp;<span className="text-[var(--drawing-accent)]">делаем за&nbsp;вас</span>
               </p>
               <p className="font-gost text-sm md:text-base opacity-80 leading-relaxed">
-                Наставничество вместо&nbsp;«диплома на&nbsp;заказ»: помогаем разобраться в&nbsp;расчётах, чертежах и&nbsp;защите&nbsp;&mdash; чтобы вы&nbsp;сделали работу сами и&nbsp;защитили её&nbsp;осознанно.
+                Наставничество вместо&nbsp;«диплома на&nbsp;заказ»: направляем и&nbsp;помогаем разобраться в&nbsp;расчётах, чертежах и&nbsp;защите&nbsp;&mdash; чтобы вы&nbsp;сделали работу сами и&nbsp;защитили её&nbsp;осознанно.
               </p>
             </div>
           </div>
