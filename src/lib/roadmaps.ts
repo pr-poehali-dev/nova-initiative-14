@@ -540,7 +540,7 @@ const MVP_ROADMAP: Roadmap = {
         { title: "noscript-контент для краулеров без JS", status: "done", note: "H1, описание, ссылки в index.html." },
         { title: "robots: закрыть /roadmaps", status: "done" },
         { title: "Перелинковка и тексты под ядро запросов", status: "next", note: "Развивать оба направления: наставничество и CAE." },
-        { title: "Регистрация в Я.Вебмастер и Google Search Console", status: "next", note: "Отправить sitemap, отслеживать индексацию." },
+        { title: "Регистрация в Я.Вебмастер и Google Search Console", status: "done", note: "Сайт подтверждён в обоих сервисах; sitemap отправлен, отслеживаем индексацию." },
         { title: "Контент-план блога под частотные запросы", status: "later" },
       ],
     },
