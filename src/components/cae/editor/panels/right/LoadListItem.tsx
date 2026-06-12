@@ -29,6 +29,7 @@ export default function LoadListItem({
   const isPoint = load.type === "in_span_point";
 
   const q = load.load_local_per_length?.[1] ?? 0;
+  const qz = load.load_local_per_length?.[2] ?? 0;
   const p = load.force?.[1] ?? 0;
   const pos = load.position_ratio ?? 0.5;
 
@@ -38,7 +39,9 @@ export default function LoadListItem({
   const [pText, setPText] = useState(String(p));
 
   const label = isDist
-    ? `q = ${q.toFixed(0)} Н/м (равномерная)`
+    ? qz !== 0
+      ? `q_y = ${q.toFixed(0)}, q_z = ${qz.toFixed(0)} Н/м`
+      : `q = ${q.toFixed(0)} Н/м (равномерная)`
     : isPoint
       ? `P = ${p.toFixed(0)} Н в x = ${(pos * length).toFixed(2)} м (${(pos * 100).toFixed(0)}%)`
       : load.type;

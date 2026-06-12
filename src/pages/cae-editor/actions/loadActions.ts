@@ -115,26 +115,30 @@ export function setNodalMomentVec(
 }
 
 /**
- * Установить распределённую равномерную нагрузку qy на элемент.
- * qy=0 — удаляет существующую нагрузку.
+ * Установить распределённую равномерную нагрузку на элемент по локальным осям.
+ * qy — по локальной оси y, qz — по локальной оси z (только 3D).
+ * Если qz не передан — сохраняется текущее значение по z.
+ * Если обе компоненты нулевые — нагрузка удаляется.
  */
 export function setDistributedLoad(
   model: FrameModel,
   elementId: string,
   qy: number,
+  qz?: number,
 ): FrameModel {
   qy = num(qy);
   const existing = model.loads.find(
     (l) => l.type === "distributed_uniform" && l.element_id === elementId,
   );
+  // qz по умолчанию берём из существующей нагрузки (чтобы правка qy не сбросила qz).
+  const zVal = num(qz ?? existing?.load_local_per_length?.[2] ?? 0);
+  const vec: [number, number, number] = [0, qy, zVal];
   let loads = model.loads;
-  if (qy === 0) {
+  if (qy === 0 && zVal === 0) {
     loads = loads.filter((l) => l !== existing);
   } else if (existing) {
     loads = loads.map((l) =>
-      l === existing
-        ? { ...l, load_local_per_length: [0, qy, 0] as [number, number, number] }
-        : l,
+      l === existing ? { ...l, load_local_per_length: vec } : l,
     );
   } else {
     loads = [
@@ -143,7 +147,7 @@ export function setDistributedLoad(
         id: genId("L", model.loads),
         type: "distributed_uniform",
         element_id: elementId,
-        load_local_per_length: [0, qy, 0],
+        load_local_per_length: vec,
       },
     ];
   }

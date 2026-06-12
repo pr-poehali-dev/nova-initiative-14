@@ -44,7 +44,7 @@ interface Props {
   setNodeConnection: (c: NodeConnectionType) => void;
   setMatPickerOpen: (v: boolean) => void;
   setSecPickerOpen: (v: boolean) => void;
-  setDistributedLoad: (qy: number) => void;
+  setDistributedLoad: (qy: number, qz?: number) => void;
   addInSpanPoint: (pos: number, py: number) => void;
   updateInSpanPoint: (loadId: string, pos: number, py: number) => void;
   removeLoadById: (loadId: string) => void;
@@ -109,6 +109,7 @@ const EditorRightPanel = ({
       <ElementPropertiesPanel
         model={model}
         selectedElementId={selectedElementId}
+        dim={model.meta?.dim ?? "2d"}
         setMatPickerOpen={setMatPickerOpen}
         setSecPickerOpen={setSecPickerOpen}
         setElementHinge={setElementHinge}

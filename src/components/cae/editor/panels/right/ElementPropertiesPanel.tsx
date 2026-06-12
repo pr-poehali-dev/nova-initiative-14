@@ -15,6 +15,7 @@ import LoadListItem from "./LoadListItem";
 export default function ElementPropertiesPanel({
   model,
   selectedElementId,
+  dim = "2d",
   setMatPickerOpen,
   setSecPickerOpen,
   setElementHinge,
@@ -26,15 +27,17 @@ export default function ElementPropertiesPanel({
 }: {
   model: FrameModel;
   selectedElementId: string;
+  dim?: "2d" | "3d";
   setMatPickerOpen: (v: boolean) => void;
   setSecPickerOpen: (v: boolean) => void;
   setElementHinge: (end: "start" | "end", on: boolean) => void;
-  setDistributedLoad: (qy: number) => void;
+  setDistributedLoad: (qy: number, qz?: number) => void;
   addInSpanPoint: (pos: number, py: number) => void;
   updateInSpanPoint: (loadId: string, pos: number, py: number) => void;
   removeLoadById: (loadId: string) => void;
   deleteSelected: () => void;
 }) {
+  const is3d = dim === "3d";
   const el = model.elements.find((x) => x.id === selectedElementId);
   if (!el) return null;
   const mat = model.materials.find((m) => m.id === el.material_id);
@@ -48,7 +51,13 @@ export default function ElementPropertiesPanel({
   const a = model.nodes.find((n) => n.id === el.node_start);
   const b = model.nodes.find((n) => n.id === el.node_end);
   const len =
-    a && b ? Math.hypot(b.coords[0] - a.coords[0], b.coords[1] - a.coords[1]) : 0;
+    a && b
+      ? Math.hypot(
+          b.coords[0] - a.coords[0],
+          b.coords[1] - a.coords[1],
+          (b.coords[2] ?? 0) - (a.coords[2] ?? 0),
+        )
+      : 0;
 
   return (
     <div className="border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] p-3">
@@ -115,14 +124,30 @@ export default function ElementPropertiesPanel({
       )}
 
       <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-1">
-        Распределённая q (по локальной y), Н/м
+        {is3d ? "Распределённая q_y (локальная y), Н/м" : "Распределённая q (по локальной y), Н/м"}
       </p>
       <div className="mb-3">
         <DistributedForm
           current={distLoad?.load_local_per_length?.[1] ?? 0}
-          onApply={setDistributedLoad}
+          onApply={(qy) => setDistributedLoad(qy)}
         />
       </div>
+
+      {is3d && (
+        <>
+          <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-1">
+            Распределённая q_z (локальная z), Н/м
+          </p>
+          <div className="mb-3">
+            <DistributedForm
+              current={distLoad?.load_local_per_length?.[2] ?? 0}
+              onApply={(qz) =>
+                setDistributedLoad(distLoad?.load_local_per_length?.[1] ?? 0, qz)
+              }
+            />
+          </div>
+        </>
+      )}
 
       <details className="mb-3 text-[11px]">
         <summary className="cursor-pointer font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)]">

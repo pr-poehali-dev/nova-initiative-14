@@ -245,9 +245,9 @@ export function useCaeActions(
     updateModel(pickSectionPure(model, selectedElementId, sec));
   };
 
-  const setDistributedLoad = (qy: number) => {
+  const setDistributedLoad = (qy: number, qz?: number) => {
     if (!selectedElementId) return;
-    updateModel(setDistributedLoadPure(model, selectedElementId, qy));
+    updateModel(setDistributedLoadPure(model, selectedElementId, qy, qz));
   };
 
   const addInSpanPoint = (pos: number, py: number) => {
