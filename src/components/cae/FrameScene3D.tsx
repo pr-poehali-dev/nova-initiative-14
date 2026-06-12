@@ -87,6 +87,14 @@ interface Props {
   showDeformed?: boolean;
   /** Триггер автоподгонки камеры под содержимое. */
   fitRequestId?: number;
+  /** Активный инструмент: draw-node / draw-element / select. */
+  mode?: "draw-node" | "draw-element" | "select";
+  /** Шаг сетки для привязки клика по полу (м). */
+  gridStep?: number;
+  /** Добавить узел по координатам (клик по полу сцены в режиме «Узел»). */
+  onAddNodeAt?: (x: number, y: number, z: number) => void;
+  /** Соединить два узла стержнем по id (режим «Балка», клик по двум узлам). */
+  onConnectTwoNodes?: (a: string, b: string) => void;
 }
 
 type Vec3 = [number, number, number];
@@ -207,6 +215,10 @@ export default function FrameScene3D({
   result,
   showDeformed,
   fitRequestId,
+  mode = "select",
+  gridStep = 0.5,
+  onAddNodeAt,
+  onConnectTwoNodes,
 }: Props) {
   const palette = useScenePalette();
   const nodeById = useMemo(
@@ -256,6 +268,17 @@ export default function FrameScene3D({
 
   const handleSelectNode = (id: string, additive: boolean) => {
     onSelectElements([]);
+
+    // Режим «Балка»: клик по узлам подряд соединяет их стержнем (как в 2D).
+    if (mode === "draw-element" && onConnectTwoNodes) {
+      if (selectedNodeIds.length === 1 && selectedNodeIds[0] !== id) {
+        onConnectTwoNodes(selectedNodeIds[0], id);
+      } else {
+        onSelectNodes([id]);
+      }
+      return;
+    }
+
     if (additive) {
       onSelectNodes(
         selectedNodeIds.includes(id)
@@ -322,6 +345,24 @@ export default function FrameScene3D({
         args={[Math.max(radius * 3, 6), Math.max(Math.round(radius * 3), 6), palette.thin, palette.grid]}
         position={[center[0], 0, center[2]]}
       />
+
+      {/* Невидимая плоскость-«пол» для добавления узлов кликом в режиме «Узел».
+          Клик даёт точку на плоскости Y=0, координаты привязываем к шагу сетки. */}
+      {mode === "draw-node" && onAddNodeAt && (
+        <mesh
+          position={[center[0], 0, center[2]]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          onClick={(e) => {
+            e.stopPropagation();
+            const p = e.point;
+            const snap = (v: number) => Math.round(v / gridStep) * gridStep;
+            onAddNodeAt(snap(p.x), 0, snap(p.z));
+          }}
+        >
+          <planeGeometry args={[Math.max(radius * 6, 20), Math.max(radius * 6, 20)]} />
+          <meshBasicMaterial transparent opacity={0} side={THREE.DoubleSide} />
+        </mesh>
+      )}
 
       {/* Оси координат в начале (X-красная, Y-зелёная, Z-синяя). */}
       <axesHelper args={[Math.max(radius * 0.6, 1)]} />

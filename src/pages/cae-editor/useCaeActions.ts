@@ -160,6 +160,17 @@ export function useCaeActions(
     }
   };
 
+  /** Соединить два узла стержнем по явным id (клик в 3D-сцене, режим «Балка»). */
+  const connectTwoNodes = (a: string, b: string) => {
+    const r = connectNodesPure(model, [a, b]);
+    if (r.model === model) return;
+    updateModel(r.model);
+    if (r.elementIds) {
+      setSelectedElementIds(r.elementIds);
+      setSelectedNodeIds([]);
+    }
+  };
+
   const setNodeConnection = (connection: NodeConnectionType) => {
     if (!selectedNodeId) return;
     updateModel(setNodeConnectionPure(model, selectedNodeId, connection));
@@ -276,6 +287,7 @@ export function useCaeActions(
     setNodeCoord,
     addNodeAtCoords,
     connectSelectedNodes,
+    connectTwoNodes,
     selectAll,
     clearSelection,
     setNodeConnection,

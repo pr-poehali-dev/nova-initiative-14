@@ -41,6 +41,8 @@ interface Props {
   addNodeAtCoords?: (x: number, y: number, z: number) => void;
   /** Соединить два выбранных узла стержнем (панель построения 3D, тикет #51). */
   connectSelectedNodes?: () => void;
+  /** Соединить два узла стержнем по id (клик по двум узлам в 3D-сцене). */
+  connectTwoNodes?: (a: string, b: string) => void;
   result: SolverResponse | null;
   showDiagram: DiagramKind;
   diagramScale: number;
@@ -95,6 +97,7 @@ const EditorCanvasArea = ({
   moveNode,
   addNodeAtCoords,
   connectSelectedNodes,
+  connectTwoNodes,
   result,
   showDiagram,
   diagramScale,
@@ -230,6 +233,10 @@ const EditorCanvasArea = ({
           result={result}
           showDeformed={showDiagram === "deformed"}
           fitRequestId={fitRequestId}
+          mode={mode}
+          gridStep={gridStep}
+          onAddNodeAt={addNodeAtCoords}
+          onConnectTwoNodes={connectTwoNodes}
         />
         {addNodeAtCoords && connectSelectedNodes && (
           <Scene3DBuilder

@@ -324,6 +324,40 @@ img {
   color: var(--drawing-on-accent);
 }
 
+/* Ползунки в «чертёжном» стиле: акцентный бегунок + тонкая дорожка.
+   Заменяет системный синий range, чтобы попасть в тему (в т.ч. тёмную). */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: var(--drawing-line-thin);
+  border-radius: 0;
+  cursor: pointer;
+  accent-color: var(--drawing-accent);
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--drawing-accent);
+  border: 1.5px solid var(--drawing-bg);
+  border-radius: 0;
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: var(--drawing-accent);
+  border: 1.5px solid var(--drawing-bg);
+  border-radius: 0;
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-track {
+  height: 4px;
+  background: var(--drawing-line-thin);
+}
+
 .card-drawing {
   border: 1.5px solid var(--drawing-line);
   position: relative;

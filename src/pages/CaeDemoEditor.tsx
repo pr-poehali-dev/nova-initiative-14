@@ -162,6 +162,7 @@ const CaeDemoEditor = () => {
     setNodeCoord,
     addNodeAtCoords,
     connectSelectedNodes,
+    connectTwoNodes,
     setNodalForceComponent,
     setNodalMomentComponent,
     toggleCustomDof,
@@ -276,6 +277,7 @@ const CaeDemoEditor = () => {
               setMode={setMode}
               gridStep={gridStep}
               setGridStep={setGridStep}
+              dim={model.meta?.dim ?? "2d"}
               onStartTutorial={() => setHelpOpen(true)}
               arrowScale={viewSettings.arrowScale}
               setArrowScale={viewSettings.setArrowScale}
@@ -301,6 +303,7 @@ const CaeDemoEditor = () => {
             moveNode={moveNode}
             addNodeAtCoords={addNodeAtCoords}
             connectSelectedNodes={connectSelectedNodes}
+            connectTwoNodes={connectTwoNodes}
             result={result}
             showDiagram={showDiagram}
             diagramScale={diagramScale}

@@ -8,6 +8,8 @@ interface Props {
   gridStep: number;
   setGridStep: (g: number) => void;
   onStartTutorial?: () => void;
+  /** Размерность проекта — для контекстных подсказок (2d/3d). */
+  dim?: "2d" | "3d";
   // Настройки отображения схемы
   arrowScale: number;
   setArrowScale: (v: number) => void;
@@ -23,6 +25,7 @@ const EditorLeftPanel = ({
   gridStep,
   setGridStep,
   onStartTutorial,
+  dim = "2d",
   arrowScale,
   setArrowScale,
   fontScale,
@@ -65,7 +68,10 @@ const EditorLeftPanel = ({
         ))}
       </div>
       <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] mt-2 leading-relaxed">
-        {mode === "draw-node" && "Клик по холсту — добавить узел"}
+        {mode === "draw-node" &&
+          (dim === "3d"
+            ? "Клик по полу сцены — добавить узел (привязка к сетке). Для точного ввода используйте панель «Построение 3D»."
+            : "Клик по холсту — добавить узел")}
         {mode === "draw-element" && "Клик на 2 узла подряд — провести балку"}
         {mode === "select" && "Клик — выбрать. Shift+клик — добавить к выбору. Drag — переместить узел."}
       </p>
