@@ -80,6 +80,8 @@ interface Props {
   /** Открыть модальное окно проверок / результатов (мобильный HUD). */
   onOpenChecks?: () => void;
   onOpenResults?: () => void;
+  /** Канва во всю высоту экрана (3D-режим, fullscreen-макет). */
+  fullHeight?: boolean;
 }
 
 const EditorCanvasArea = ({
@@ -126,6 +128,7 @@ const EditorCanvasArea = ({
   onRequestContext,
   onOpenChecks,
   onOpenResults,
+  fullHeight,
 }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -157,7 +160,9 @@ const EditorCanvasArea = ({
     className={`border-2 border-[var(--drawing-line)] relative ${
       isFullscreen
         ? "h-screen w-screen bg-[var(--drawing-bg)]"
-        : "h-[75vh] min-h-[420px] lg:h-[70vh] lg:min-h-[480px]"
+        : fullHeight
+          ? "h-[calc(100vh-72px)] min-h-[480px]"
+          : "h-[75vh] min-h-[420px] lg:h-[70vh] lg:min-h-[480px]"
     }`}
     data-tutorial="canvas"
   >
