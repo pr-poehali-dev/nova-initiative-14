@@ -6,7 +6,7 @@
  *  - FrameCanvas
  *  - баннер ошибки решателя/загрузки
  */
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import Icon from "@/components/ui/icon";
 import FrameCanvas, {
   type EditorMode,
@@ -123,9 +123,39 @@ const EditorCanvasArea = ({
   onRequestContext,
   onOpenChecks,
   onOpenResults,
-}: Props) => (
+}: Props) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Синхронизируем состояние с реальным fullscreen (вкл/выкл, в т.ч. по Esc).
+  useEffect(() => {
+    const onChange = () =>
+      setIsFullscreen(document.fullscreenElement === containerRef.current);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    const el = containerRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) {
+      void document.exitFullscreen();
+    } else if (el.requestFullscreen) {
+      void el.requestFullscreen().then(() => {
+        // После входа в полный экран пересчитываем масштаб под новый размер.
+        setFitRequestId((x) => x + 1);
+      });
+    }
+  };
+
+  return (
   <div
-    className="border-2 border-[var(--drawing-line)] relative h-[75vh] min-h-[420px] lg:h-[70vh] lg:min-h-[480px]"
+    ref={containerRef}
+    className={`border-2 border-[var(--drawing-line)] relative ${
+      isFullscreen
+        ? "h-screen w-screen bg-[var(--drawing-bg)]"
+        : "h-[75vh] min-h-[420px] lg:h-[70vh] lg:min-h-[480px]"
+    }`}
     data-tutorial="canvas"
   >
     {/* Плавающая панель инструментов — кнопки 44×44 на мобилке, компактные на десктопе.
@@ -163,7 +193,15 @@ const EditorCanvasArea = ({
         title="Подогнать масштаб под содержимое (F)"
         aria-label="Подогнать масштаб"
       >
-        <Icon name="Maximize2" size={18} />
+        <Icon name="Scan" size={18} />
+      </button>
+      <button
+        onClick={toggleFullscreen}
+        className="min-w-[44px] min-h-[44px] lg:min-w-0 lg:min-h-0 p-2 border-r border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)] active:bg-[var(--drawing-paper)] flex items-center justify-center"
+        title={isFullscreen ? "Свернуть из полного экрана (Esc)" : "Развернуть на весь экран"}
+        aria-label={isFullscreen ? "Свернуть" : "На весь экран"}
+      >
+        <Icon name={isFullscreen ? "Minimize" : "Maximize"} size={18} />
       </button>
       <button
         onClick={onOpenSettings}
@@ -278,6 +316,7 @@ const EditorCanvasArea = ({
       </div>
     )}
   </div>
-);
+  );
+};
 
 export default EditorCanvasArea;
