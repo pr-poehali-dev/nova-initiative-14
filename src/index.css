@@ -15,6 +15,10 @@
   --drawing-blue: #2c3e80;
   --drawing-grid: rgba(26, 26, 46, 0.06);
   --drawing-paper: #f5f3e8;
+  /* Цвет текста/иконок поверх акцентной заливки (кнопки, плашки). */
+  --drawing-on-accent: #ffffff;
+  /* Зелёный «успеха/реакций» — например стрелки реакций опор в демо CAE. */
+  --drawing-success: #1a8a5a;
 }
 
 /* Тёмная тема: переопределяем фирменные переменные «чертежа».
@@ -29,6 +33,9 @@ html.dark {
   --drawing-blue: #6d8ad6;
   --drawing-grid: rgba(232, 230, 218, 0.07);
   --drawing-paper: #1e1e2e;
+  --drawing-on-accent: #ffffff;
+  /* В тёмной теме зелёный светлее для контраста на тёмном фоне. */
+  --drawing-success: #34c98a;
 }
 
 /* Плавная смена темы для фона/текста/границ. */
@@ -314,7 +321,7 @@ img {
 
 .btn-drawing-accent:hover {
   background: var(--drawing-accent);
-  color: white;
+  color: var(--drawing-on-accent);
 }
 
 .card-drawing {

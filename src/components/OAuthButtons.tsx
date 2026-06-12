@@ -26,7 +26,8 @@ const ICONS: Record<OAuthProvider, string> = {
 const COLORS: Record<OAuthProvider, string> = {
   yandex: "bg-[#FC3F1D] hover:bg-[#e0381a] text-white border-[#FC3F1D]",
   vk: "bg-[#0077FF] hover:bg-[#0066dd] text-white border-[#0077FF]",
-  google: "bg-white hover:bg-gray-50 text-[#1a1a2e] border-[#1a1a2e]",
+  google:
+    "bg-white hover:bg-gray-50 text-[#1a1a2e] border-[#dadce0] dark:border-white/30 dark:shadow-[0_0_0_1px_rgba(255,255,255,0.15)]",
   mailru: "bg-[#005FF9] hover:bg-[#0050d4] text-white border-[#005FF9]",
 };
 

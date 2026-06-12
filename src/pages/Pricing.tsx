@@ -370,6 +370,7 @@ const Pricing = () => {
                   "Работу по согласованному плану с дедлайнами",
                   "Подготовку к защите: презентация, репетиция, разбор вопросов",
                   "Честную оценку состояния работы и реалистичные ожидания",
+                  "Возврат средств за неоказанные услуги, если наставник не выполнил обязательства — по условиям оферты",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3 font-gost text-xs text-[var(--drawing-line)] leading-relaxed">
                     <span className="mt-0.5 shrink-0 text-green-700">
@@ -379,6 +380,14 @@ const Pricing = () => {
                   </li>
                 ))}
               </ul>
+              <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] leading-relaxed mt-4 opacity-80">
+                Порядок возврата за неоказанные или некачественно оказанные услуги
+                описан в{" "}
+                <Link to="/offer" className="text-[var(--drawing-accent)] hover:underline">
+                  публичной оферте
+                </Link>
+                . Срок ответа на материалы — до 48&nbsp;часов (в экспресс-тарифе — до 12&nbsp;часов).
+              </p>
             </div>
 
             <div className="space-y-6">

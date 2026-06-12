@@ -33,22 +33,22 @@ const About = () => {
 
       <section className="pb-12 px-4 md:px-8 max-w-[1000px] mx-auto">
         <div className="border-2 border-[var(--drawing-accent)] bg-[var(--drawing-line)] text-[var(--drawing-bg)] relative overflow-hidden">
-          <div className="zone-marker top-2 left-3 text-[var(--drawing-bg)] opacity-60">СТАТ.01</div>
+          <div className="zone-marker top-2 left-3 text-[var(--drawing-bg)] opacity-60">МИССИЯ</div>
           <div className="grid md:grid-cols-[auto_1fr] items-center gap-6 md:gap-10 p-7 md:p-10">
             <div className="text-center md:text-left">
-              <div className="font-gost-upright text-6xl md:text-7xl font-black leading-none text-[var(--drawing-accent)]">
-                95<span className="text-4xl md:text-5xl align-top">%</span>
+              <div className="font-gost-upright text-5xl md:text-6xl font-black leading-none text-[var(--drawing-accent)]">
+                САМ
               </div>
               <div className="font-gost text-[10px] uppercase tracking-[0.25em] opacity-60 mt-2">
-                покупают диплом
+                считает · чертит · защищает
               </div>
             </div>
             <div className="border-t-2 md:border-t-0 md:border-l-2 border-[var(--drawing-bg)]/20 pt-5 md:pt-0 md:pl-10">
               <p className="font-gost-upright text-xl md:text-2xl font-bold tracking-tight leading-snug mb-2">
-                Мы&nbsp;&mdash; за&nbsp;оставшиеся <span className="text-[var(--drawing-accent)]">5%</span>
+                Мы&nbsp;учим, а&nbsp;не&nbsp;<span className="text-[var(--drawing-accent)]">делаем за&nbsp;вас</span>
               </p>
               <p className="font-gost text-sm md:text-base opacity-80 leading-relaxed">
-                За&nbsp;тех, кто рассчитывает, проектирует и&nbsp;чертит диплом сам&nbsp;&mdash; и&nbsp;защищает свою работу осознанно.
+                Наставничество вместо&nbsp;«диплома на&nbsp;заказ»: помогаем разобраться в&nbsp;расчётах, чертежах и&nbsp;защите&nbsp;&mdash; чтобы вы&nbsp;сделали работу сами и&nbsp;защитили её&nbsp;осознанно.
               </p>
             </div>
           </div>

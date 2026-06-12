@@ -19,19 +19,22 @@ export interface ContactsData {
   instagram: string;
 }
 
+// Запасные контакты на случай сбоя API: у пользователя ВСЕГДА должна
+// остаться рабочая связь (телефон, e-mail, ВКонтакте), даже если бэкенд
+// контактов недоступен. Значения синхронизированы с таблицей contacts.
 const FALLBACK: ContactsData = {
   telegram: "",
   telegram_link: "",
-  phone: "",
-  phone_tel: "",
+  phone: "+7 982 855-73-09",
+  phone_tel: "tel:+79828557309",
   working_hours: "10:00–20:00",
   working_hours_label: "Ежедневно 10:00–20:00",
   city: "Екатеринбург",
   timezone: "UTC+5",
-  address: "",
-  email: "",
-  vk: "",
-  vk_link: "",
+  address: "Екатеринбург",
+  email: "info@диплом-инж.рф",
+  vk: "Перейти в группу",
+  vk_link: "https://vk.com/diplominzj",
   max: "",
   max_link: "",
   instagram: "",

@@ -4,6 +4,7 @@ import useContacts from "@/hooks/useContacts";
 
 const footerLinks = [
   { label: "Программа", to: "/program" },
+  { label: "CAE-сервис", to: "/cae" },
   { label: "Тарифы", to: "/pricing" },
   { label: "Кейсы", to: "/cases" },
   { label: "Блог", to: "/blog" },

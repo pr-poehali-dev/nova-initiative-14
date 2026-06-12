@@ -16,7 +16,7 @@ export default function CaeDemoAnimation() {
 
   const blue = "var(--drawing-blue)";
   const accent = "var(--drawing-accent)";
-  const green = "#1a8a5a";
+  const green = "var(--drawing-success)";
 
   return (
     <div className="relative w-full border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] overflow-hidden">
