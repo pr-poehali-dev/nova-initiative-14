@@ -20,12 +20,61 @@ import * as THREE from "three";
 import Icon from "@/components/ui/icon";
 import type { FrameModel, SolverResponse } from "@/lib/cae-model";
 
-const ACCENT = "#c0392b";
-const LINE = "#1a1a2e";
-const THIN = "#6a6a8e";
-const NODE = "#1a1a2e";
-const SUPPORT = "#2563eb";
-const DEFORMED = "#16a34a";
+/**
+ * Палитра 3D-сцены. Читается из CSS-переменных «чертёжной» темы, чтобы
+ * 3D-канва выглядела одинаково с 2D-редактором и корректно реагировала
+ * на светлую/тёмную тему. Значения после двоеточия — фолбэк (светлая тема).
+ */
+interface ScenePalette {
+  bg: string;
+  line: string;
+  thin: string;
+  accent: string;
+  success: string;
+  grid: string;
+  paper: string;
+}
+
+const FALLBACK_PALETTE: ScenePalette = {
+  bg: "#faf8f0",
+  line: "#1a1a2e",
+  thin: "#3a3a5e",
+  accent: "#c0392b",
+  success: "#1a8a5a",
+  grid: "#d8d4c4",
+  paper: "#f5f3e8",
+};
+
+/** Читает текущие значения CSS-переменных темы (реагирует на html.dark). */
+function useScenePalette(): ScenePalette {
+  const [palette, setPalette] = useState<ScenePalette>(FALLBACK_PALETTE);
+  useEffect(() => {
+    const read = () => {
+      const s = getComputedStyle(document.documentElement);
+      const v = (name: string, fb: string) =>
+        s.getPropertyValue(name).trim() || fb;
+      setPalette({
+        bg: v("--drawing-bg", FALLBACK_PALETTE.bg),
+        line: v("--drawing-line", FALLBACK_PALETTE.line),
+        thin: v("--drawing-line-thin", FALLBACK_PALETTE.thin),
+        accent: v("--drawing-accent", FALLBACK_PALETTE.accent),
+        success: v("--drawing-success", FALLBACK_PALETTE.success),
+        // Для линий сетки используем тонкий тон бумаги/линии.
+        grid: v("--drawing-line-thin", FALLBACK_PALETTE.grid),
+        paper: v("--drawing-paper", FALLBACK_PALETTE.paper),
+      });
+    };
+    read();
+    // Реагируем на переключение темы (класс html.dark).
+    const obs = new MutationObserver(read);
+    obs.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    return () => obs.disconnect();
+  }, []);
+  return palette;
+}
 
 interface Props {
   model: FrameModel;
@@ -117,12 +166,14 @@ function NodeMesh({
   pos,
   selected,
   scale,
+  palette,
   onSelect,
 }: {
   id: string;
   pos: Vec3;
   selected: boolean;
   scale: number;
+  palette: ScenePalette;
   onSelect: (id: string, additive: boolean) => void;
 }) {
   const [hover, setHover] = useState(false);
@@ -140,7 +191,9 @@ function NodeMesh({
       onPointerOut={() => setHover(false)}
     >
       <sphereGeometry args={[scale * (selected ? 1.5 : 1), 16, 16]} />
-      <meshStandardMaterial color={selected ? ACCENT : hover ? ACCENT : NODE} />
+      <meshStandardMaterial
+        color={selected || hover ? palette.accent : palette.line}
+      />
     </mesh>
   );
 }
@@ -155,6 +208,7 @@ export default function FrameScene3D({
   showDeformed,
   fitRequestId,
 }: Props) {
+  const palette = useScenePalette();
   const nodeById = useMemo(
     () => new Map(model.nodes.map((n) => [n.id, n])),
     [model.nodes],
@@ -256,15 +310,16 @@ export default function FrameScene3D({
         onSelectNodes([]);
         onSelectElements([]);
       }}
-      style={{ background: "#faf8f0" }}
+      style={{ background: palette.bg }}
     >
       <ambientLight intensity={0.8} />
       <directionalLight position={[10, 20, 10]} intensity={0.6} />
       <directionalLight position={[-10, 5, -10]} intensity={0.3} />
 
-      {/* Сетка в горизонтальной плоскости XZ (пол) на уровне минимума по Y. */}
+      {/* Сетка в горизонтальной плоскости XZ (пол) на уровне минимума по Y.
+          Цвет — тонкая линия темы, как сетка 2D-канвы. */}
       <gridHelper
-        args={[Math.max(radius * 3, 6), Math.max(Math.round(radius * 3), 6), THIN, "#d8d4c4"]}
+        args={[Math.max(radius * 3, 6), Math.max(Math.round(radius * 3), 6), palette.thin, palette.grid]}
         position={[center[0], 0, center[2]]}
       />
 
@@ -281,7 +336,7 @@ export default function FrameScene3D({
           <group key={el.id}>
             <Line
               points={[vec(a.coords), vec(b.coords)]}
-              color={selected ? ACCENT : LINE}
+              color={selected ? palette.accent : palette.line}
               lineWidth={selected ? 4 : 2.5}
               onClick={(e) => {
                 e.stopPropagation();
@@ -315,7 +370,7 @@ export default function FrameScene3D({
             <Line
               key={`def-${el.id}`}
               points={[pa, pb]}
-              color={DEFORMED}
+              color={palette.success}
               lineWidth={2}
               dashed
               dashSize={markerScale * 4}
@@ -332,11 +387,38 @@ export default function FrameScene3D({
           pos={vec(n.coords)}
           selected={selectedNodeIds.includes(n.id)}
           scale={markerScale * 1.4}
+          palette={palette}
           onSelect={handleSelectNode}
         />
       ))}
 
-      {/* Опоры — синие кубики на закреплённых узлах. */}
+      {/* Подписи выбранных узлов — в чертёжном стиле, как метки 2D-канвы.
+          Показываем только для выбранных, чтобы не перегружать сцену. */}
+      {model.nodes
+        .filter((n) => selectedNodeIds.includes(n.id))
+        .map((n) => (
+          <Html
+            key={`lbl-${n.id}`}
+            position={vec(n.coords)}
+            center
+            distanceFactor={radius * 8}
+            style={{ pointerEvents: "none" }}
+          >
+            <div
+              className="font-gost text-[11px] font-bold whitespace-nowrap px-1.5 py-0.5 border"
+              style={{
+                background: palette.bg,
+                color: palette.accent,
+                borderColor: palette.accent,
+                transform: "translateY(-150%)",
+              }}
+            >
+              {n.id}
+            </div>
+          </Html>
+        ))}
+
+      {/* Опоры — полупрозрачные кубики цвета линий темы (как опоры 2D-канвы). */}
       {model.boundary_conditions.map((bc) => {
         const n = nodeById.get(bc.node_id);
         if (!n) return null;
@@ -345,7 +427,7 @@ export default function FrameScene3D({
             <boxGeometry
               args={[markerScale * 3, markerScale * 3, markerScale * 3]}
             />
-            <meshStandardMaterial color={SUPPORT} transparent opacity={0.5} />
+            <meshStandardMaterial color={palette.line} transparent opacity={0.4} />
           </mesh>
         );
       })}
@@ -369,6 +451,7 @@ export default function FrameScene3D({
               origin={origin}
               length={len}
               headScale={markerScale * 2}
+              color={palette.accent}
             />
           );
         })}
@@ -391,10 +474,10 @@ export default function FrameScene3D({
 
       <GizmoHelper alignment="bottom-right" margin={[60, 60]}>
         <GizmoViewcube
-          color="#e8e4d4"
-          textColor="#1a1a2e"
-          strokeColor="#1a1a2e"
-          hoverColor={ACCENT}
+          color={palette.paper}
+          textColor={palette.line}
+          strokeColor={palette.line}
+          hoverColor={palette.accent}
         />
       </GizmoHelper>
     </Canvas>
@@ -408,11 +491,13 @@ function ForceArrow({
   origin,
   length,
   headScale,
+  color,
 }: {
   dir: THREE.Vector3;
   origin: THREE.Vector3;
   length: number;
   headScale: number;
+  color: string;
 }) {
   // Стрелка направлена ОТ узла навстречу силе (тянет/толкает узел).
   const end = origin.clone().add(dir.clone().multiplyScalar(length));
@@ -427,10 +512,10 @@ function ForceArrow({
   );
   return (
     <group>
-      <Line points={points} color={ACCENT} lineWidth={2} />
+      <Line points={points} color={color} lineWidth={2} />
       <mesh position={[end.x, end.y, end.z]} quaternion={quat}>
         <coneGeometry args={[headScale, headScale * 2.2, 12]} />
-        <meshStandardMaterial color={ACCENT} />
+        <meshStandardMaterial color={color} />
       </mesh>
     </group>
   );
