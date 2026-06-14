@@ -3,14 +3,14 @@
  * Содержит: pan (мышь / один палец), pinch-zoom (два пальца), drag узла,
  * handleSvgClick (с подавлением после drag/pan), onPointerCancel/onPointerLeave.
  * Не содержит логики выбора узлов/элементов — это в useCanvasInteractions.
+ *
+ * Хелпер snap и контейнер ref'ов touch-жестов вынесены в ./pointer-helpers
+ * без изменения поведения.
  */
 import { useRef, useState, type PointerEvent } from "react";
 import type { EditorMode } from "@/components/cae/FrameCanvas";
 import type { ViewState } from "./useCanvasView";
-
-function snap(v: number, step: number) {
-  return Math.round(v / step) * step;
-}
+import { snap, useTouchGestures } from "./pointer-helpers";
 
 interface Params {
   svgRef: React.RefObject<SVGSVGElement>;
@@ -57,15 +57,8 @@ export function useCanvasPointer({
   const [draggingNode, setDraggingNode] = useState<{ id: string; movedPx: number } | null>(null);
   const [cursorWorld, setCursorWorld] = useState<{ x: number; y: number } | null>(null);
 
-  /**
-   * Активные касания пальцами на канве (для touch-жестов).
-   * При 1 пальце — pan, при 2 — pinch-zoom. Ключ — pointerId, значение — координаты.
-   */
-  const activeTouches = useRef<Map<number, { x: number; y: number }>>(new Map());
-  /** Дистанция между двумя пальцами на старте pinch — для расчёта коэффициента зума. */
-  const pinchStart = useRef<{ dist: number; pxPerM: number; cx: number; cy: number; midX: number; midY: number } | null>(null);
-  /** Длительность нажатия пальца — для отличения tap от долгого нажатия для pan. */
-  const touchStartTime = useRef<number>(0);
+  // Контейнер ref'ов touch-жестов (activeTouches / pinchStart / touchStartTime).
+  const { activeTouches, pinchStart, touchStartTime } = useTouchGestures();
   /** Флаг подавления следующего onClick на SVG (после drag/multiselect, чтобы не создать узел) */
   const suppressNextClick = useRef(false);
 

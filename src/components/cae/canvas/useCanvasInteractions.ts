@@ -5,18 +5,17 @@
  * handleElementClick (выбор элемента), handleNodeContextMenu / handleElementContextMenu
  * (правый клик / long-press → открывает popup со свойствами),
  * pendingFirstNodeId (для режима draw-element).
+ *
+ * Long-press для мобильного контекста вынесен в ./useLongPress, общие типы/
+ * константы — в ./interactions-shared (без изменения логики).
  */
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { genId, type FrameModel, type ModelNode, type ModelElement } from "@/lib/cae-model";
 import type { EditorMode } from "@/components/cae/FrameCanvas";
+import { type ContextRequest } from "./interactions-shared";
+import { useLongPress } from "./useLongPress";
 
-/** Цель открытия контекстного popup'а свойств. */
-export interface ContextRequest {
-  kind: "node" | "element";
-  id: string;
-  clientX: number;
-  clientY: number;
-}
+export type { ContextRequest } from "./interactions-shared";
 
 interface Params {
   svgRef: React.RefObject<SVGSVGElement>;
@@ -50,11 +49,6 @@ export interface CanvasInteractionsResult {
   handleElementPointerDown: (el: ModelElement, e: React.PointerEvent) => void;
 }
 
-/** Длительность long-press для открытия контекстного попапа на мобиле. */
-const LONG_PRESS_MS = 500;
-/** Допустимый сдвиг пальца, при котором long-press ещё считается «удержанием». */
-const LONG_PRESS_TOLERANCE_PX = 8;
-
 export function useCanvasInteractions({
   svgRef,
   model,
@@ -73,75 +67,14 @@ export function useCanvasInteractions({
 }: Params): CanvasInteractionsResult {
   const [pendingFirstNodeId, setPendingFirstNodeId] = useState<string | null>(null);
 
-  /**
-   * Long-press для мобилы: при нажатии пальцем на узел/элемент стартуем таймер,
-   * если за 500мс палец не двинулся и не отпущен — открываем контекстный popup.
-   * Хранится в ref'е чтобы можно было отменить из move/up хендлеров.
-   */
-  const longPressTimer = useRef<number | null>(null);
-  const longPressStart = useRef<{ x: number; y: number } | null>(null);
-
-  const cancelLongPress = () => {
-    if (longPressTimer.current !== null) {
-      window.clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-    longPressStart.current = null;
-  };
-
-  const startLongPress = (
-    kind: "node" | "element",
-    id: string,
-    clientX: number,
-    clientY: number,
-  ) => {
-    cancelLongPress();
-    longPressStart.current = { x: clientX, y: clientY };
-    longPressTimer.current = window.setTimeout(() => {
-      // Сбрасываем drag и подавляем последующий click — пользователь
-      // удержал палец, чтобы открыть свойства, а не выделить/нарисовать.
-      setDraggingNode(null);
-      suppressNextClick.current = true;
-      // ВАЖНО: выделяем объект ДО открытия popup, как это делает контекст-меню
-      // на десктопе. Иначе на мобиле selectedNode/selectedElementId остаются
-      // пустыми, panel свойств рендерится «вхолостую» и падает с ошибкой.
-      if (kind === "node") {
-        onSelectNodes([id]);
-        onSelectElements([]);
-      } else {
-        onSelectElements([id]);
-        onSelectNodes([]);
-      }
-      onRequestContext?.({ kind, id, clientX, clientY });
-      longPressTimer.current = null;
-    }, LONG_PRESS_MS);
-  };
-
-  /**
-   * Глобально слушаем pointermove/pointerup чтобы отменять long-press
-   * если палец сдвинулся (значит юзер хочет pan'нуть или перетащить узел).
-   */
-  useEffect(() => {
-    const onMove = (e: PointerEvent) => {
-      if (!longPressStart.current) return;
-      const dx = Math.abs(e.clientX - longPressStart.current.x);
-      const dy = Math.abs(e.clientY - longPressStart.current.y);
-      if (dx + dy > LONG_PRESS_TOLERANCE_PX) {
-        cancelLongPress();
-      }
-    };
-    const onUp = () => cancelLongPress();
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    window.addEventListener("pointercancel", onUp);
-    return () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
-    };
-  }, []);
-
-
+  // Long-press для мобильного контекстного меню (таймеры/слушатели внутри хука).
+  const { startLongPress } = useLongPress({
+    onSelectNodes,
+    onSelectElements,
+    suppressNextClick,
+    setDraggingNode,
+    onRequestContext,
+  });
 
   // === Поиск узла под курсором (для draw-element / select) ===
   // Радиус 18px (комфортный для тапа пальцем) пересчитан в мировые единицы.
