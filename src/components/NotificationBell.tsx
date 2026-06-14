@@ -5,7 +5,9 @@
  * уведомлениями (обновления, исправления, ответы на тикеты). Клик по
  * уведомлению отмечает его прочитанным и ведёт по ссылке.
  *
- * Поллинг счётчика раз в 60 сек и при возврате фокуса на вкладку.
+ * Экономный поллинг счётчика: раз в 60 сек, но только в активной вкладке
+ * (фоновые/свёрнутые не опрашиваем). Возврат фокуса обновляет счётчик
+ * не чаще раза в 30 сек.
  */
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
@@ -39,21 +41,41 @@ export default function NotificationBell() {
   const [loading, setLoading] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
+  // Время последнего запроса — чтобы тротлить опрос при возврате фокуса
+  // и не дёргать бэкенд чаще, чем нужно.
+  const lastFetchRef = useRef(0);
+
   const refreshCount = useCallback(async () => {
+    lastFetchRef.current = Date.now();
     const res = await getUnreadCount();
     if (res.ok && res.data) setUnread(res.data.unread);
   }, []);
 
-  // Поллинг счётчика, пока пользователь авторизован.
+  // Экономный поллинг счётчика, пока пользователь авторизован.
+  // 1) Не опрашиваем фоновые/свёрнутые вкладки (document.hidden) — там
+  //    счётчик всё равно никто не видит, а вызовы бэкенда тратятся впустую.
+  // 2) Возврат фокуса обновляет счётчик, но не чаще раза в FOCUS_THROTTLE_MS,
+  //    чтобы частые переключения вкладок не создавали шквал запросов.
   useEffect(() => {
     if (!user) return;
-    refreshCount();
-    const id = window.setInterval(refreshCount, POLL_MS);
-    const onFocus = () => refreshCount();
+    const FOCUS_THROTTLE_MS = 30_000;
+
+    const maybeRefresh = (throttle: boolean) => {
+      if (document.hidden) return;
+      if (throttle && Date.now() - lastFetchRef.current < FOCUS_THROTTLE_MS) return;
+      refreshCount();
+    };
+
+    maybeRefresh(false);
+    const id = window.setInterval(() => maybeRefresh(false), POLL_MS);
+    const onFocus = () => maybeRefresh(true);
+    const onVisible = () => maybeRefresh(true);
     window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       window.clearInterval(id);
       window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [user, refreshCount]);
 
