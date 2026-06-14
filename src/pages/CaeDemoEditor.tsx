@@ -11,12 +11,13 @@
  *  - лимит пробных расчётов с модалкой регистрации;
  *  - баннер демо-режима со счётчиком расчётов;
  *  - редирект авторизованных пользователей в их проекты.
+ *
+ * Разметка вынесена в ./cae-editor/CaeDemoEditorView (+ баннер/уведомление)
+ * без изменения логики — здесь только хуки, состояние и сборка пропсов.
  */
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Helmet } from "@/lib/helmet-shim";
+import { useNavigate } from "react-router-dom";
 import { type ContextTarget } from "@/components/cae/editor/ContextPropertiesPopup";
-import DemoLimitModal from "@/components/cae/DemoLimitModal";
 import { useCaeDemoProject, DEMO_ELEMENT_LIMIT, getSolveCount } from "./cae-editor/useCaeDemoProject";
 import { useCaeActions } from "./cae-editor/useCaeActions";
 import { useCaeSolver } from "./cae-editor/useCaeSolver";
@@ -24,12 +25,11 @@ import { useCaeKeyboard } from "./cae-editor/useCaeKeyboard";
 import { useCaeEditorState } from "./cae-editor/useCaeEditorState";
 import { useCaeViewSettings } from "./cae-editor/useCaeViewSettings";
 import { useLabelOffsets } from "./cae-editor/useLabelOffsets";
-import { SITE_URL } from "@/lib/seo";
 import { DEFAULT_ANALYSIS_SETTINGS } from "@/lib/cae-model";
 import { useAuth } from "@/contexts/AuthContext";
-import CaeEditorLayout from "./cae-editor/CaeEditorLayout";
-import CaeEditorModals from "./cae-editor/CaeEditorModals";
-import CaeEditorContextPopup from "./cae-editor/CaeEditorContextPopup";
+import CaeDemoBanner from "./cae-editor/CaeDemoBanner";
+import CaeDemoLimitNotice from "./cae-editor/CaeDemoLimitNotice";
+import CaeDemoEditorView from "./cae-editor/CaeDemoEditorView";
 
 const CaeDemoEditor = () => {
   const { user, loading: authLoadingCtx } = useAuth();
@@ -212,71 +212,26 @@ const CaeDemoEditor = () => {
   });
 
   return (
-    <>
-      <Helmet>
-        <title>Демо CAE-редактора — расчёт рам и балок · Диплом-Инж.рф</title>
-        <meta
-          name="description"
-          content="Попробуйте облачный CAE-редактор без регистрации: нарисуйте плоскую раму, задайте нагрузки и опоры, запустите МКЭ-расчёт, получите эпюры N/Q/M прямо в браузере."
-        />
-        <link rel="canonical" href={`${SITE_URL}/cae/demo`} />
-      </Helmet>
-
-      <CaeEditorLayout
-        is3d={is3d}
-        leftPanelOpen={leftPanelOpen}
-        setLeftPanelOpen={setLeftPanelOpen}
-        rightPanelOpen={rightPanelOpen}
-        setRightPanelOpen={setRightPanelOpen}
-        draftFound={null}
-        restoreDraft={() => {}}
-        discardDraft={() => {}}
-        bannerSlot={
-          /* Баннер демо-режима со счётчиком пробных расчётов */
-          <div className="bg-[var(--drawing-accent)] text-white">
-            <div className="max-w-[1400px] mx-auto px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-gost uppercase tracking-wider">
-                <span className="font-bold">Демо без регистрации</span>
-                <span className={`inline-flex items-center gap-1 ${solveBlocked ? "bg-red-700" : "bg-white/15"} px-2 py-0.5`}>
-                  Пробных расчётов: <span className="font-bold">{solveCount}/{solveLimit}</span>
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={onReset}
-                  className="font-gost uppercase tracking-wider underline underline-offset-2 hover:no-underline"
-                >
-                  Сбросить
-                </button>
-                <Link
-                  to="/register"
-                  className="font-gost-upright font-bold uppercase tracking-wider bg-white text-[var(--drawing-accent)] px-3 py-1 hover:bg-white/90"
-                >
-                  Регистрация · безлимит
-                </Link>
-              </div>
-            </div>
-          </div>
-        }
-        topSlot={
-          /* Уведомление об исчерпании лимита расчётов */
-          solveBlocked ? (
-            <div className="bg-amber-50 border-b-2 border-amber-700/40">
-              <div className="max-w-[1400px] mx-auto px-3 py-2 flex flex-wrap items-center gap-3 text-xs">
-                <span className="text-amber-900">
-                  Лимит демо исчерпан: <strong>{solveLimit} расчётов</strong> использовано.
-                </span>
-                <Link
-                  to="/register"
-                  className="btn-drawing text-[10px] border-amber-700/60 hover:border-amber-700 inline-flex"
-                >
-                  Зарегистрироваться — расчёты без лимита&nbsp;&rarr;
-                </Link>
-              </div>
-            </div>
-          ) : null
-        }
-        topBarProps={{
+    <CaeDemoEditorView
+      layoutProps={{
+        is3d,
+        leftPanelOpen,
+        setLeftPanelOpen,
+        rightPanelOpen,
+        setRightPanelOpen,
+        draftFound: null,
+        restoreDraft: () => {},
+        discardDraft: () => {},
+        bannerSlot: (
+          <CaeDemoBanner
+            solveBlocked={solveBlocked}
+            solveCount={solveCount}
+            solveLimit={solveLimit}
+            onReset={onReset}
+          />
+        ),
+        topSlot: solveBlocked ? <CaeDemoLimitNotice solveLimit={solveLimit} /> : null,
+        topBarProps: {
           projectName,
           model,
           result,
@@ -288,8 +243,8 @@ const CaeDemoEditor = () => {
           errorsCount,
           onSave,
           onSolve,
-        }}
-        leftPanelProps={{
+        },
+        leftPanelProps: {
           mode,
           setMode,
           gridStep,
@@ -302,8 +257,8 @@ const CaeDemoEditor = () => {
           setFontScale: viewSettings.setFontScale,
           onResetView: viewSettings.resetView,
           onResetLabelOffsets: labelOffsets.resetAll,
-        }}
-        canvasProps={{
+        },
+        canvasProps: {
           model,
           updateModel,
           mode,
@@ -360,8 +315,8 @@ const CaeDemoEditor = () => {
           onOpenChecks: () => setMobileChecksOpen(true),
           onOpenResults: () => setMobileResultsOpen(true),
           fullHeight: is3d,
-        }}
-        sidePanelsProps={{
+        },
+        sidePanelsProps: {
           model,
           result,
           issues,
@@ -406,14 +361,13 @@ const CaeDemoEditor = () => {
           solving,
           blocked,
           onSolve,
-        }}
-      />
-
-      <CaeEditorModals
-        showLoadButton={!!selectedNode && selectedNodeIds.length === 1 && !loadModalOpen}
-        loadButtonNodeId={selectedNode?.id ?? ""}
-        onOpenLoadModal={() => setLoadModalOpen(true)}
-        loadModalProps={{
+        },
+      }}
+      modalsProps={{
+        showLoadButton: !!selectedNode && selectedNodeIds.length === 1 && !loadModalOpen,
+        loadButtonNodeId: selectedNode?.id ?? "",
+        onOpenLoadModal: () => setLoadModalOpen(true),
+        loadModalProps: {
           open: loadModalOpen,
           onClose: () => setLoadModalOpen(false),
           dim: model.meta?.dim ?? "2d",
@@ -422,57 +376,55 @@ const CaeDemoEditor = () => {
           setForce: setNodalForceComponent,
           setMoment: setNodalMomentComponent,
           onRemove: removeLoadOnNode,
-        }}
-        materialPickerProps={{
+        },
+        materialPickerProps: {
           open: matPickerOpen,
           onClose: () => setMatPickerOpen(false),
           currentId: selectedElementId
             ? model.elements.find((x) => x.id === selectedElementId)?.material_id || null
             : null,
           onPick: pickMaterialForElement,
-        }}
-        sectionPickerProps={{
+        },
+        sectionPickerProps: {
           open: secPickerOpen,
           onClose: () => setSecPickerOpen(false),
           currentId: selectedElementId
             ? model.elements.find((x) => x.id === selectedElementId)?.section_id || null
             : null,
           onPick: pickSectionForElement,
-        }}
-        helpOpen={helpOpen}
-        onCloseHelp={() => setHelpOpen(false)}
-        tutorialOpen={tutorialOpen}
-        onCloseTutorial={() => setTutorialOpen(false)}
-        welcomeProps={{
+        },
+        helpOpen,
+        onCloseHelp: () => setHelpOpen(false),
+        tutorialOpen,
+        onCloseTutorial: () => setTutorialOpen(false),
+        welcomeProps: {
           open: false,
           onClose: () => {},
           onStartTutorial: () => {},
           onLoadTemplate: () => {},
-        }}
-        analysisSettingsProps={{
+        },
+        analysisSettingsProps: {
           open: settingsOpen,
           onClose: () => setSettingsOpen(false),
           settings: model.analysis_settings ?? DEFAULT_ANALYSIS_SETTINGS,
           onChange: (s) => updateModel({ ...model, analysis_settings: s }),
-        }}
-        nodeLimitProps={{
+        },
+        nodeLimitProps: {
           open: nodeLimitOpen,
           onClose: () => setNodeLimitOpen(false),
           currentLimit: NODE_LIMIT_ALPHA,
           currentNodeCount: model.nodes.length,
-        }}
-      />
-
-      <DemoLimitModal
-        open={limitModalOpen}
-        onClose={() => setLimitModalOpen(false)}
-        usedSolves={solveCount}
-        solveLimit={solveLimit}
-      />
-
-      <CaeEditorContextPopup
-        target={contextTarget}
-        popupProps={{
+        },
+      }}
+      demoLimitModalProps={{
+        open: limitModalOpen,
+        onClose: () => setLimitModalOpen(false),
+        usedSolves: solveCount,
+        solveLimit,
+      }}
+      popupProps={{
+        target: contextTarget,
+        popupProps: {
           onClose: () => setContextTarget(null),
           model,
           selectedNode,
@@ -499,9 +451,9 @@ const CaeDemoEditor = () => {
           removeLoadById,
           setElementHinge,
           deleteSelected,
-        }}
-      />
-    </>
+        },
+      }}
+    />
   );
 };
 
