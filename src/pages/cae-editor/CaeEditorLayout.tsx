@@ -8,7 +8,7 @@
  * Вся бизнес-логика (хуки, состояние, действия) остаётся в CaeEditor.tsx —
  * сюда приходят только готовые значения и колбэки через пропсы.
  */
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import Icon from "@/components/ui/icon";
 import EditorTopBar from "@/components/cae/editor/EditorTopBar";
 import EditorCanvasArea from "@/components/cae/editor/EditorCanvasArea";
@@ -29,6 +29,10 @@ interface Props {
   leftPanelProps: ComponentProps<typeof EditorLeftPanel>;
   canvasProps: ComponentProps<typeof EditorCanvasArea>;
   sidePanelsProps: ComponentProps<typeof EditorSidePanels>;
+  /** Доп. контент НАД всем редактором (демо-баннер). Опционально. */
+  bannerSlot?: ReactNode;
+  /** Доп. контент сразу под верхней панелью (демо-уведомление). Опционально. */
+  topSlot?: ReactNode;
 }
 
 const CaeEditorLayout = ({
@@ -44,9 +48,15 @@ const CaeEditorLayout = ({
   leftPanelProps,
   canvasProps,
   sidePanelsProps,
+  bannerSlot,
+  topSlot,
 }: Props) => (
+  <>
+  {bannerSlot}
   <div className="pt-16 md:pt-16">
     <EditorTopBar {...topBarProps} />
+
+    {topSlot}
 
     {draftFound && (
       <DraftRestoreBanner
@@ -115,6 +125,7 @@ const CaeEditorLayout = ({
       </div>
     </div>
   </div>
+  </>
 );
 
 export default CaeEditorLayout;
