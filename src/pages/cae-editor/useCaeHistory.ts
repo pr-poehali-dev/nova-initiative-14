@@ -52,7 +52,12 @@ export function useCaeHistory(initial: FrameModel): HistoryApi {
     }
     stack.current.push(clone(next));
     if (stack.current.length > MAX_HISTORY) {
+      // Переполнение: удаляем самый старый снимок из начала. Поскольку только
+      // что добавили снимок в конец, новый «текущий» — это последний индекс.
+      // Курсор обязан указывать на него, иначе после 50 правок undo/redo
+      // ссылались бы на неверный снимок (рассинхрон cursor и stack).
       stack.current.shift();
+      cursor.current = stack.current.length - 1;
     } else {
       cursor.current += 1;
     }

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Helmet } from "@/lib/helmet-shim";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,9 +24,12 @@ const Login = () => {
   const needsVerification =
     !!error && /подтвердите email|не подтверждён|не подтвержден/i.test(error);
 
-  if (user) {
-    setTimeout(() => nav(from, { replace: true }), 0);
-  }
+  // Уже авторизован — уводим на целевую страницу. Делаем это в эффекте,
+  // а НЕ в теле рендера: иначе на каждый рендер ставился новый setTimeout
+  // и могли срабатывать множественные навигации.
+  useEffect(() => {
+    if (user) nav(from, { replace: true });
+  }, [user, from, nav]);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();

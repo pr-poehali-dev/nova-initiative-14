@@ -59,7 +59,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await fetchUserInfo(access);
     if (res.ok && res.data?.user) {
       setState({ user: res.data.user, loading: false, error: null });
-      localStorage.setItem("sso_user", JSON.stringify(res.data.user));
+      // В приватном режиме / при превышении квоты setItem может бросить —
+      // не даём этому уронить обновление сессии (она и так уже в state).
+      try {
+        localStorage.setItem("sso_user", JSON.stringify(res.data.user));
+      } catch { /* localStorage недоступен — сессия живёт в памяти */ }
       return;
     }
 

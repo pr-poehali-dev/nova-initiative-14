@@ -18,7 +18,7 @@
  *  F5      — запустить расчёт
  *  ?       — показать справку
  */
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { EditorMode } from "@/components/cae/FrameCanvas";
 
 interface KeyboardOptions {
@@ -44,8 +44,15 @@ function isEditableTarget(t: EventTarget | null): boolean {
 }
 
 export function useCaeKeyboard(opts: KeyboardOptions) {
+  // Держим актуальные колбэки в ref'е: слушатель keydown ставится один раз,
+  // но всегда вызывает свежие обработчики (без устаревших замыканий и без
+  // переустановки слушателя на каждый рендер).
+  const optsRef = useRef(opts);
+  optsRef.current = opts;
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      const opts = optsRef.current;
       // Если фокус в инпуте — не перехватываем буквенные шорткаты,
       // но Ctrl+Z/Y/S работают всегда
       const inField = isEditableTarget(e.target);
@@ -134,5 +141,5 @@ export function useCaeKeyboard(opts: KeyboardOptions) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [opts]);
+  }, []);
 }

@@ -84,7 +84,17 @@ def handler(event: dict, context) -> dict:
             'body': ''
         }
 
-    body = json.loads(event.get('body', '{}'))
+    try:
+        body = json.loads(event.get('body') or '{}')
+    except (ValueError, TypeError):
+        return {
+            'statusCode': 400,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Content-Type': 'application/json'
+            },
+            'body': json.dumps({'ok': False, 'error': 'invalid_json'})
+        }
 
     name = body.get('name', '')
     contact = body.get('contact', '')
