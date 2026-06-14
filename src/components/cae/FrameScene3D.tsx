@@ -12,69 +12,21 @@
  *
  * Компонент намеренно автономен (read-mostly): правка модели идёт через панели
  * свойств справа, здесь — навигация, выбор и визуальная проверка пространства.
+ *
+ * Вспомогательные части вынесены в ./scene3d/* без изменения логики:
+ *  - palette.ts     — палитра темы (useScenePalette) и общие типы/хелперы;
+ *  - CameraFit.tsx  — камера, автоподгонка и быстрые виды;
+ *  - SceneMeshes.tsx — узел-сфера (NodeMesh) и стрелка силы (ForceArrow).
  */
-import { useMemo, useState, useEffect } from "react";
-import { Canvas, useThree } from "@react-three/fiber";
-import { OrbitControls, GizmoHelper, GizmoViewcube, Line, Html } from "@react-three/drei";
+import { useMemo, useState } from "react";
+import { Canvas } from "@react-three/fiber";
+import { GizmoHelper, GizmoViewcube, Line, Html } from "@react-three/drei";
 import * as THREE from "three";
 import Icon from "@/components/ui/icon";
 import type { FrameModel, SolverResponse } from "@/lib/cae-model";
-
-/**
- * Палитра 3D-сцены. Читается из CSS-переменных «чертёжной» темы, чтобы
- * 3D-канва выглядела одинаково с 2D-редактором и корректно реагировала
- * на светлую/тёмную тему. Значения после двоеточия — фолбэк (светлая тема).
- */
-interface ScenePalette {
-  bg: string;
-  line: string;
-  thin: string;
-  accent: string;
-  success: string;
-  grid: string;
-  paper: string;
-}
-
-const FALLBACK_PALETTE: ScenePalette = {
-  bg: "#faf8f0",
-  line: "#1a1a2e",
-  thin: "#3a3a5e",
-  accent: "#c0392b",
-  success: "#1a8a5a",
-  grid: "#d8d4c4",
-  paper: "#f5f3e8",
-};
-
-/** Читает текущие значения CSS-переменных темы (реагирует на html.dark). */
-function useScenePalette(): ScenePalette {
-  const [palette, setPalette] = useState<ScenePalette>(FALLBACK_PALETTE);
-  useEffect(() => {
-    const read = () => {
-      const s = getComputedStyle(document.documentElement);
-      const v = (name: string, fb: string) =>
-        s.getPropertyValue(name).trim() || fb;
-      setPalette({
-        bg: v("--drawing-bg", FALLBACK_PALETTE.bg),
-        line: v("--drawing-line", FALLBACK_PALETTE.line),
-        thin: v("--drawing-line-thin", FALLBACK_PALETTE.thin),
-        accent: v("--drawing-accent", FALLBACK_PALETTE.accent),
-        success: v("--drawing-success", FALLBACK_PALETTE.success),
-        // Для линий сетки используем тонкий тон бумаги/линии.
-        grid: v("--drawing-line-thin", FALLBACK_PALETTE.grid),
-        paper: v("--drawing-paper", FALLBACK_PALETTE.paper),
-      });
-    };
-    read();
-    // Реагируем на переключение темы (класс html.dark).
-    const obs = new MutationObserver(read);
-    obs.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-    return () => obs.disconnect();
-  }, []);
-  return palette;
-}
+import { useScenePalette, type Vec3, type ViewName, vec } from "./scene3d/palette";
+import CameraFit from "./scene3d/CameraFit";
+import { NodeMesh, ForceArrow } from "./scene3d/SceneMeshes";
 
 interface Props {
   model: FrameModel;
@@ -95,115 +47,6 @@ interface Props {
   onAddNodeAt?: (x: number, y: number, z: number) => void;
   /** Соединить два узла стержнем по id (режим «Балка», клик по двум узлам). */
   onConnectTwoNodes?: (a: string, b: string) => void;
-}
-
-type Vec3 = [number, number, number];
-
-/** Именованные ракурсы быстрых видов. */
-type ViewName = "iso" | "front" | "back" | "left" | "right" | "top" | "bottom";
-
-/** Единичные направления камеры (откуда смотрим) для каждого вида.
- *  Ось Y — вертикаль (вверх). */
-const VIEW_DIRS: Record<ViewName, Vec3> = {
-  iso: [1, 0.8, 1],
-  front: [0, 0, 1], // смотрим вдоль −Z (плоскость XY, как 2D)
-  back: [0, 0, -1],
-  right: [1, 0, 0],
-  left: [-1, 0, 0],
-  top: [0, 1, 0],
-  bottom: [0, -1, 0],
-};
-
-const vec = (c: [number, number, number]): Vec3 => [c[0], c[1], c[2]];
-
-/**
- * Камера: автоподгонка под габариты и установка именованных ракурсов.
- * Реагирует на fitRequestId (изометрия + фит) и на viewRequest (конкретный вид).
- */
-function CameraFit({
-  center,
-  radius,
-  fitRequestId,
-  viewRequest,
-}: {
-  center: Vec3;
-  radius: number;
-  fitRequestId?: number;
-  viewRequest?: { view: ViewName; id: number };
-}) {
-  const { camera } = useThree();
-
-  const place = (dir: Vec3) => {
-    const d = Math.max(radius * 2.2, 2);
-    const n = new THREE.Vector3(dir[0], dir[1], dir[2]).normalize();
-    camera.position.set(
-      center[0] + n.x * d,
-      center[1] + n.y * d,
-      center[2] + n.z * d,
-    );
-    camera.near = d / 100;
-    camera.far = d * 50;
-    // Для вида «сверху/снизу» подменяем up, иначе камера вырождается.
-    if (dir[0] === 0 && dir[2] === 0) {
-      camera.up.set(0, 0, dir[1] > 0 ? -1 : 1);
-    } else {
-      camera.up.set(0, 1, 0);
-    }
-    camera.updateProjectionMatrix();
-    camera.lookAt(center[0], center[1], center[2]);
-  };
-
-  useEffect(() => {
-    place(VIEW_DIRS.iso);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fitRequestId]);
-
-  useEffect(() => {
-    if (viewRequest) place(VIEW_DIRS[viewRequest.view]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewRequest?.id]);
-
-  return (
-    <OrbitControls target={center} enableDamping dampingFactor={0.1} makeDefault />
-  );
-}
-
-/** Узел-сфера с обработкой клика. */
-function NodeMesh({
-  id,
-  pos,
-  selected,
-  scale,
-  palette,
-  onSelect,
-}: {
-  id: string;
-  pos: Vec3;
-  selected: boolean;
-  scale: number;
-  palette: ScenePalette;
-  onSelect: (id: string, additive: boolean) => void;
-}) {
-  const [hover, setHover] = useState(false);
-  return (
-    <mesh
-      position={pos}
-      onClick={(e) => {
-        e.stopPropagation();
-        onSelect(id, e.shiftKey || e.ctrlKey || e.metaKey);
-      }}
-      onPointerOver={(e) => {
-        e.stopPropagation();
-        setHover(true);
-      }}
-      onPointerOut={() => setHover(false)}
-    >
-      <sphereGeometry args={[scale * (selected ? 1.5 : 1), 16, 16]} />
-      <meshStandardMaterial
-        color={selected || hover ? palette.accent : palette.line}
-      />
-    </mesh>
-  );
 }
 
 export default function FrameScene3D({
@@ -560,41 +403,5 @@ export default function FrameScene3D({
       </GizmoHelper>
     </Canvas>
     </div>
-  );
-}
-
-/** Стрелка узловой силы (направленный конус + древко). */
-function ForceArrow({
-  dir,
-  origin,
-  length,
-  headScale,
-  color,
-}: {
-  dir: THREE.Vector3;
-  origin: THREE.Vector3;
-  length: number;
-  headScale: number;
-  color: string;
-}) {
-  // Стрелка направлена ОТ узла навстречу силе (тянет/толкает узел).
-  const end = origin.clone().add(dir.clone().multiplyScalar(length));
-  const points: Vec3[] = [
-    [origin.x, origin.y, origin.z],
-    [end.x, end.y, end.z],
-  ];
-  // Ориентация конуса: по умолчанию конус смотрит вдоль +Y.
-  const quat = new THREE.Quaternion().setFromUnitVectors(
-    new THREE.Vector3(0, 1, 0),
-    dir,
-  );
-  return (
-    <group>
-      <Line points={points} color={color} lineWidth={2} />
-      <mesh position={[end.x, end.y, end.z]} quaternion={quat}>
-        <coneGeometry args={[headScale, headScale * 2.2, 12]} />
-        <meshStandardMaterial color={color} />
-      </mesh>
-    </group>
   );
 }
