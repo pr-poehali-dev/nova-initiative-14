@@ -152,9 +152,32 @@ const AdGenerator = () => {
         <h1 className="font-gost-upright text-2xl md:text-3xl font-black uppercase tracking-wide mb-1">
           Генератор рекламы
         </h1>
-        <p className="font-gost text-xs text-[var(--drawing-line-thin)] mb-6">
+        <p className="font-gost text-xs text-[var(--drawing-line-thin)] mb-4">
           Заполните поля, выберите формат и тему — затем выгрузите макет в PNG, JPG или PDF.
         </p>
+
+        {/* Переключатель между видами генераторов рекламы. */}
+        <div className="grid sm:grid-cols-2 gap-3 mb-6">
+          <div className="border-2 border-[var(--drawing-accent)] bg-[var(--drawing-bg)] p-3">
+            <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-accent)] mb-1 flex items-center gap-1">
+              <Icon name="MonitorSmartphone" size={13} /> Онлайн-макеты · вы здесь
+            </p>
+            <p className="font-gost text-xs text-[var(--drawing-line-thin)] leading-snug">
+              Посты и баннеры для соцсетей и сайта. Выгрузка PNG / JPG / PDF.
+            </p>
+          </div>
+          <Link
+            to="/admin/print"
+            className="border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] p-3 hover:border-[var(--drawing-accent)] transition-colors block group"
+          >
+            <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] group-hover:text-[var(--drawing-accent)] mb-1 flex items-center gap-1">
+              <Icon name="Printer" size={13} /> Печать для типографии →
+            </p>
+            <p className="font-gost text-xs text-[var(--drawing-line-thin)] leading-snug">
+              Листовки А7 / А6 / А5 / DL с двумя QR. Векторный SVG для CorelDRAW.
+            </p>
+          </Link>
+        </div>
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,360px)_1fr] [&>*]:min-w-0">
           {/* Форма */}

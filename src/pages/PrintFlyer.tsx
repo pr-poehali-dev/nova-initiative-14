@@ -115,6 +115,12 @@ const PrintFlyer = () => {
           </p>
           <div className="flex items-center gap-3">
             <Link
+              to="/admin/generator"
+              className="font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)] hover:text-[var(--drawing-accent)] inline-flex items-center gap-1"
+            >
+              <Icon name="ArrowLeft" size={12} />Онлайн-макеты
+            </Link>
+            <Link
               to="/admin/qr"
               className="font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)] hover:text-[var(--drawing-accent)] inline-flex items-center gap-1"
             >
