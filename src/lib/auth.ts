@@ -330,6 +330,62 @@ export async function fetchAdminStats(
   return { ok: res.ok, status: res.status, data: res.ok ? data : null };
 }
 
+// ──────────────────────────── Дашборд владельца: продукт ────────────────────────────
+
+export interface OwnerDashboard {
+  period_days: number;
+  users: {
+    total: number;
+    new_period: number;
+    verified: number;
+    online: number;
+    active_24h: number;
+    active_7d: number;
+  };
+  solves: {
+    runs: number;
+    ok: number;
+    err: number;
+    runs_period: number;
+    avg_nodes: number;
+    avg_elems: number;
+    avg_loads: number;
+    max_elems: number;
+    avg_ms: number;
+  };
+  solves_by_type: { type: string; count: number }[];
+  solves_daily: { date: string; count: number; errors: number }[];
+  complexity: { bucket: string; count: number }[];
+  projects: {
+    total: number;
+    archived: number;
+    active: number;
+    new_period: number;
+    by_type: { type: string; count: number }[];
+  };
+  referrals: {
+    invited_total: number;
+    invited_period: number;
+    top_inviters: { id: number; name: string; invited: number; active: number }[];
+  };
+  top_users: { id: number; name: string; runs: number; last_run: string | null }[];
+}
+
+/** Сводный дашборд владельца: пользователи, расчёты, проекты, рефералы (only admin). */
+export async function fetchOwnerDashboard(
+  days = 30,
+): Promise<{ ok: boolean; status: number; data: OwnerDashboard | null }> {
+  const url = `${API}?action=owner-dashboard&days=${days}`;
+  const res = await authorizedFetch(url);
+  let data: OwnerDashboard | null = null;
+  try {
+    data = (await res.json()) as OwnerDashboard;
+  } catch {
+    data = null;
+  }
+  return { ok: res.ok, status: res.status, data: res.ok ? data : null };
+}
+
 // ──────────────────────────── Владелец: посетители ────────────────────────────
 
 /** Краткая запись сессии посетителя для списка (owner-only). */

@@ -45,6 +45,7 @@ from account_actions import (
 )
 from config import CORS
 from db_helpers import client_ip, current_user_id, json_response, user_agent
+from owner_stats import action_owner_dashboard
 from oauth import (
     action_list_identities,
     action_oauth_callback,
@@ -204,6 +205,11 @@ def handler(event: dict, context) -> dict:
             if not uid:
                 return json_response(401, {'error': 'unauthorized'})
             return action_owner_visit_detail(conn, uid, params)
+        if action == 'owner-dashboard' and method == 'GET':
+            uid = current_user_id(event)
+            if not uid:
+                return json_response(401, {'error': 'unauthorized'})
+            return action_owner_dashboard(conn, uid, params)
 
         return json_response(404, {'error': 'unknown_action'})
     except Exception as e:

@@ -6,10 +6,23 @@ import { useAuth } from "@/contexts/AuthContext";
 import { SITE_URL } from "@/lib/seo";
 import {
   fetchAdminStats,
+  fetchOwnerDashboard,
   type AdminStats,
+  type OwnerDashboard,
   type PageStat,
   type QrFlyerStat,
 } from "@/lib/auth";
+
+/** Человекочитаемые названия типов расчётных моделей. */
+const TYPE_LABEL: Record<string, string> = {
+  frame_3d: "Рама 3D",
+  frame_2d: "Рама 2D",
+  truss_3d: "Ферма 3D",
+  truss_2d: "Ферма 2D",
+  beam: "Балка",
+  unknown: "Прочее",
+};
+const typeLabel = (t: string) => TYPE_LABEL[t] || t;
 
 /** Дни-периоды для переключателя. */
 const PERIODS = [
@@ -40,6 +53,7 @@ const AdminStats = () => {
   const nav = useNavigate();
   const [days, setDays] = useState(30);
   const [stats, setStats] = useState<AdminStats | null>(null);
+  const [dash, setDash] = useState<OwnerDashboard | null>(null);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,12 +61,15 @@ const AdminStats = () => {
     let alive = true;
     setBusy(true);
     setError(null);
-    fetchAdminStats(days).then((r) => {
-      if (!alive) return;
-      if (r.ok && r.data) setStats(r.data);
-      else setError("Не удалось загрузить статистику");
-      setBusy(false);
-    });
+    Promise.all([fetchAdminStats(days), fetchOwnerDashboard(days)]).then(
+      ([s, d]) => {
+        if (!alive) return;
+        if (s.ok && s.data) setStats(s.data);
+        else setError("Не удалось загрузить статистику");
+        if (d.ok && d.data) setDash(d.data);
+        setBusy(false);
+      },
+    );
     return () => {
       alive = false;
     };
@@ -102,7 +119,7 @@ const AdminStats = () => {
           </div>
         </div>
         <h1 className="font-gost-upright text-2xl md:text-3xl font-black uppercase tracking-wide mb-4">
-          Статистика посещений
+          Статистика продукта
         </h1>
 
         {/* Переключатель периода */}
@@ -129,8 +146,13 @@ const AdminStats = () => {
           <p className="font-gost text-sm text-[var(--drawing-accent)]">{error}</p>
         )}
 
+        {dash && !busy && <OwnerDashboardBlock dash={dash} />}
+
         {stats && !busy && (
           <>
+            <p className="font-gost text-[11px] uppercase tracking-[0.3em] text-[var(--drawing-line-thin)] mb-3 mt-10">
+              Трафик и источники
+            </p>
             {/* Итоги */}
             <div className="grid grid-cols-3 gap-3 mb-8">
               <StatCard icon="Eye" label="Визитов" value={stats.totals.visits} />
@@ -189,11 +211,206 @@ const AdminStats = () => {
   );
 };
 
-function StatCard({ icon, label, value }: { icon: string; label: string; value: number }) {
+/** Блок дашборда владельца: пользователи/онлайн, расчёты/сложность, рефералы. */
+function OwnerDashboardBlock({ dash }: { dash: OwnerDashboard }) {
+  const { users, solves, projects, referrals, top_users } = dash;
+  const maxSolveDaily = Math.max(1, ...dash.solves_daily.map((d) => d.count));
+  const successRate =
+    solves.runs > 0 ? Math.round((solves.ok / solves.runs) * 100) : 0;
+
   return (
-    <div className="border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] p-4">
+    <>
+      {/* Пользователи и онлайн */}
+      <p className="font-gost text-[11px] uppercase tracking-[0.3em] text-[var(--drawing-line-thin)] mb-3">
+        Пользователи и активность
+      </p>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-3">
+        <StatCard icon="Users" label="Всего пользователей" value={users.total} />
+        <StatCard icon="UserPlus" label="Новых за период" value={users.new_period} />
+        <StatCard icon="MailCheck" label="Подтвердили email" value={users.verified} />
+      </div>
+      <div className="grid grid-cols-3 gap-3 mb-8">
+        <StatCard icon="Radio" label="Онлайн сейчас" value={users.online} accent />
+        <StatCard icon="Activity" label="Активны за 24ч" value={users.active_24h} />
+        <StatCard icon="CalendarClock" label="Активны за 7д" value={users.active_7d} />
+      </div>
+
+      {/* Расчёты и сложность */}
+      <p className="font-gost text-[11px] uppercase tracking-[0.3em] text-[var(--drawing-line-thin)] mb-3">
+        Расчёты и сложность
+      </p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+        <StatCard icon="Calculator" label="Всего расчётов" value={solves.runs} />
+        <StatCard icon="CircleCheck" label={`Успешных (${successRate}%)`} value={solves.ok} />
+        <StatCard icon="CircleX" label="С ошибкой" value={solves.err} />
+        <StatCard icon="TrendingUp" label="За период" value={solves.runs_period} />
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <StatCard icon="Spline" label="Сред. узлов" value={solves.avg_nodes} />
+        <StatCard icon="Grid3x3" label="Сред. элементов" value={solves.avg_elems} />
+        <StatCard icon="ArrowDownToLine" label="Сред. нагрузок" value={solves.avg_loads} />
+        <StatCard icon="Timer" label="Сред. время, мс" value={solves.avg_ms} />
+      </div>
+
+      <Section title="Расчёты по дням">
+        {dash.solves_daily.length === 0 ? (
+          <Empty />
+        ) : (
+          <div className="flex items-end gap-1 h-40 border-b border-l border-[var(--drawing-line)] pl-1">
+            {dash.solves_daily.map((d) => (
+              <div
+                key={d.date}
+                className="flex-1 min-w-[3px] bg-[var(--drawing-line)] relative"
+                style={{ height: `${(d.count / maxSolveDaily) * 100}%` }}
+                title={`${d.date}: ${d.count} расчётов, ${d.errors} с ошибкой`}
+              >
+                {d.errors > 0 && (
+                  <span className="absolute -top-1 left-0 right-0 h-1 bg-[var(--drawing-accent)]" />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] mt-2">
+          Красная отметка — в этот день были расчёты с ошибкой.
+        </p>
+      </Section>
+
+      <div className="grid md:grid-cols-2 gap-8 mb-2">
+        <Section title="Типы расчётов">
+          <CountBars
+            items={dash.solves_by_type.map((t) => ({ label: typeLabel(t.type), count: t.count }))}
+          />
+        </Section>
+        <Section title="Распределение по сложности">
+          <CountBars items={dash.complexity.map((c) => ({ label: c.bucket, count: c.count }))} />
+        </Section>
+      </div>
+
+      {/* Проекты */}
+      <p className="font-gost text-[11px] uppercase tracking-[0.3em] text-[var(--drawing-line-thin)] mb-3 mt-6">
+        Проекты
+      </p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <StatCard icon="FolderKanban" label="Всего проектов" value={projects.total} />
+        <StatCard icon="FolderOpen" label="Активных" value={projects.active} />
+        <StatCard icon="Archive" label="В архиве" value={projects.archived} />
+        <StatCard icon="FolderPlus" label="Новых за период" value={projects.new_period} />
+      </div>
+
+      {/* Рефералы */}
+      <p className="font-gost text-[11px] uppercase tracking-[0.3em] text-[var(--drawing-line-thin)] mb-3">
+        Приглашения и рефералы
+      </p>
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <StatCard icon="Gift" label="Пришли по приглашению" value={referrals.invited_total} />
+        <StatCard icon="UserRoundPlus" label="Из них за период" value={referrals.invited_period} />
+      </div>
+      <Section title="Топ приглашающих (приглашено → стали активными)">
+        <PeopleTable
+          rows={referrals.top_inviters.map((r) => ({
+            name: r.name,
+            a: r.invited,
+            b: r.active,
+          }))}
+          colA="Приглашено"
+          colB="Активны"
+        />
+      </Section>
+
+      {/* Самые активные по расчётам */}
+      <Section title="Самые активные пользователи (по числу расчётов)">
+        <PeopleTable
+          rows={top_users.map((r) => ({
+            name: r.name,
+            a: r.runs,
+            b: r.last_run ? new Date(r.last_run).toLocaleDateString("ru-RU") : "—",
+          }))}
+          colA="Расчётов"
+          colB="Последний"
+        />
+      </Section>
+    </>
+  );
+}
+
+/** Горизонтальные бары по подписи + количеству (универсальный). */
+function CountBars({ items }: { items: { label: string; count: number }[] }) {
+  if (items.length === 0) return <Empty />;
+  const max = Math.max(1, ...items.map((i) => i.count));
+  return (
+    <div className="space-y-2">
+      {items.map((it, idx) => (
+        <div key={idx} className="flex items-center gap-2">
+          <span className="font-gost text-xs text-[var(--drawing-line)] w-28 shrink-0 truncate" title={it.label}>
+            {it.label}
+          </span>
+          <div className="flex-1 h-5 bg-[var(--drawing-paper)] border border-[var(--drawing-line)]/20">
+            <div
+              className="h-full bg-[var(--drawing-line)]"
+              style={{ width: `${(it.count / max) * 100}%` }}
+            />
+          </div>
+          <span className="font-mono text-xs text-[var(--drawing-line)] w-10 text-right shrink-0">
+            {it.count}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Таблица «человек → две метрики» (рефералы, активность). */
+function PeopleTable({
+  rows,
+  colA,
+  colB,
+}: {
+  rows: { name: string; a: number | string; b: number | string }[];
+  colA: string;
+  colB: string;
+}) {
+  if (rows.length === 0) return <Empty />;
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-2 pb-1 border-b border-[var(--drawing-line)]/30">
+        <span className="flex-1 font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)]">
+          Пользователь
+        </span>
+        <span className="w-20 text-right font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)]">
+          {colA}
+        </span>
+        <span className="w-20 text-right font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)]">
+          {colB}
+        </span>
+      </div>
+      {rows.map((r, i) => (
+        <div key={i} className="flex items-center gap-2 py-1">
+          <span className="flex-1 font-gost text-xs text-[var(--drawing-line)] truncate" title={r.name}>
+            {r.name}
+          </span>
+          <span className="w-20 text-right font-mono text-sm font-bold text-[var(--drawing-line)]">
+            {r.a}
+          </span>
+          <span className="w-20 text-right font-mono text-xs text-[var(--drawing-line-thin)]">
+            {r.b}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function StatCard({ icon, label, value, accent }: { icon: string; label: string; value: number; accent?: boolean }) {
+  const display = Number.isInteger(value) ? value : value.toFixed(1);
+  return (
+    <div
+      className={`border-2 bg-[var(--drawing-bg)] p-4 ${
+        accent && value > 0 ? "border-[var(--drawing-accent)]" : "border-[var(--drawing-line)]"
+      }`}
+    >
       <Icon name={icon} size={18} className="text-[var(--drawing-accent)] mb-1" />
-      <p className="font-gost-upright text-2xl font-black text-[var(--drawing-line)]">{value}</p>
+      <p className="font-gost-upright text-2xl font-black text-[var(--drawing-line)]">{display}</p>
       <p className="font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)]">
         {label}
       </p>

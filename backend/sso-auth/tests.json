@@ -155,6 +155,12 @@
       "method": "GET",
       "path": "/?action=owner-visit&id=1",
       "expectedStatus": 401
+    },
+    {
+      "name": "Дашборд владельца без токена",
+      "method": "GET",
+      "path": "/?action=owner-dashboard",
+      "expectedStatus": 401
     }
   ]
 }
