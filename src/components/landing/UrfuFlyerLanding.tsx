@@ -1,5 +1,5 @@
 /**
- * Общий лендинг для QR-флаеров, раздаваемых у УрФУ.
+ * Общий лендинг для печатных QR-флаеров.
  * Используется двумя страницами:
  *   /urfu_qr_cae    — CAE-расчёты балок, рам, ферм
  *   /urfu_qr_diplom — наставничество по дипломному проекту
@@ -33,7 +33,7 @@ export interface UrfuFlyerConfig {
 }
 
 const ADDRESS_LINE = "ул. Мира, 34 / ул. Малышева, 132";
-const CITY_LINE = "Екатеринбург · перекрёсток у УрФУ";
+const CITY_LINE = "Екатеринбург · центр города";
 const MAP_QUERY = encodeURIComponent("Екатеринбург, улица Мира 34");
 
 export default function UrfuFlyerLanding({ config }: { config: UrfuFlyerConfig }) {
