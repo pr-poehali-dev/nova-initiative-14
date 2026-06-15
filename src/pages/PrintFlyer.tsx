@@ -180,29 +180,17 @@ const PrintFlyer = () => {
                 </div>
               </Field>
 
-              {/* Тумблер меток реза (область для отрезания) */}
-              <button
-                type="button"
-                onClick={() => set({ showTrimMarks: !o.showTrimMarks })}
-                className="flex items-center justify-between w-full border border-[var(--drawing-line)]/40 px-3 py-2 hover:border-[var(--drawing-accent)] transition-colors"
-              >
-                <span className="font-gost text-xs text-[var(--drawing-line)] text-left">
-                  Метки реза (область для отрезания)
-                </span>
-                <span
-                  className={`relative inline-block w-9 h-5 shrink-0 border-2 transition-colors ${
-                    o.showTrimMarks
-                      ? "border-[var(--drawing-accent)] bg-[var(--drawing-accent)]"
-                      : "border-[var(--drawing-line)]"
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 w-3 h-3 transition-all ${
-                      o.showTrimMarks ? "left-[18px] bg-white" : "left-0.5 bg-[var(--drawing-line)]"
-                    }`}
-                  />
-                </span>
-              </button>
+              {/* Тумблеры служебных элементов макета */}
+              <Toggle
+                label="Метки реза (область для отрезания)"
+                on={o.showTrimMarks}
+                onToggle={() => set({ showTrimMarks: !o.showTrimMarks })}
+              />
+              <Toggle
+                label="Подпись «тираж: …» (для учёта на мероприятиях)"
+                on={o.showCampaignNote}
+                onToggle={() => set({ showCampaignNote: !o.showCampaignNote })}
+              />
             </Group>
 
             {/* Тексты */}
@@ -341,6 +329,29 @@ const PrintFlyer = () => {
     </>
   );
 };
+
+function Toggle({ label, on, onToggle }: { label: string; on: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="flex items-center justify-between w-full border border-[var(--drawing-line)]/40 px-3 py-2 hover:border-[var(--drawing-accent)] transition-colors"
+    >
+      <span className="font-gost text-xs text-[var(--drawing-line)] text-left pr-2">{label}</span>
+      <span
+        className={`relative inline-block w-9 h-5 shrink-0 border-2 transition-colors ${
+          on ? "border-[var(--drawing-accent)] bg-[var(--drawing-accent)]" : "border-[var(--drawing-line)]"
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 w-3 h-3 transition-all ${
+            on ? "left-[18px] bg-white" : "left-0.5 bg-[var(--drawing-line)]"
+          }`}
+        />
+      </span>
+    </button>
+  );
+}
 
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (

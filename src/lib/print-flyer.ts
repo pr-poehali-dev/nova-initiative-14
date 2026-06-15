@@ -98,6 +98,8 @@ export interface FlyerOptions {
   qrBlocks: [FlyerQrBlock, FlyerQrBlock];
   /** Показывать метки реза (засечки по углам зоны обреза). */
   showTrimMarks: boolean;
+  /** Показывать служебную подпись «тираж: …» (мелким шрифтом в углу). */
+  showCampaignNote: boolean;
 }
 
 /** Значения по умолчанию для нового макета. */
@@ -127,6 +129,7 @@ export const DEFAULT_FLYER: FlyerOptions = {
     },
   ],
   showTrimMarks: true,
+  showCampaignNote: false,
 };
 
 const BLEED = 3; // мм вылет
@@ -418,8 +421,9 @@ export async function buildFlyerSvg(o: FlyerOptions): Promise<string> {
     }
   }
 
-  // Служебная метка тиража (мелко, можно убрать в Corel)
-  const campaignNote = sanitizeUtm(o.campaign) ? `тираж: ${sanitizeUtm(o.campaign)}` : "";
+  // Служебная метка тиража (мелко, по тумблеру — для учёта на мероприятиях)
+  const campaignNote =
+    o.showCampaignNote && sanitizeUtm(o.campaign) ? `тираж: ${sanitizeUtm(o.campaign)}` : "";
   if (campaignNote) {
     parts.push(
       `<text x="${BLEED + 1}" y="${H - 1}" font-size="2" fill="${th.muted}">${esc(campaignNote)}</text>`,
