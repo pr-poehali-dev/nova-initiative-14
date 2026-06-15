@@ -151,7 +151,7 @@ const PrintFlyer = () => {
                 <select
                   value={format}
                   onChange={(e) => setFormat(e.target.value as FlyerFormatId)}
-                  className="input-drawing w-full"
+                  className="drawing-input w-full"
                 >
                   {FORMATS.map((f) => (
                     <option key={f.id} value={f.id}>
@@ -164,7 +164,7 @@ const PrintFlyer = () => {
                 <select
                   value={theme}
                   onChange={(e) => setTheme(e.target.value as FlyerThemeId)}
-                  className="input-drawing w-full"
+                  className="drawing-input w-full"
                 >
                   {THEMES.map((t) => (
                     <option key={t.id} value={t.id}>
@@ -180,7 +180,7 @@ const PrintFlyer = () => {
                 value={source}
                 onChange={(e) => setSource(e.target.value)}
                 placeholder="flyer_urfu"
-                className="input-drawing w-full"
+                className="drawing-input w-full"
               />
             </Field>
             <Field label="Канал (utm_medium)">
@@ -188,7 +188,7 @@ const PrintFlyer = () => {
                 value={medium}
                 onChange={(e) => setMedium(e.target.value)}
                 placeholder="qr"
-                className="input-drawing w-full"
+                className="drawing-input w-full"
               />
             </Field>
             <Field label="Кампания / тираж (utm_campaign)">
@@ -196,7 +196,7 @@ const PrintFlyer = () => {
                 value={campaign}
                 onChange={(e) => setCampaign(e.target.value)}
                 placeholder="korpus_mehmash"
-                className="input-drawing w-full"
+                className="drawing-input w-full"
               />
               <span className="font-gost text-[10px] text-[var(--drawing-line-thin)] block mt-1">
                 По этой метке статистика различит конкретный тираж/место раздачи.
