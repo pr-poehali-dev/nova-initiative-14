@@ -33,7 +33,7 @@ export interface UrfuFlyerConfig {
 }
 
 const ADDRESS_LINE = "ул. Мира, 34 / ул. Малышева, 132";
-const CITY_LINE = "Екатеринбург · центр города";
+const CITY_LINE = "Екатеринбург · перекрёсток у УрФУ";
 const MAP_QUERY = encodeURIComponent("Екатеринбург, улица Мира 34");
 
 export default function UrfuFlyerLanding({ config }: { config: UrfuFlyerConfig }) {
