@@ -1,9 +1,12 @@
 import json
 import os
+import urllib.request
 import psycopg2
 import psycopg2.extras
 
 SITE_URL = "https://xn----gtbhgbqhkfi.xn--p1ai"
+# Ключ IndexNow: совпадает с именем файла-подтверждения в /public.
+INDEXNOW_KEY = "a7f3c9e1b2d84e6f9a05c7d3e8b1f4a2"
 
 
 def _cors(extra=None):
@@ -84,54 +87,117 @@ def _handle_articles(conn, params):
 
 
 def _handle_sitemap(conn):
+    # Дата последнего изменения сайта в целом — берём свежайшую дату
+    # обновления опубликованной статьи (фолбэк — сегодня). Используется
+    # как lastmod для разделов блога и главной, чтобы роботы видели свежесть.
+    from datetime import datetime, timezone
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT MAX(updated_at) FROM engineering_articles WHERE is_published = TRUE"
+        )
+        row = cur.fetchone()
+        latest_article = row[0].strftime("%Y-%m-%d") if row and row[0] else today
+
+    # (path, changefreq, priority, lastmod)
     static_pages = [
-        ("/", "weekly", "1.0"),
-        ("/program", "monthly", "0.9"),
-        ("/pricing", "monthly", "0.9"),
-        ("/cases", "monthly", "0.8"),
-        ("/experts", "monthly", "0.8"),
-        ("/reviews", "monthly", "0.8"),
-        ("/faq", "monthly", "0.7"),
-        ("/about", "monthly", "0.7"),
-        ("/contacts", "monthly", "0.9"),
-        ("/vacancies", "monthly", "0.6"),
-        ("/blog", "weekly", "0.9"),
-        ("/cae", "weekly", "0.9"),
-        ("/privacy", "yearly", "0.3"),
-        ("/offer", "yearly", "0.3"),
+        ("/", "daily", "1.0", latest_article),
+        ("/blog", "daily", "0.9", latest_article),
+        ("/cae", "weekly", "0.9", today),
+        ("/cae/changelog", "weekly", "0.6", today),
+        ("/program", "monthly", "0.9", today),
+        ("/pricing", "monthly", "0.9", today),
+        ("/contacts", "monthly", "0.9", today),
+        ("/cases", "monthly", "0.8", today),
+        ("/experts", "monthly", "0.8", today),
+        ("/reviews", "monthly", "0.8", today),
+        ("/faq", "monthly", "0.7", today),
+        ("/about", "monthly", "0.7", today),
+        ("/vacancies", "monthly", "0.6", today),
+        ("/privacy", "yearly", "0.3", today),
+        ("/offer", "yearly", "0.3", today),
     ]
     parts = ['<?xml version="1.0" encoding="UTF-8"?>',
              '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
-    for path, freq, prio in static_pages:
+    for path, freq, prio, lastmod in static_pages:
         parts.append('  <url>')
         parts.append(f'    <loc>{SITE_URL}{path}</loc>')
+        parts.append(f'    <lastmod>{lastmod}</lastmod>')
         parts.append(f'    <changefreq>{freq}</changefreq>')
         parts.append(f'    <priority>{prio}</priority>')
         parts.append('  </url>')
 
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT slug, updated_at FROM engineering_articles "
-            "WHERE is_published = TRUE ORDER BY updated_at DESC"
+            "SELECT slug, COALESCE(updated_at, published_at) AS lm "
+            "FROM engineering_articles "
+            "WHERE is_published = TRUE ORDER BY lm DESC"
         )
-        for slug, updated_at in cur.fetchall():
+        for slug, lm in cur.fetchall():
             parts.append('  <url>')
             parts.append(f'    <loc>{SITE_URL}/blog/{slug}</loc>')
-            if updated_at:
-                parts.append(f'    <lastmod>{updated_at.strftime("%Y-%m-%d")}</lastmod>')
-            parts.append('    <changefreq>monthly</changefreq>')
+            if lm:
+                parts.append(f'    <lastmod>{lm.strftime("%Y-%m-%d")}</lastmod>')
+            parts.append('    <changefreq>weekly</changefreq>')
             parts.append('    <priority>0.8</priority>')
             parts.append('  </url>')
     parts.append('</urlset>')
     return {
         'statusCode': 200,
-        'headers': _cors({'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=3600'}),
+        # Короткий кэш (10 мин) — чтобы свежие статьи попадали в карту почти сразу.
+        'headers': _cors({'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=600'}),
         'body': '\n'.join(parts),
     }
 
 
+def _handle_ping(conn):
+    """Уведомляет поисковики (IndexNow: Яндекс + Bing) об обновлении контента.
+
+    Отправляет список актуальных публичных URL одним батч-запросом. Это
+    заставляет роботов прийти на переобход почти сразу, а не ждать планового
+    обхода. Вызывать после публикации/обновления статьи.
+    """
+    urls = [
+        f"{SITE_URL}/",
+        f"{SITE_URL}/blog",
+    ]
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT slug FROM engineering_articles WHERE is_published = TRUE"
+        )
+        for (slug,) in cur.fetchall():
+            urls.append(f"{SITE_URL}/blog/{slug}")
+
+    payload = json.dumps({
+        "host": "xn----gtbhgbqhkfi.xn--p1ai",
+        "key": INDEXNOW_KEY,
+        "keyLocation": f"{SITE_URL}/{INDEXNOW_KEY}.txt",
+        "urlList": urls,
+    }).encode("utf-8")
+
+    result = {"submitted": len(urls), "endpoints": {}}
+    for ep in ("https://yandex.com/indexnow", "https://api.indexnow.org/indexnow"):
+        try:
+            req = urllib.request.Request(
+                ep, data=payload,
+                headers={"Content-Type": "application/json; charset=utf-8"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                result["endpoints"][ep] = resp.status
+        except Exception as e:
+            result["endpoints"][ep] = f"error: {type(e).__name__}"
+
+    return {
+        'statusCode': 200,
+        'headers': _cors({'Content-Type': 'application/json; charset=utf-8'}),
+        'body': json.dumps(result, ensure_ascii=False),
+    }
+
+
 def handler(event, context):
-    """Возвращает контакты, блоки «О нас», статьи блога или sitemap.xml."""
+    """Возвращает контакты, блоки «О нас», статьи блога, sitemap.xml или пинг поисковиков."""
     if event.get('httpMethod') == 'OPTIONS':
         return {'statusCode': 200, 'headers': _cors(), 'body': ''}
 
@@ -144,6 +210,8 @@ def handler(event, context):
             return _handle_articles(conn, params)
         if resource == 'sitemap':
             return _handle_sitemap(conn)
+        if resource == 'ping':
+            return _handle_ping(conn)
 
         schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
         with conn.cursor() as cur:

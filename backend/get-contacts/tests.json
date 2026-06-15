@@ -25,6 +25,12 @@
       "method": "GET",
       "path": "/?resource=articles&slug=xxx-non-existent",
       "expectedStatus": 404
+    },
+    {
+      "name": "Ping search engines (IndexNow)",
+      "method": "GET",
+      "path": "/?resource=ping",
+      "expectedStatus": 200
     }
   ]
 }
