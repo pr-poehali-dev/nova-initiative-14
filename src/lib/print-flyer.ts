@@ -128,7 +128,7 @@ export const DEFAULT_FLYER: FlyerOptions = {
       note: "Расчёт балок, рам и ферм онлайн — сейчас бесплатно",
     },
   ],
-  showTrimMarks: true,
+  showTrimMarks: false,
   showCampaignNote: false,
 };
 
