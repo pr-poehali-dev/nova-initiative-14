@@ -96,6 +96,8 @@ export interface FlyerOptions {
   addressLabel: string;
   /** QR-блоки (для qrCount=1 используется только первый). */
   qrBlocks: [FlyerQrBlock, FlyerQrBlock];
+  /** Показывать метки реза (засечки по углам зоны обреза). */
+  showTrimMarks: boolean;
 }
 
 /** Значения по умолчанию для нового макета. */
@@ -124,6 +126,7 @@ export const DEFAULT_FLYER: FlyerOptions = {
       note: "Расчёт балок, рам и ферм онлайн — сейчас бесплатно",
     },
   ],
+  showTrimMarks: true,
 };
 
 const BLEED = 3; // мм вылет
@@ -423,14 +426,16 @@ export async function buildFlyerSvg(o: FlyerOptions): Promise<string> {
     );
   }
 
-  // Метки реза по углам зоны обреза
-  let trim = `<g stroke="${th.accent}" stroke-width="0.3">`;
-  trim += `<line x1="0" y1="${BLEED}" x2="${BLEED - 1}" y2="${BLEED}"/><line x1="${BLEED}" y1="0" x2="${BLEED}" y2="${BLEED - 1}"/>`;
-  trim += `<line x1="${W}" y1="${BLEED}" x2="${W - BLEED + 1}" y2="${BLEED}"/><line x1="${W - BLEED}" y1="0" x2="${W - BLEED}" y2="${BLEED - 1}"/>`;
-  trim += `<line x1="0" y1="${H - BLEED}" x2="${BLEED - 1}" y2="${H - BLEED}"/><line x1="${BLEED}" y1="${H}" x2="${BLEED}" y2="${H - BLEED + 1}"/>`;
-  trim += `<line x1="${W}" y1="${H - BLEED}" x2="${W - BLEED + 1}" y2="${H - BLEED}"/><line x1="${W - BLEED}" y1="${H}" x2="${W - BLEED}" y2="${H - BLEED + 1}"/>`;
-  trim += `</g>`;
-  parts.push(trim);
+  // Метки реза по углам зоны обреза (можно отключить тумблером)
+  if (o.showTrimMarks) {
+    let trim = `<g stroke="${th.accent}" stroke-width="0.3">`;
+    trim += `<line x1="0" y1="${BLEED}" x2="${BLEED - 1}" y2="${BLEED}"/><line x1="${BLEED}" y1="0" x2="${BLEED}" y2="${BLEED - 1}"/>`;
+    trim += `<line x1="${W}" y1="${BLEED}" x2="${W - BLEED + 1}" y2="${BLEED}"/><line x1="${W - BLEED}" y1="0" x2="${W - BLEED}" y2="${BLEED - 1}"/>`;
+    trim += `<line x1="0" y1="${H - BLEED}" x2="${BLEED - 1}" y2="${H - BLEED}"/><line x1="${BLEED}" y1="${H}" x2="${BLEED}" y2="${H - BLEED + 1}"/>`;
+    trim += `<line x1="${W}" y1="${H - BLEED}" x2="${W - BLEED + 1}" y2="${H - BLEED}"/><line x1="${W - BLEED}" y1="${H}" x2="${W - BLEED}" y2="${H - BLEED + 1}"/>`;
+    trim += `</g>`;
+    parts.push(trim);
+  }
 
   parts.push(`</svg>`);
   return parts.join("\n");
