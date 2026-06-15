@@ -26,6 +26,45 @@ def _is_admin(conn, user_id: int) -> bool:
         return bool(row and row[0])
 
 
+def _is_owner(conn, user_id: int) -> bool:
+    """Роль «Владелец» — расширенный доступ (детальная аналитика посетителей)."""
+    with conn.cursor() as cur:
+        cur.execute("SELECT is_owner FROM sso_users WHERE id = %s", (user_id,))
+        row = cur.fetchone()
+        return bool(row and row[0])
+
+
+def _device_from_ua(ua: str) -> str:
+    """Грубое определение браузера/ОС из User-Agent для читаемого таймлайна."""
+    ua = ua or ''
+    low = ua.lower()
+    if 'iphone' in low or 'ipad' in low:
+        os_name = 'iOS'
+    elif 'android' in low:
+        os_name = 'Android'
+    elif 'windows' in low:
+        os_name = 'Windows'
+    elif 'mac os' in low or 'macintosh' in low:
+        os_name = 'macOS'
+    elif 'linux' in low:
+        os_name = 'Linux'
+    else:
+        os_name = '—'
+    if 'yabrowser' in low:
+        br = 'Yandex'
+    elif 'edg' in low:
+        br = 'Edge'
+    elif 'chrome' in low:
+        br = 'Chrome'
+    elif 'firefox' in low:
+        br = 'Firefox'
+    elif 'safari' in low:
+        br = 'Safari'
+    else:
+        br = '—'
+    return f'{br} · {os_name}'
+
+
 # ──────────────────────────── Пользователь ────────────────────────────
 
 def action_update_profile(conn, user_id: int, body: dict) -> dict:
@@ -396,4 +435,131 @@ def action_admin_stats(conn, admin_id: int, params: dict) -> dict:
         'qr_flyers': qr_flyers,
         'top_pages': top_pages,
         'daily': daily,
+    })
+
+
+# ──────────────────────────── Владелец: посетители ────────────────────────────
+
+def _geo_by_ip(ip: str) -> dict:
+    """Страна/город по IP через бесплатный ip-api.com (без ключа, до 45 req/min).
+    Вызывается ТОЛЬКО при просмотре деталей одной сессии, не на каждый визит.
+    При сбое/таймауте возвращает пустые значения — гео не критично."""
+    if not ip:
+        return {'country': None, 'city': None}
+    # Берём первый IP из возможного списка X-Forwarded-For.
+    ip = ip.split(',')[0].strip()
+    if ip.startswith(('10.', '192.168.', '127.', '172.')):
+        return {'country': 'Локальный', 'city': None}
+    import urllib.request
+    try:
+        url = f'http://ip-api.com/json/{ip}?fields=status,country,city&lang=ru'
+        with urllib.request.urlopen(url, timeout=3) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+        if data.get('status') == 'success':
+            return {'country': data.get('country'), 'city': data.get('city')}
+    except Exception as e:
+        print(f'[owner-visits] geo error: {e!r}')
+    return {'country': None, 'city': None}
+
+
+def action_owner_visits(conn, owner_id: int, params: dict) -> dict:
+    """
+    Список сессий посетителей для владельца (роль is_owner) за период.
+    Каждая запись: источник, путь по страницам, устройство, время на сайте,
+    факт отправки формы, IP. Гео НЕ подгружается в списке (тяжело) —
+    только в деталях конкретной сессии (action_owner_visit_detail).
+    """
+    if not _is_owner(conn, owner_id):
+        return json_response(403, {'error': 'forbidden'})
+
+    try:
+        days = int(params.get('days') or 30)
+    except (TypeError, ValueError):
+        days = 30
+    days = max(1, min(days, 365))
+    try:
+        limit = int(params.get('limit') or 200)
+    except (TypeError, ValueError):
+        limit = 200
+    limit = max(1, min(limit, 500))
+
+    import psycopg2.extras
+    since = f"now() - interval '{days} days'"
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute(
+            "SELECT id, source_type, source_label, referrer, "
+            "utm_source, utm_medium, utm_campaign, landing_path, pages, "
+            "device, time_on_site, ip, user_agent, created_at "
+            "FROM site_visits "
+            f"WHERE created_at >= {since} "
+            "ORDER BY created_at DESC LIMIT %s",
+            (limit,),
+        )
+        rows = cur.fetchall()
+
+    visits = [{
+        'id': int(r['id']),
+        'sourceType': r['source_type'],
+        'sourceLabel': r['source_label'],
+        'landingPath': r['landing_path'],
+        'pages': r['pages'],
+        'pagesCount': len([p for p in (r['pages'] or '').split('→') if p.strip()]),
+        'device': r['device'],
+        'browser': _device_from_ua(r['user_agent']),
+        'timeOnSite': r['time_on_site'],
+        'ip': r['ip'],
+        'createdAt': r['created_at'].isoformat() if r['created_at'] else None,
+    } for r in rows]
+    return json_response(200, {'visits': visits, 'period_days': days})
+
+
+def action_owner_visit_detail(conn, owner_id: int, params: dict) -> dict:
+    """
+    Детали одной сессии посетителя (роль is_owner): полный путь по страницам,
+    источник/UTM/реферер, устройство, гео по IP (страна/город), время на сайте.
+    Гео подгружается здесь, по одному IP — не нагружает список.
+    """
+    if not _is_owner(conn, owner_id):
+        return json_response(403, {'error': 'forbidden'})
+
+    try:
+        visit_id = int(params.get('id') or 0)
+    except (TypeError, ValueError):
+        return json_response(400, {'error': 'bad_id'})
+    if visit_id <= 0:
+        return json_response(400, {'error': 'bad_id'})
+
+    import psycopg2.extras
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute(
+            "SELECT id, source_type, source_label, referrer, "
+            "utm_source, utm_medium, utm_campaign, landing_path, pages, "
+            "device, time_on_site, ip, user_agent, created_at "
+            "FROM site_visits WHERE id = %s",
+            (visit_id,),
+        )
+        r = cur.fetchone()
+    if not r:
+        return json_response(404, {'error': 'not_found'})
+
+    geo = _geo_by_ip(r['ip'] or '')
+    steps = [p.strip() for p in (r['pages'] or '').split('→') if p.strip()]
+    return json_response(200, {
+        'id': int(r['id']),
+        'sourceType': r['source_type'],
+        'sourceLabel': r['source_label'],
+        'referrer': r['referrer'],
+        'utmSource': r['utm_source'],
+        'utmMedium': r['utm_medium'],
+        'utmCampaign': r['utm_campaign'],
+        'landingPath': r['landing_path'],
+        'steps': steps,
+        'device': r['device'],
+        'browser': _device_from_ua(r['user_agent']),
+        'userAgent': r['user_agent'],
+        'timeOnSite': r['time_on_site'],
+        'ip': r['ip'],
+        'country': geo['country'],
+        'city': geo['city'],
+        'createdAt': r['created_at'].isoformat() if r['created_at'] else None,
     })

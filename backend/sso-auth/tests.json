@@ -143,6 +143,18 @@
       "path": "/?action=admin-award-points",
       "body": {"user_id": 1, "points": 10},
       "expectedStatus": 401
+    },
+    {
+      "name": "Список посетителей (owner) без токена",
+      "method": "GET",
+      "path": "/?action=owner-visits",
+      "expectedStatus": 401
+    },
+    {
+      "name": "Детали сессии (owner) без токена",
+      "method": "GET",
+      "path": "/?action=owner-visit&id=1",
+      "expectedStatus": 401
     }
   ]
 }

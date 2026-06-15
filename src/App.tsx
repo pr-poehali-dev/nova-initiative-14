@@ -41,6 +41,7 @@ import CaeChangelog from "./pages/CaeChangelog";
 import RoadmapView from "./pages/RoadmapView";
 import AdGenerator from "./pages/AdGenerator";
 import AdminStats from "./pages/AdminStats";
+import OwnerVisitors from "./pages/OwnerVisitors";
 import AdminQr from "./pages/AdminQr";
 import UrfuQrCae from "./pages/UrfuQrCae";
 import UrfuQrDiplom from "./pages/UrfuQrDiplom";
@@ -166,6 +167,7 @@ const App = () => (
                 <Route path="/oauth/callback" element={<OAuthCallback />} />
                 <Route path="/admin/generator" element={<AdGenerator />} />
                 <Route path="/admin/stats" element={<AdminStats />} />
+                <Route path="/admin/visitors" element={<OwnerVisitors />} />
                 <Route path="/admin/qr" element={<AdminQr />} />
                 <Route path="/urfu_qr_cae" element={<UrfuQrCae />} />
                 <Route path="/urfu_qr_diplom" element={<UrfuQrDiplom />} />

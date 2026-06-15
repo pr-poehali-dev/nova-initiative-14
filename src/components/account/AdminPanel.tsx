@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
+import { useAuth } from "@/contexts/AuthContext";
 import AdminUsersTab from "@/components/account/AdminUsersTab";
 import {
   adminListTickets,
@@ -74,6 +75,7 @@ function TabBtn({ active, onClick, label, wip }: { active: boolean; onClick: () 
 }
 
 function MarketingTab() {
+  const { user } = useAuth();
   return (
     <div className="space-y-3">
       <Link
@@ -91,6 +93,27 @@ function MarketingTab() {
         </div>
         <Icon name="ArrowRight" size={16} className="text-[var(--drawing-line-thin)] shrink-0 mt-1" />
       </Link>
+
+      {user?.is_owner && (
+        <Link
+          to="/admin/visitors"
+          className="flex items-start gap-3 border-[1.5px] border-[var(--drawing-line)] hover:border-[var(--drawing-accent)] p-4 transition-colors group"
+        >
+          <Icon name="Footprints" size={24} className="text-[var(--drawing-accent)] shrink-0 mt-0.5" />
+          <div className="min-w-0 flex-1">
+            <p className="font-gost-upright font-bold mb-0.5 group-hover:text-[var(--drawing-accent)] transition-colors">
+              Посетители · детальный разбор
+              <span className="ml-2 text-[8px] uppercase tracking-wider text-[var(--drawing-accent)] border border-[var(--drawing-accent)] px-1 py-0.5 align-middle">
+                Владелец
+              </span>
+            </p>
+            <p className="font-gost text-[11px] text-[var(--drawing-line-thin)] leading-snug">
+              Путь каждого посетителя по страницам, источник, устройство, гео по IP и время на сайте.
+            </p>
+          </div>
+          <Icon name="ArrowRight" size={16} className="text-[var(--drawing-line-thin)] shrink-0 mt-1" />
+        </Link>
+      )}
 
       <Link
         to="/admin/generator"

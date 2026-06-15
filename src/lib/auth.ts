@@ -330,6 +330,74 @@ export async function fetchAdminStats(
   return { ok: res.ok, status: res.status, data: res.ok ? data : null };
 }
 
+// ──────────────────────────── Владелец: посетители ────────────────────────────
+
+/** Краткая запись сессии посетителя для списка (owner-only). */
+export interface VisitorRow {
+  id: number;
+  sourceType: string;
+  sourceLabel: string | null;
+  landingPath: string | null;
+  pages: string | null;
+  pagesCount: number;
+  device: string | null;
+  browser: string | null;
+  timeOnSite: number | null;
+  ip: string | null;
+  createdAt: string | null;
+}
+
+/** Полные детали одной сессии посетителя (owner-only). */
+export interface VisitorDetail {
+  id: number;
+  sourceType: string;
+  sourceLabel: string | null;
+  referrer: string | null;
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
+  landingPath: string | null;
+  steps: string[];
+  device: string | null;
+  browser: string | null;
+  userAgent: string | null;
+  timeOnSite: number | null;
+  ip: string | null;
+  country: string | null;
+  city: string | null;
+  createdAt: string | null;
+}
+
+/** Список сессий посетителей за период (только владелец, роль is_owner). */
+export async function fetchOwnerVisits(
+  days = 30,
+): Promise<{ ok: boolean; status: number; data: { visits: VisitorRow[]; period_days: number } | null }> {
+  const url = `${API}?action=owner-visits&days=${days}`;
+  const res = await authorizedFetch(url);
+  let data: { visits: VisitorRow[]; period_days: number } | null = null;
+  try {
+    data = (await res.json()) as { visits: VisitorRow[]; period_days: number };
+  } catch {
+    data = null;
+  }
+  return { ok: res.ok, status: res.status, data: res.ok ? data : null };
+}
+
+/** Детали одной сессии посетителя по id (только владелец). Подгружает гео по IP. */
+export async function fetchOwnerVisitDetail(
+  id: number,
+): Promise<{ ok: boolean; status: number; data: VisitorDetail | null }> {
+  const url = `${API}?action=owner-visit&id=${id}`;
+  const res = await authorizedFetch(url);
+  let data: VisitorDetail | null = null;
+  try {
+    data = (await res.json()) as VisitorDetail;
+  } catch {
+    data = null;
+  }
+  return { ok: res.ok, status: res.status, data: res.ok ? data : null };
+}
+
 /**
  * Повторно отправляет письмо с подтверждением email.
  * Бэкенд намеренно отвечает 200 даже если email не зарегистрирован —
