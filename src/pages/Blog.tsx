@@ -4,6 +4,7 @@ import { Helmet } from "@/lib/helmet-shim";
 import { fetchArticles, formatRuDate, type ArticleListItem } from "@/lib/articles";
 import { SITE_URL, absUrl, breadcrumbsLd } from "@/lib/seo";
 import RelatedSections from "@/components/RelatedSections";
+import ReducerSeries from "@/components/blog/ReducerSeries";
 
 const Blog = () => {
   const [articles, setArticles] = useState<ArticleListItem[]>([]);
@@ -74,6 +75,9 @@ const Blog = () => {
             Статьи скоро появятся.
           </p>
         )}
+
+        {/* Витрина кластера «Проектирование редуктора» — единый маршрут серии. */}
+        {!loading && !error && articles.length > 0 && <ReducerSeries />}
 
         <div className="grid gap-4 md:gap-5 md:grid-cols-2">
           {articles.map((a) => (
