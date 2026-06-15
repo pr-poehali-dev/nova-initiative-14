@@ -9,6 +9,10 @@ import {
   buildFlyerUrl,
   flyerFileName,
   sanitizeUtm,
+  FORMATS,
+  THEMES,
+  type FlyerFormatId,
+  type FlyerThemeId,
   type FlyerOptions,
 } from "@/lib/print-flyer";
 
@@ -35,12 +39,14 @@ const PrintFlyer = () => {
   const [source, setSource] = useState("flyer_urfu");
   const [medium, setMedium] = useState("qr");
   const [campaign, setCampaign] = useState("");
+  const [format, setFormat] = useState<FlyerFormatId>("a6");
+  const [theme, setTheme] = useState<FlyerThemeId>("dark");
   const [svg, setSvg] = useState<string>("");
   const [busy, setBusy] = useState(false);
 
   const opts: FlyerOptions = useMemo(
-    () => ({ source, medium, campaign }),
-    [source, medium, campaign],
+    () => ({ source, medium, campaign, format, theme }),
+    [source, medium, campaign, format, theme],
   );
 
   const caeUrl = buildFlyerUrl("/urfu_qr_cae", opts);
@@ -123,17 +129,46 @@ const PrintFlyer = () => {
           </div>
         </div>
         <h1 className="font-gost-upright text-2xl md:text-3xl font-black uppercase tracking-wide mb-2">
-          Листовка А6 · два QR
+          Листовка · два QR
         </h1>
         <p className="font-gost text-sm text-[var(--drawing-line-thin)] mb-6 max-w-[640px]">
-          Задайте метку тиража — она зашьётся в оба QR (Диплом + CAE). Скачайте
-          векторный SVG (А6, 105×148 мм + вылеты 3 мм) и откройте в CorelDRAW для
-          отправки в типографию. Переходы по этому тиражу видны в «Статистике».
+          Выберите формат и оформление, задайте метку тиража — она зашьётся в оба
+          QR (Диплом + CAE). Скачайте векторный SVG (с вылетами 3 мм и метками реза)
+          и откройте в CorelDRAW. Переходы по этому тиражу видны в «Статистике».
         </p>
 
         <div className="grid md:grid-cols-2 gap-6">
           {/* Настройки */}
           <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Формат">
+                <select
+                  value={format}
+                  onChange={(e) => setFormat(e.target.value as FlyerFormatId)}
+                  className="input-drawing w-full"
+                >
+                  {FORMATS.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Оформление">
+                <select
+                  value={theme}
+                  onChange={(e) => setTheme(e.target.value as FlyerThemeId)}
+                  className="input-drawing w-full"
+                >
+                  {THEMES.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+
             <Field label="Источник (utm_source)">
               <input
                 value={source}
