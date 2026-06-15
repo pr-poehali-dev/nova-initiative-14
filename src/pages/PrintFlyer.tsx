@@ -341,9 +341,9 @@ const PrintFlyer = () => {
               <div className="grid grid-cols-3 gap-2">
                 <Field label="utm_source">
                   <select value={o.source} onChange={(e) => set({ source: e.target.value })} className="drawing-input w-full">
-                    {AD_SOURCES.map((s) => (<option key={s.value} value={s.value}>{s.value}</option>))}
+                    {AD_SOURCES.map((s) => (<option key={s.value} value={s.value}>{s.label} ({s.value})</option>))}
                   </select>
-                  <span className="font-gost text-[9px] text-[var(--drawing-line-thin)] block mt-1 leading-tight">Источник: где раздаёте.</span>
+                  <span className="font-gost text-[9px] text-[var(--drawing-line-thin)] block mt-1 leading-tight">Тип носителя рекламы.</span>
                 </Field>
                 <Field label="utm_medium">
                   <input value={o.medium} onChange={(e) => set({ medium: e.target.value })} className="drawing-input w-full" />
@@ -354,6 +354,16 @@ const PrintFlyer = () => {
                   <span className="font-gost text-[9px] text-[var(--drawing-line-thin)] block mt-1 leading-tight">Метка кампании. Главное поле.</span>
                 </Field>
               </div>
+
+              {/* Описание выбранного типа носителя */}
+              {AD_SOURCES.find((s) => s.value === o.source) && (
+                <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] leading-snug bg-[var(--drawing-paper)] border border-[var(--drawing-line)]/30 px-2 py-1.5">
+                  <span className="text-[var(--drawing-accent)] font-bold">
+                    {AD_SOURCES.find((s) => s.value === o.source)!.label}:
+                  </span>{" "}
+                  {AD_SOURCES.find((s) => s.value === o.source)!.desc}
+                </p>
+              )}
               <Field label="Подпись адресного блока">
                 <input value={o.addressLabel} onChange={(e) => set({ addressLabel: e.target.value })} className="drawing-input w-full" />
               </Field>
