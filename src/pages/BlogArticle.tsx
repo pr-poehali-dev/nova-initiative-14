@@ -161,6 +161,14 @@ const BlogArticle = () => {
             </div>
           </header>
 
+          {article.cover_url && (
+            <img
+              src={article.cover_url}
+              alt={article.h1}
+              className="w-full aspect-[16/9] object-cover my-4 border border-[var(--drawing-line)]/30"
+            />
+          )}
+
           {article.quick_facts.length > 0 && (
             <section className="eskd-quickfacts">
               <h2>Краткая инженерная справка</h2>

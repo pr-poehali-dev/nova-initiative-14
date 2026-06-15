@@ -97,6 +97,14 @@ const Blog = () => {
         <div className="grid gap-4 md:gap-5 md:grid-cols-2">
           {articles.map((a) => (
             <Link key={a.slug} to={`/blog/${a.slug}`} className="blog-card block">
+              {a.cover_url && (
+                <img
+                  src={a.cover_url}
+                  alt={a.h1}
+                  loading="lazy"
+                  className="w-full aspect-[16/9] object-cover mb-3 border border-[var(--drawing-line)]/30"
+                />
+              )}
               <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)]">
                 {formatRuDate(a.published_at)} · {a.reading_minutes} мин чтения
               </p>
