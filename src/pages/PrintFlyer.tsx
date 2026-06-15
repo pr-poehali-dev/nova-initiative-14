@@ -256,15 +256,28 @@ const PrintFlyer = () => {
 
             {/* Метки и адрес */}
             <Group title="Метка тиража и адрес">
+              <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] leading-snug border-l-2 border-[var(--drawing-accent)] pl-2">
+                UTM-метки зашиваются в ссылку QR и показывают в «Статистике»,
+                откуда пришёл человек. Обычно меняют только последнюю — тираж.
+              </p>
               <div className="grid grid-cols-3 gap-2">
                 <Field label="utm_source">
                   <input value={o.source} onChange={(e) => set({ source: e.target.value })} className="drawing-input w-full" />
+                  <span className="font-gost text-[9px] text-[var(--drawing-line-thin)] block mt-1 leading-tight">
+                    Источник: где раздаёте. Напр. flyer_urfu, stand_urfu.
+                  </span>
                 </Field>
                 <Field label="utm_medium">
                   <input value={o.medium} onChange={(e) => set({ medium: e.target.value })} className="drawing-input w-full" />
+                  <span className="font-gost text-[9px] text-[var(--drawing-line-thin)] block mt-1 leading-tight">
+                    Канал: тип носителя. Для QR-кода всегда qr.
+                  </span>
                 </Field>
                 <Field label="utm_campaign">
                   <input value={o.campaign} onChange={(e) => set({ campaign: e.target.value })} className="drawing-input w-full" />
+                  <span className="font-gost text-[9px] text-[var(--drawing-line-thin)] block mt-1 leading-tight">
+                    Тираж/акция: ярлык партии. Напр. korpus_mehmash. Главное поле для учёта.
+                  </span>
                 </Field>
               </div>
               <div className="flex flex-wrap gap-1">
