@@ -1,3 +1,4 @@
+import base64
 import json
 import os
 import urllib.request
@@ -117,7 +118,17 @@ def handler(event: dict, context) -> dict:
             'body': '',
         }
 
-    body = json.loads(event.get('body', '{}'))
+    # Тело может прийти base64-кодированным (navigator.sendBeacon / прокси).
+    raw = event.get('body') or '{}'
+    if event.get('isBase64Encoded'):
+        try:
+            raw = base64.b64decode(raw).decode('utf-8')
+        except Exception:
+            raw = '{}'
+    try:
+        body = json.loads(raw) if raw.strip() else {}
+    except json.JSONDecodeError:
+        body = {}
     visitor = body.get('visitor', {})
     source_ip = event.get('requestContext', {}).get('identity', {}).get('sourceIp', '—')
 
