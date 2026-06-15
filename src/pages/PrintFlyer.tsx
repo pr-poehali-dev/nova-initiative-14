@@ -211,6 +211,33 @@ const PrintFlyer = () => {
             </div>
           )}
 
+          {/* История заказов печати */}
+          {selected && selected.stats.orders.length > 0 && (
+            <div className="mt-4">
+              <p className="font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)] mb-2">
+                История тиражей ({selected.stats.orders.length})
+              </p>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 pb-1 border-b border-[var(--drawing-line)]/30">
+                  <span className="flex-1 font-gost text-[9px] uppercase tracking-wider text-[var(--drawing-line-thin)]">Дата</span>
+                  <span className="w-24 text-right font-gost text-[9px] uppercase tracking-wider text-[var(--drawing-line-thin)]">Тираж</span>
+                  <span className="w-24 text-right font-gost text-[9px] uppercase tracking-wider text-[var(--drawing-line-thin)]">Стоимость</span>
+                  <span className="w-20 text-right font-gost text-[9px] uppercase tracking-wider text-[var(--drawing-line-thin)]">За шт.</span>
+                </div>
+                {selected.stats.orders.map((ord) => (
+                  <div key={ord.id} className="flex items-center gap-2 py-0.5">
+                    <span className="flex-1 font-mono text-[11px] text-[var(--drawing-line)]">{ord.created}</span>
+                    <span className="w-24 text-right font-mono text-[11px] text-[var(--drawing-line)]">{ord.quantity.toLocaleString("ru-RU")} шт</span>
+                    <span className="w-24 text-right font-mono text-[11px] text-[var(--drawing-line)]">{formatRub(ord.total_kopecks)}</span>
+                    <span className="w-20 text-right font-mono text-[10px] text-[var(--drawing-line-thin)]">
+                      {ord.quantity > 0 ? formatRub(Math.round(ord.total_kopecks / ord.quantity)) : "—"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Действия с кампанией */}
           <div className="flex flex-wrap items-center gap-2 mt-4">
             <input

@@ -89,6 +89,25 @@ def _campaign_stats(conn, slug: str) -> dict:
         printed = int(prow["qty"])
         print_cost_k = int(prow["cost"])
 
+        # История заказов печати (последние 50, новые сверху).
+        cur.execute(
+            "SELECT o.id, o.quantity, o.total_kopecks, "
+            "to_char(o.created_at,'YYYY-MM-DD HH24:MI') AS created "
+            "FROM ad_campaign_print_orders o "
+            "JOIN ad_campaigns c ON c.id = o.campaign_id "
+            "WHERE c.slug = %s ORDER BY o.created_at DESC LIMIT 50",
+            (slug,),
+        )
+        orders = [
+            {
+                "id": r["id"],
+                "quantity": int(r["quantity"]),
+                "total_kopecks": int(r["total_kopecks"]),
+                "created": r["created"],
+            }
+            for r in cur.fetchall()
+        ]
+
     conv = round(signups / visits * 100, 1) if visits else 0.0
     cost_per_signup = round(print_cost_k / 100 / signups, 2) if signups else 0.0
     return {
@@ -102,6 +121,7 @@ def _campaign_stats(conn, slug: str) -> dict:
         "print_cost_kopecks": print_cost_k,
         "cost_per_signup_rub": cost_per_signup,
         "unit_price_kopecks": round(print_cost_k / printed) if printed else 0,
+        "orders": orders,
     }
 
 

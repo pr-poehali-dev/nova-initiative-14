@@ -16,6 +16,15 @@ export interface CampaignStats {
   print_cost_kopecks: number;
   cost_per_signup_rub: number;
   unit_price_kopecks: number;
+  orders: PrintOrder[];
+}
+
+/** Один заказ печати (тираж + стоимость + дата). */
+export interface PrintOrder {
+  id: number;
+  quantity: number;
+  total_kopecks: number;
+  created: string;
 }
 
 export interface AdCampaign {
