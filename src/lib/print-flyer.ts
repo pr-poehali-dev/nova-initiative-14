@@ -4,14 +4,15 @@ import { SITE_URL } from "@/lib/seo";
 /**
  * Генерация печатного макета листовки в формате SVG (для CorelDRAW).
  *
- * Размеры в миллиметрах — SVG задаётся в мм, поэтому в Corel импортируется
- * в натуральную величину без масштабирования.
- *   Вылеты под обрез (bleed): по 3 мм с каждой стороны.
- *   Безопасное поле: контент не ближе 5 мм к линии реза.
+ * Макет 1:1 повторяет онлайн-генератор QR-флаера (renderQrFlyer в
+ * adGenerator.ts): чертёжная сетка, рамка с угловыми засечками, центрированный
+ * логотип, крупный заголовок с подчёркиванием, два QR с подписями и адрес.
  *
- * Два QR-кода (CAE и Диплом) встраиваются как ВЕКТОРНЫЕ path — печать
- * любого размера остаётся чёткой. В оба QR зашита одна метка кампании,
- * по которой аналитика различает тираж/место раздачи.
+ * Размеры — в миллиметрах: SVG импортируется в Corel в натуральную величину.
+ *   Вылеты под обрез (bleed): по 3 мм с каждой стороны.
+ * QR-коды встраиваются как ВЕКТОРНЫЕ path — печать любого размера чёткая.
+ * В оба QR зашита одна метка кампании (utm_campaign) — по ней аналитика
+ * различает тираж/место раздачи.
  */
 
 export type FlyerFormatId = "a7" | "a6" | "a5" | "dl";
@@ -36,53 +37,44 @@ export interface FlyerTheme {
   id: FlyerThemeId;
   label: string;
   bg: string;
-  text: string;
-  sub: string;
+  fg: string;
+  muted: string;
   accent: string;
-  /** Фон под QR (всегда контрастный для сканирования). */
-  qrLight: string;
-  qrDark: string;
+  frame: string;
 }
 
+/** Палитры повторяют palette() онлайн-генератора. */
 export const THEMES: FlyerTheme[] = [
+  {
+    id: "light",
+    label: "Светлая (как онлайн-макет)",
+    bg: "#ffffff",
+    fg: "#1a1a2e",
+    muted: "#1a1a2e",
+    accent: "#c0392b",
+    frame: "#1a1a2e",
+  },
   {
     id: "dark",
     label: "Тёмная (синий фон)",
     bg: "#1a1a2e",
-    text: "#ffffff",
-    sub: "#9aa0c0",
+    fg: "#ffffff",
+    muted: "#9aa0c0",
     accent: "#c0392b",
-    qrLight: "#ffffff",
-    qrDark: "#1a1a2e",
-  },
-  {
-    id: "light",
-    label: "Светлая (для тонкой бумаги)",
-    bg: "#ffffff",
-    text: "#1a1a2e",
-    sub: "#5a5a78",
-    accent: "#c0392b",
-    qrLight: "#ffffff",
-    qrDark: "#1a1a2e",
+    frame: "#ffffff",
   },
 ];
 
 export interface FlyerOptions {
-  /** utm_source, например flyer_urfu. */
   source: string;
-  /** utm_medium, например qr. */
   medium: string;
-  /** utm_campaign — метка тиража/места раздачи (может быть пустой). */
   campaign: string;
-  /** Формат листовки. */
   format: FlyerFormatId;
-  /** Тема оформления. */
   theme: FlyerThemeId;
 }
 
 const BLEED = 3; // мм вылет
 
-/** Чистит UTM-значение: латиница, цифры, дефис, подчёркивание. */
 export function sanitizeUtm(v: string): string {
   return v
     .trim()
@@ -91,7 +83,6 @@ export function sanitizeUtm(v: string): string {
     .replace(/[^a-z0-9_-]/g, "");
 }
 
-/** Собирает целевой URL QR-лендинга с UTM-метками. */
 export function buildFlyerUrl(landing: string, o: FlyerOptions): string {
   const params = new URLSearchParams();
   if (sanitizeUtm(o.source)) params.set("utm_source", sanitizeUtm(o.source));
@@ -108,13 +99,13 @@ function getTheme(id: FlyerThemeId): FlyerTheme {
   return THEMES.find((t) => t.id === id) || THEMES[0];
 }
 
-/** Векторный QR: возвращает path-данные и размер сетки N. */
-async function qrPaths(url: string, dark: string): Promise<{ d: string; n: number }> {
+/** Векторный QR: path-данные и размер сетки N. Цвет всегда тёмный (на белом). */
+async function qrPaths(url: string): Promise<{ d: string; n: number }> {
   const svg = await QRCode.toString(url, {
     type: "svg",
     margin: 0,
     errorCorrectionLevel: "H",
-    color: { dark, light: "#0000" },
+    color: { dark: "#1a1a2e", light: "#0000" },
   });
   const pathMatch = svg.match(/<path[^>]*d="([^"]+)"[^>]*\/>/);
   const vbMatch = svg.match(/viewBox="0 0 (\d+) (\d+)"/);
@@ -124,113 +115,224 @@ async function qrPaths(url: string, dark: string): Promise<{ d: string; n: numbe
   };
 }
 
-interface QrBlock {
-  x: number;
-  y: number;
-  size: number; // мм
-  d: string;
-  n: number;
-  caption: string;
-  theme: FlyerTheme;
-}
-
-function qrBlockSvg(b: QrBlock): string {
-  const scale = b.size / b.n;
-  return `
-    <g transform="translate(${b.x} ${b.y})">
-      <rect x="-1.5" y="-1.5" width="${b.size + 3}" height="${b.size + 3}" fill="${b.theme.qrLight}" stroke="${b.theme.qrDark}" stroke-width="0.4"/>
-      <g transform="scale(${scale})"><path d="${b.d}" fill="${b.theme.qrDark}"/></g>
-      <text x="${b.size / 2}" y="${b.size + 5}" font-family="'Courier New', monospace" font-size="3.4" font-weight="bold" fill="${b.theme.text}" text-anchor="middle">${b.caption}</text>
-    </g>`;
+/** Экранирование XML-спецсимволов в тексте. */
+function esc(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 /**
- * Строит готовый печатный SVG листовки с двумя QR под выбранный формат и тему.
- * Возвращает строку SVG (UTF-8), готовую к сохранению в .svg.
- *
- * Вёрстка вертикально центрируется по холсту: шапка сверху, QR в нижней
- * трети, адрес внизу. Координаты считаются от размеров выбранного формата,
- * поэтому макет корректно перестраивается под А7/А6/А5/DL.
+ * Перенос строки по ширине (моноширинный шрифт ≈ 0.6em на символ).
+ * Повторяет wrapText() онлайн-генератора с учётом ручных \n.
+ */
+function wrapMono(text: string, fontMm: number, maxWidthMm: number): string[] {
+  const charW = fontMm * 0.6;
+  const maxChars = Math.max(1, Math.floor(maxWidthMm / charW));
+  const out: string[] = [];
+  for (const para of text.split("\n")) {
+    if (!para.trim()) {
+      out.push("");
+      continue;
+    }
+    const words = para.split(/\s+/);
+    let cur = "";
+    for (const w of words) {
+      const test = cur ? `${cur} ${w}` : w;
+      if (test.length > maxChars && cur) {
+        out.push(cur);
+        cur = w;
+      } else {
+        cur = test;
+      }
+    }
+    if (cur) out.push(cur);
+  }
+  return out;
+}
+
+const FONT = "'Courier New', monospace";
+
+/**
+ * Строит печатный SVG листовки с двумя QR, повторяя онлайн-макет 1:1.
  */
 export async function buildFlyerSvg(o: FlyerOptions): Promise<string> {
   const fmt = getFormat(o.format);
   const th = getTheme(o.theme);
 
-  const canvasW = fmt.w + BLEED * 2;
-  const canvasH = fmt.h + BLEED * 2;
-  const cx = canvasW / 2;
+  const W = fmt.w + BLEED * 2;
+  const H = fmt.h + BLEED * 2;
+  const cx = W / 2;
+
+  // Относительная единица — как unit = W/100 в онлайн-рендере.
+  const unit = W / 100;
+  const margin = BLEED + unit * 5; // рамка с учётом вылетов
 
   const caeUrl = buildFlyerUrl("/urfu_qr_cae", o);
   const diplomUrl = buildFlyerUrl("/urfu_qr_diplom", o);
-  const caeQr = await qrPaths(caeUrl, th.qrDark);
-  const dipQr = await qrPaths(diplomUrl, th.qrDark);
+  const caeQr = await qrPaths(caeUrl);
+  const dipQr = await qrPaths(diplomUrl);
 
-  // QR-размер масштабируем от ширины формата (но в разумных пределах).
-  const qrSize = Math.max(22, Math.min(40, fmt.w * 0.32));
-  const gap = qrSize * 0.26;
-  const qrY = canvasH - BLEED - 30 - qrSize; // блок QR над адресной зоной
-  const leftX = cx - qrSize - gap / 2;
-  const rightX = cx + gap / 2;
+  const parts: string[] = [];
+  parts.push(`<?xml version="1.0" encoding="UTF-8"?>`);
+  parts.push(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}" font-family="${FONT}">`,
+  );
+  parts.push(`<!-- Формат ${fmt.label}, вылеты ${BLEED} мм. Рез = ${fmt.w}x${fmt.h} мм. -->`);
 
-  // Шрифты масштабируем коэффициентом от ширины (А6 = база).
-  const k = fmt.w / 105;
-  const fTitle = (11 * k).toFixed(1);
-  const fLead = (4.4 * k).toFixed(1);
-  const fEyebrow = (3.6 * k).toFixed(1);
-  const fAddr = (3.8 * k).toFixed(1);
-  const fSub = (3.2 * k).toFixed(1);
+  // Фон
+  parts.push(`<rect x="0" y="0" width="${W}" height="${H}" fill="${th.bg}"/>`);
 
-  const campaignNote = sanitizeUtm(o.campaign)
-    ? `тираж: ${sanitizeUtm(o.campaign)}`
-    : "";
+  // Чертёжная сетка (alpha 0.08), как drawGrid
+  const step = W / 24;
+  let grid = `<g stroke="${th.fg}" stroke-width="0.15" opacity="0.08">`;
+  for (let x = step; x < W; x += step) grid += `<line x1="${x.toFixed(2)}" y1="0" x2="${x.toFixed(2)}" y2="${H}"/>`;
+  for (let y = step; y < H; y += step) grid += `<line x1="0" y1="${y.toFixed(2)}" x2="${W}" y2="${y.toFixed(2)}"/>`;
+  grid += `</g>`;
+  parts.push(grid);
 
-  const topY = BLEED + 12 * k;
+  // Рамка-чертёж
+  const fw = W - margin * 2;
+  const fh = H - margin * 2;
+  parts.push(
+    `<rect x="${margin}" y="${margin}" width="${fw}" height="${fh}" fill="none" stroke="${th.frame}" stroke-width="${(unit * 0.5).toFixed(2)}"/>`,
+  );
 
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${canvasW}mm" height="${canvasH}mm" viewBox="0 0 ${canvasW} ${canvasH}">
-  <!-- Формат ${fmt.label}, вылеты ${BLEED} мм. Линия реза = прямоугольник ${fmt.w}x${fmt.h} мм. -->
-  <rect x="0" y="0" width="${canvasW}" height="${canvasH}" fill="${th.bg}"/>
+  // Угловые засечки (drawCorners)
+  const cs = unit * 4;
+  const clw = (unit * 0.5).toFixed(2);
+  const corner = (px: number, py: number, sx: number, sy: number) =>
+    `<path d="M ${px} ${py + sy * cs} L ${px} ${py} L ${px + sx * cs} ${py}" fill="none" stroke="${th.accent}" stroke-width="${clw}"/>`;
+  parts.push(`<g>`);
+  parts.push(corner(margin, margin, 1, 1));
+  parts.push(corner(margin + fw, margin, -1, 1));
+  parts.push(corner(margin, margin + fh, 1, -1));
+  parts.push(corner(margin + fw, margin + fh, -1, -1));
+  parts.push(`</g>`);
 
-  <!-- Шапка -->
-  <text x="${cx}" y="${topY}" font-family="Arial, sans-serif" font-size="${fEyebrow}" letter-spacing="1.2" fill="${th.accent}" text-anchor="middle">ДИПЛОМ-ИНЖ.РФ · ЕКАТЕРИНБУРГ</text>
+  let y = margin + unit * 9;
 
-  <text x="${cx}" y="${topY + 16 * k}" font-family="Arial, sans-serif" font-size="${fTitle}" font-weight="bold" fill="${th.text}" text-anchor="middle">ИНЖЕНЕРНАЯ</text>
-  <text x="${cx}" y="${topY + 28 * k}" font-family="Arial, sans-serif" font-size="${fTitle}" font-weight="bold" fill="${th.text}" text-anchor="middle">ПОДДЕРЖКА СТУДЕНТА</text>
+  // Логотип-марка по центру
+  parts.push(
+    `<text x="${cx}" y="${y}" font-size="${(unit * 5).toFixed(2)}" font-weight="700" fill="${th.accent}" text-anchor="middle">ДИПЛОМ-ИНЖ.РФ</text>`,
+  );
+  y += unit * 6;
 
-  <line x1="${cx - 28 * k}" y1="${topY + 34 * k}" x2="${cx + 28 * k}" y2="${topY + 34 * k}" stroke="${th.accent}" stroke-width="0.6"/>
+  // Eyebrow
+  parts.push(
+    `<text x="${cx}" y="${y}" font-size="${(unit * 3).toFixed(2)}" fill="${th.muted}" text-anchor="middle">${esc("СТУДЕНТАМ УРФУ · ЕКАТЕРИНБУРГ")}</text>`,
+  );
+  y += unit * 5;
 
-  <!-- Два направления -->
-  <text x="${cx}" y="${topY + 46 * k}" font-family="Arial, sans-serif" font-size="${fLead}" fill="${th.text}" text-anchor="middle">Доведём диплом (ВКР) до защиты</text>
-  <text x="${cx}" y="${topY + 53 * k}" font-family="Arial, sans-serif" font-size="${fLead}" fill="${th.text}" text-anchor="middle">+ бесплатный CAE-сервис расчётов</text>
+  // Заголовок (2 строки) + подчёркивание
+  const titleSize = unit * 7.5;
+  for (const line of ["ИНЖЕНЕРНАЯ", "ПОМОЩЬ"]) {
+    y += titleSize * 1.05;
+    parts.push(
+      `<text x="${cx}" y="${y}" font-size="${titleSize.toFixed(2)}" font-weight="700" fill="${th.fg}" text-anchor="middle">${line}</text>`,
+    );
+  }
+  y += unit * 2;
+  parts.push(
+    `<line x1="${cx - unit * 14}" y1="${y}" x2="${cx + unit * 14}" y2="${y}" stroke="${th.accent}" stroke-width="${(unit * 0.8).toFixed(2)}"/>`,
+  );
+  y += unit * 4;
 
-  <text x="${cx}" y="${qrY - 4}" font-family="Arial, sans-serif" font-size="${fSub}" fill="${th.sub}" text-anchor="middle">Наведи камеру телефона на QR ↓</text>
+  // Subtitle
+  y += unit * 0;
+  parts.push(
+    `<text x="${cx}" y="${y}" font-size="${(unit * 3.2).toFixed(2)}" font-weight="700" fill="${th.fg}" text-anchor="middle">Наведи камеру на QR-код</text>`,
+  );
+  y += unit * 5;
 
-  <!-- QR-коды -->
-  ${qrBlockSvg({ x: leftX, y: qrY, size: qrSize, d: dipQr.d, n: dipQr.n, caption: "ДИПЛОМ / ВКР", theme: th })}
-  ${qrBlockSvg({ x: rightX, y: qrY, size: qrSize, d: caeQr.d, n: caeQr.n, caption: "CAE-РАСЧЁТЫ", theme: th })}
+  // === Два QR-столбца === (повтор геометрии renderQrFlyer)
+  const colW = (W - margin * 2 - unit * 4) / 2;
+  const qrSize = Math.min(colW - unit * 2, unit * 34);
+  const colCenters = [
+    margin + unit * 2 + colW / 2,
+    margin + unit * 2 + colW + unit * 4 + colW / 2 - unit * 2,
+  ];
+  const qrTop = y + unit * 2;
+  const pad = unit * 1.2;
 
-  <!-- Адрес (из лендингов) -->
-  <text x="${cx}" y="${canvasH - BLEED - 14}" font-family="Arial, sans-serif" font-size="${fAddr}" font-weight="bold" fill="${th.text}" text-anchor="middle">ул. Мира, 34 / ул. Малышева, 132</text>
-  <text x="${cx}" y="${canvasH - BLEED - 8}" font-family="Arial, sans-serif" font-size="${fSub}" fill="${th.sub}" text-anchor="middle">перекрёсток у УрФУ · диплом-инж.рф</text>
+  const blocks = [
+    { qr: dipQr, caption: "Диплом", note: "Наставничество по дипломному проекту: чертежи, расчёты, защита ВКР" },
+    { qr: caeQr, caption: "CAE", note: "Расчёт балок, рам и ферм онлайн — сейчас бесплатно" },
+  ];
 
-  <!-- Служебная метка тиража (мелко, можно убрать в Corel) -->
-  ${campaignNote ? `<text x="${BLEED + 1}" y="${canvasH - 1}" font-family="'Courier New', monospace" font-size="2" fill="${th.sub}">${campaignNote}</text>` : ""}
+  for (let i = 0; i < 2; i++) {
+    const colCx = colCenters[i];
+    const qrX = colCx - qrSize / 2;
+    const b = blocks[i];
 
-  <!-- Метки реза (trim marks) по углам зоны обреза -->
-  <g stroke="${th.accent}" stroke-width="0.3">
-    <line x1="0" y1="${BLEED}" x2="${BLEED - 1}" y2="${BLEED}"/>
-    <line x1="${BLEED}" y1="0" x2="${BLEED}" y2="${BLEED - 1}"/>
-    <line x1="${canvasW}" y1="${BLEED}" x2="${canvasW - BLEED + 1}" y2="${BLEED}"/>
-    <line x1="${canvasW - BLEED}" y1="0" x2="${canvasW - BLEED}" y2="${BLEED - 1}"/>
-    <line x1="0" y1="${canvasH - BLEED}" x2="${BLEED - 1}" y2="${canvasH - BLEED}"/>
-    <line x1="${BLEED}" y1="${canvasH}" x2="${BLEED}" y2="${canvasH - BLEED + 1}"/>
-    <line x1="${canvasW}" y1="${canvasH - BLEED}" x2="${canvasW - BLEED + 1}" y2="${canvasH - BLEED}"/>
-    <line x1="${canvasW - BLEED}" y1="${canvasH}" x2="${canvasW - BLEED}" y2="${canvasH - BLEED + 1}"/>
-  </g>
-</svg>`;
+    // Белая подложка под QR
+    parts.push(
+      `<rect x="${(qrX - pad).toFixed(2)}" y="${(qrTop - pad).toFixed(2)}" width="${(qrSize + pad * 2).toFixed(2)}" height="${(qrSize + pad * 2).toFixed(2)}" fill="#ffffff" stroke="${th.frame}" stroke-width="${(unit * 0.3).toFixed(2)}"/>`,
+    );
+    // Векторный QR
+    const scale = qrSize / b.qr.n;
+    parts.push(
+      `<g transform="translate(${qrX.toFixed(2)} ${qrTop.toFixed(2)}) scale(${scale.toFixed(4)})"><path d="${b.qr.d}" fill="#1a1a2e"/></g>`,
+    );
+
+    // Подпись под QR (акцентом)
+    let cy = qrTop + qrSize + pad + unit * 5;
+    parts.push(
+      `<text x="${colCx.toFixed(2)}" y="${cy.toFixed(2)}" font-size="${(unit * 5).toFixed(2)}" font-weight="700" fill="${th.accent}" text-anchor="middle">${esc(b.caption)}</text>`,
+    );
+    cy += unit * 4;
+
+    // Пояснение (перенос по ширине колонки)
+    const noteSize = unit * 2.8;
+    const noteLines = wrapMono(b.note, noteSize, colW - unit * 2);
+    for (const line of noteLines) {
+      cy += noteSize * 1.35;
+      parts.push(
+        `<text x="${colCx.toFixed(2)}" y="${cy.toFixed(2)}" font-size="${noteSize.toFixed(2)}" font-weight="700" fill="${th.fg}" text-anchor="middle">${esc(line)}</text>`,
+      );
+    }
+  }
+
+  // === Адрес снизу === (повтор renderQrFlyer)
+  const address = "ул. Мира, 34 / ул. Малышева, 132 · Екатеринбург";
+  const addrY = H - margin - unit * 13;
+  parts.push(
+    `<line x1="${margin + unit * 4}" y1="${(addrY - unit * 4).toFixed(2)}" x2="${W - margin - unit * 4}" y2="${(addrY - unit * 4).toFixed(2)}" stroke="${th.frame}" stroke-width="${(unit * 0.3).toFixed(2)}"/>`,
+  );
+  parts.push(
+    `<text x="${cx}" y="${addrY.toFixed(2)}" font-size="${(unit * 2.3).toFixed(2)}" fill="${th.muted}" text-anchor="middle">МЫ НАХОДИМСЯ</text>`,
+  );
+  const addrLines = wrapMono(address, unit * 3, W - margin * 2 - unit * 8);
+  let ay = addrY;
+  for (const line of addrLines) {
+    ay += unit * 4;
+    parts.push(
+      `<text x="${cx}" y="${ay.toFixed(2)}" font-size="${(unit * 3).toFixed(2)}" font-weight="700" fill="${th.fg}" text-anchor="middle">${esc(line)}</text>`,
+    );
+  }
+
+  // Служебная метка тиража (мелко, можно убрать в Corel)
+  const campaignNote = sanitizeUtm(o.campaign) ? `тираж: ${sanitizeUtm(o.campaign)}` : "";
+  if (campaignNote) {
+    parts.push(
+      `<text x="${BLEED + 1}" y="${H - 1}" font-size="2" fill="${th.muted}">${esc(campaignNote)}</text>`,
+    );
+  }
+
+  // Метки реза по углам зоны обреза
+  let trim = `<g stroke="${th.accent}" stroke-width="0.3">`;
+  trim += `<line x1="0" y1="${BLEED}" x2="${BLEED - 1}" y2="${BLEED}"/><line x1="${BLEED}" y1="0" x2="${BLEED}" y2="${BLEED - 1}"/>`;
+  trim += `<line x1="${W}" y1="${BLEED}" x2="${W - BLEED + 1}" y2="${BLEED}"/><line x1="${W - BLEED}" y1="0" x2="${W - BLEED}" y2="${BLEED - 1}"/>`;
+  trim += `<line x1="0" y1="${H - BLEED}" x2="${BLEED - 1}" y2="${H - BLEED}"/><line x1="${BLEED}" y1="${H}" x2="${BLEED}" y2="${H - BLEED + 1}"/>`;
+  trim += `<line x1="${W}" y1="${H - BLEED}" x2="${W - BLEED + 1}" y2="${H - BLEED}"/><line x1="${W - BLEED}" y1="${H}" x2="${W - BLEED}" y2="${H - BLEED + 1}"/>`;
+  trim += `</g>`;
+  parts.push(trim);
+
+  parts.push(`</svg>`);
+  return parts.join("\n");
 }
 
-/** Собирает имя файла для скачивания. */
 export function flyerFileName(o: FlyerOptions): string {
   const c = sanitizeUtm(o.campaign) || "base";
   return `flyer_${o.format}_${o.theme}_${c}.svg`;

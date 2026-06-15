@@ -40,7 +40,7 @@ const PrintFlyer = () => {
   const [medium, setMedium] = useState("qr");
   const [campaign, setCampaign] = useState("");
   const [format, setFormat] = useState<FlyerFormatId>("a6");
-  const [theme, setTheme] = useState<FlyerThemeId>("dark");
+  const [theme, setTheme] = useState<FlyerThemeId>("light");
   const [svg, setSvg] = useState<string>("");
   const [busy, setBusy] = useState(false);
 
