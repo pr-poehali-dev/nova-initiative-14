@@ -99,20 +99,25 @@ function getTheme(id: FlyerThemeId): FlyerTheme {
   return THEMES.find((t) => t.id === id) || THEMES[0];
 }
 
-/** Векторный QR: path-данные и размер сетки N. Цвет всегда тёмный (на белом). */
-async function qrPaths(url: string): Promise<{ d: string; n: number }> {
-  const svg = await QRCode.toString(url, {
-    type: "svg",
-    margin: 0,
-    errorCorrectionLevel: "H",
-    color: { dark: "#1a1a2e", light: "#0000" },
-  });
-  const pathMatch = svg.match(/<path[^>]*d="([^"]+)"[^>]*\/>/);
-  const vbMatch = svg.match(/viewBox="0 0 (\d+) (\d+)"/);
-  return {
-    d: pathMatch ? pathMatch[1] : "",
-    n: vbMatch ? Number(vbMatch[1]) : 25,
-  };
+/**
+ * Векторный QR через низкоуровневое API QRCode.create: строим fill-path из
+ * прямоугольников тёмных модулей (надёжнее, чем парсить svg-строку).
+ * Возвращает path-данные (d) и размер сетки N (число модулей по стороне).
+ */
+function qrPaths(url: string): { d: string; n: number } {
+  const qr = QRCode.create(url, { errorCorrectionLevel: "H" });
+  const n: number = qr.modules.size;
+  const data: Uint8Array = qr.modules.data;
+  let d = "";
+  for (let row = 0; row < n; row++) {
+    for (let col = 0; col < n; col++) {
+      if (data[row * n + col]) {
+        // Один тёмный модуль 1×1 в координатах сетки.
+        d += `M${col} ${row}h1v1h-1z`;
+      }
+    }
+  }
+  return { d, n };
 }
 
 /** Экранирование XML-спецсимволов в тексте. */
@@ -171,8 +176,8 @@ export async function buildFlyerSvg(o: FlyerOptions): Promise<string> {
 
   const caeUrl = buildFlyerUrl("/urfu_qr_cae", o);
   const diplomUrl = buildFlyerUrl("/urfu_qr_diplom", o);
-  const caeQr = await qrPaths(caeUrl);
-  const dipQr = await qrPaths(diplomUrl);
+  const caeQr = qrPaths(caeUrl);
+  const dipQr = qrPaths(diplomUrl);
 
   const parts: string[] = [];
   parts.push(`<?xml version="1.0" encoding="UTF-8"?>`);
@@ -261,6 +266,9 @@ export async function buildFlyerSvg(o: FlyerOptions): Promise<string> {
     { qr: caeQr, caption: "CAE", note: "Расчёт балок, рам и ферм онлайн — сейчас бесплатно" },
   ];
 
+  const noteSize = unit * 2.8;
+  let maxBlockBottom = qrTop + qrSize; // нижняя граница самого длинного столбца
+
   for (let i = 0; i < 2; i++) {
     const colCx = colCenters[i];
     const qrX = colCx - qrSize / 2;
@@ -270,10 +278,10 @@ export async function buildFlyerSvg(o: FlyerOptions): Promise<string> {
     parts.push(
       `<rect x="${(qrX - pad).toFixed(2)}" y="${(qrTop - pad).toFixed(2)}" width="${(qrSize + pad * 2).toFixed(2)}" height="${(qrSize + pad * 2).toFixed(2)}" fill="#ffffff" stroke="${th.frame}" stroke-width="${(unit * 0.3).toFixed(2)}"/>`,
     );
-    // Векторный QR
+    // Векторный QR (fill-path из модулей, рисуем поверх белой подложки)
     const scale = qrSize / b.qr.n;
     parts.push(
-      `<g transform="translate(${qrX.toFixed(2)} ${qrTop.toFixed(2)}) scale(${scale.toFixed(4)})"><path d="${b.qr.d}" fill="#1a1a2e"/></g>`,
+      `<g transform="translate(${qrX.toFixed(2)} ${qrTop.toFixed(2)}) scale(${scale.toFixed(4)})"><path d="${b.qr.d}" fill="#1a1a2e" shape-rendering="crispEdges"/></g>`,
     );
 
     // Подпись под QR (акцентом)
@@ -281,10 +289,9 @@ export async function buildFlyerSvg(o: FlyerOptions): Promise<string> {
     parts.push(
       `<text x="${colCx.toFixed(2)}" y="${cy.toFixed(2)}" font-size="${(unit * 5).toFixed(2)}" font-weight="700" fill="${th.accent}" text-anchor="middle">${esc(b.caption)}</text>`,
     );
-    cy += unit * 4;
+    cy += unit * 3.5;
 
     // Пояснение (перенос по ширине колонки)
-    const noteSize = unit * 2.8;
     const noteLines = wrapMono(b.note, noteSize, colW - unit * 2);
     for (const line of noteLines) {
       cy += noteSize * 1.35;
@@ -292,19 +299,34 @@ export async function buildFlyerSvg(o: FlyerOptions): Promise<string> {
         `<text x="${colCx.toFixed(2)}" y="${cy.toFixed(2)}" font-size="${noteSize.toFixed(2)}" font-weight="700" fill="${th.fg}" text-anchor="middle">${esc(line)}</text>`,
       );
     }
+    if (cy > maxBlockBottom) maxBlockBottom = cy;
   }
 
-  // === Адрес снизу === (повтор renderQrFlyer)
+  // === Адрес снизу ===
+  // Привязка к нижней границе контента (а не жёстко к низу) — текст не наезжает.
+  // Если контент короткий, опускаем блок к низу листа для аккуратной композиции.
   const address = "ул. Мира, 34 / ул. Малышева, 132 · Екатеринбург";
-  const addrY = H - margin - unit * 13;
-  parts.push(
-    `<line x1="${margin + unit * 4}" y1="${(addrY - unit * 4).toFixed(2)}" x2="${W - margin - unit * 4}" y2="${(addrY - unit * 4).toFixed(2)}" stroke="${th.frame}" stroke-width="${(unit * 0.3).toFixed(2)}"/>`,
-  );
-  parts.push(
-    `<text x="${cx}" y="${addrY.toFixed(2)}" font-size="${(unit * 2.3).toFixed(2)}" fill="${th.muted}" text-anchor="middle">МЫ НАХОДИМСЯ</text>`,
-  );
   const addrLines = wrapMono(address, unit * 3, W - margin * 2 - unit * 8);
-  let ay = addrY;
+  const addrBlockH = unit * 4 + unit * 4 * (addrLines.length + 1); // разделитель..адрес
+  const bottomLimit = H - margin - unit * 4;
+  let sepY = maxBlockBottom + unit * 6;
+  if (sepY + addrBlockH > bottomLimit) {
+    // не помещается — прижимаем к нижней границе
+    sepY = bottomLimit - addrBlockH;
+  } else {
+    // помещается с запасом — мягко опускаем к низу
+    sepY = Math.max(sepY, bottomLimit - addrBlockH);
+  }
+
+  // Разделитель
+  parts.push(
+    `<line x1="${margin + unit * 4}" y1="${sepY.toFixed(2)}" x2="${W - margin - unit * 4}" y2="${sepY.toFixed(2)}" stroke="${th.frame}" stroke-width="${(unit * 0.3).toFixed(2)}"/>`,
+  );
+  const labelY = sepY + unit * 4;
+  parts.push(
+    `<text x="${cx}" y="${labelY.toFixed(2)}" font-size="${(unit * 2.3).toFixed(2)}" fill="${th.muted}" text-anchor="middle">МЫ НАХОДИМСЯ</text>`,
+  );
+  let ay = labelY;
   for (const line of addrLines) {
     ay += unit * 4;
     parts.push(
