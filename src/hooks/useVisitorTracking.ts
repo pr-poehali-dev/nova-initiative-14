@@ -5,6 +5,7 @@ import {
   getOrCreateFirstTouch,
   type Attribution,
 } from "@/lib/attribution";
+import { hasEverAuthenticated } from "@/lib/auth";
 import func2url from "../../backend/func2url.json";
 
 const PAGE_NAMES: Record<string, string> = {
@@ -47,6 +48,8 @@ function isPvTrackable(path: string): boolean {
 /** Отправляет один просмотр страницы в page-view (учёт посещаемости). */
 function recordPageView(path: string) {
   if (!isPvTrackable(path)) return;
+  // Не учитываем просмотры «своих» — авторизованных или ранее регистрировавшихся.
+  if (hasEverAuthenticated()) return;
   const url = (func2url as Record<string, string>)["page-view"];
   if (!url) return;
   let device = "Компьютер";

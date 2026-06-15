@@ -61,6 +61,10 @@ const LS_ACCESS = "sso_access";
 const LS_REFRESH = "sso_refresh";
 const LS_USER = "sso_user";
 const LS_EXPIRES = "sso_expires_at";
+// Метка "на этом устройстве когда-либо была регистрация/вход".
+// Ставится при saveTokens и НЕ снимается при выходе — чтобы свои заходы
+// не учитывались в статистике даже после логаута.
+const LS_EVER_AUTH = "sso_ever_auth";
 
 /**
  * За сколько секунд до истечения access-токена считаем его «протухшим» и
@@ -100,6 +104,7 @@ export function saveTokens(t: TokenPair) {
   localStorage.setItem(LS_USER, JSON.stringify(t.user));
   const expiresAt = Date.now() + (t.expires_in || 0) * 1000;
   localStorage.setItem(LS_EXPIRES, String(expiresAt));
+  localStorage.setItem(LS_EVER_AUTH, "1");
 }
 
 export function clearTokens() {
@@ -107,6 +112,20 @@ export function clearTokens() {
   localStorage.removeItem(LS_REFRESH);
   localStorage.removeItem(LS_USER);
   localStorage.removeItem(LS_EXPIRES);
+  // LS_EVER_AUTH намеренно НЕ удаляем.
+}
+
+/**
+ * true, если пользователь сейчас авторизован ИЛИ на устройстве когда-либо
+ * была регистрация/вход. Используется, чтобы не учитывать заходы «своих»
+ * в статистике визитов и просмотров.
+ */
+export function hasEverAuthenticated(): boolean {
+  return (
+    !!localStorage.getItem(LS_ACCESS) ||
+    !!localStorage.getItem(LS_USER) ||
+    !!localStorage.getItem(LS_EVER_AUTH)
+  );
 }
 
 /**
