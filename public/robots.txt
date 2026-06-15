@@ -11,5 +11,4 @@ Disallow: /cae/projects
 Disallow: /admin/
 Disallow: /roadmaps/
 
-# Карта сайта генерируется динамически из БД (всегда актуальные статьи блога).
-Sitemap: https://functions.poehali.dev/9f65e248-4e08-48ce-adfa-c87094085b6d/?resource=sitemap
+Sitemap: https://xn----gtbhgbqhkfi.xn--p1ai/sitemap.xml
