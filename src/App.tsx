@@ -43,6 +43,7 @@ import AdGenerator from "./pages/AdGenerator";
 import AdminStats from "./pages/AdminStats";
 import OwnerVisitors from "./pages/OwnerVisitors";
 import AdminQr from "./pages/AdminQr";
+import PrintFlyer from "./pages/PrintFlyer";
 import UrfuQrCae from "./pages/UrfuQrCae";
 import UrfuQrDiplom from "./pages/UrfuQrDiplom";
 import NotFound from "./pages/NotFound";
@@ -169,6 +170,7 @@ const App = () => (
                 <Route path="/admin/stats" element={<AdminStats />} />
                 <Route path="/admin/visitors" element={<OwnerVisitors />} />
                 <Route path="/admin/qr" element={<AdminQr />} />
+                <Route path="/admin/print" element={<PrintFlyer />} />
                 <Route path="/urfu_qr_cae" element={<UrfuQrCae />} />
                 <Route path="/urfu_qr_diplom" element={<UrfuQrDiplom />} />
                 <Route path="*" element={<NotFound />} />

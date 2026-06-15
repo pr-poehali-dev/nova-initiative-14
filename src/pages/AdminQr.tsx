@@ -102,12 +102,20 @@ const AdminQr = () => {
           <p className="font-gost text-[11px] uppercase tracking-[0.3em] text-[var(--drawing-line-thin)]">
             Админ · QR-флаеры
           </p>
-          <Link
-            to="/admin/stats"
-            className="font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)] hover:text-[var(--drawing-accent)] inline-flex items-center gap-1"
-          >
-            <Icon name="BarChart3" size={12} />К статистике
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              to="/admin/print"
+              className="font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)] hover:text-[var(--drawing-accent)] inline-flex items-center gap-1"
+            >
+              <Icon name="Printer" size={12} />Печатная листовка
+            </Link>
+            <Link
+              to="/admin/stats"
+              className="font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)] hover:text-[var(--drawing-accent)] inline-flex items-center gap-1"
+            >
+              <Icon name="BarChart3" size={12} />К статистике
+            </Link>
+          </div>
         </div>
         <h1 className="font-gost-upright text-2xl md:text-3xl font-black uppercase tracking-wide mb-2">
           QR-коды с UTM-метками
