@@ -2,9 +2,14 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Helmet } from "@/lib/helmet-shim";
 import { fetchArticles, formatRuDate, type ArticleListItem } from "@/lib/articles";
-import { SITE_URL, absUrl, breadcrumbsLd } from "@/lib/seo";
+import { SITE_URL, SITE_NAME, SITE_OG_IMAGE, absUrl, breadcrumbsLd } from "@/lib/seo";
 import RelatedSections from "@/components/RelatedSections";
 import ReducerSeries from "@/components/blog/ReducerSeries";
+
+const BLOG_TITLE = "Инженерный блог — статьи о ВКР, ЕСКД и КОМПАС-3D · Диплом-Инж.рф";
+const BLOG_DESC =
+  "Экспертные лонгриды для студентов и наставников: оформление ВКР по ГОСТ, расчёты в КОМПАС-3D и APM FEM, материалы, допуски и посадки, защита диплома в УрФУ.";
+const BLOG_URL = `${SITE_URL}/blog`;
 
 const Blog = () => {
   const [articles, setArticles] = useState<ArticleListItem[]>([]);
@@ -35,12 +40,22 @@ const Blog = () => {
   return (
     <>
       <Helmet>
-        <title>Инженерный блог — статьи о ВКР, ЕСКД и КОМПАС-3D · Диплом-Инж.рф</title>
-        <meta
-          name="description"
-          content="Экспертные лонгриды для студентов и наставников: оформление ВКР по ГОСТ, расчёты в КОМПАС-3D и APM FEM, материалы, допуски и посадки, защита диплома в УрФУ."
-        />
-        <link rel="canonical" href={`${SITE_URL}/blog`} />
+        <title>{BLOG_TITLE}</title>
+        <meta name="description" content={BLOG_DESC} />
+        <link rel="canonical" href={BLOG_URL} />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={BLOG_TITLE} />
+        <meta property="og:description" content={BLOG_DESC} />
+        <meta property="og:url" content={BLOG_URL} />
+        <meta property="og:site_name" content={SITE_NAME} />
+        <meta property="og:locale" content="ru_RU" />
+        <meta property="og:image" content={SITE_OG_IMAGE} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={BLOG_TITLE} />
+        <meta name="twitter:description" content={BLOG_DESC} />
+        <meta name="twitter:image" content={SITE_OG_IMAGE} />
         <script type="application/ld+json">
           {JSON.stringify(breadcrumbsLd([["Блог", "/blog"]]))}
         </script>

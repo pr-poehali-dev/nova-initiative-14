@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "@/lib/helmet-shim";
 import { fetchArticle, fetchPageViews, formatRuDate, type Article } from "@/lib/articles";
-import { SITE_URL, breadcrumbsLd } from "@/lib/seo";
+import { SITE_URL, SITE_NAME, SITE_OG_IMAGE, breadcrumbsLd } from "@/lib/seo";
 import NotFound from "@/pages/NotFound";
 import ReadingProgress from "@/components/blog/ReadingProgress";
 import ArticleToc from "@/components/blog/ArticleToc";
@@ -54,6 +54,7 @@ const BlogArticle = () => {
   }
 
   const url = `${SITE_URL}/blog/${article.slug}`;
+  const ogImage = article.cover_url || SITE_OG_IMAGE;
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -108,6 +109,15 @@ const BlogArticle = () => {
         <meta property="og:title" content={article.seo_title} />
         <meta property="og:description" content={article.seo_description} />
         <meta property="og:url" content={url} />
+        <meta property="og:site_name" content={SITE_NAME} />
+        <meta property="og:locale" content="ru_RU" />
+        <meta property="og:image" content={ogImage} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={article.seo_title} />
+        <meta name="twitter:description" content={article.seo_description} />
+        <meta name="twitter:image" content={ogImage} />
         {article.published_at && (
           <meta property="article:published_time" content={article.published_at} />
         )}
