@@ -13,6 +13,7 @@ import {
 import { PERIODS } from "@/components/admin-stats/stats-shared";
 import OwnerDashboardBlock from "@/components/admin-stats/OwnerDashboardBlock";
 import TrafficStatsBlock from "@/components/admin-stats/TrafficStatsBlock";
+import CampaignsPie from "@/components/admin-stats/CampaignsPie";
 
 /**
  * Админ-дашборд статистики посещений: откуда приходят посетители и
@@ -116,6 +117,8 @@ const AdminStats = () => {
         )}
 
         {dash && !busy && <OwnerDashboardBlock dash={dash} />}
+
+        {!busy && <CampaignsPie />}
 
         {stats && !busy && <TrafficStatsBlock stats={stats} />}
       </div>

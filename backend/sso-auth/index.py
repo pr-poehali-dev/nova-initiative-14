@@ -46,6 +46,12 @@ from account_actions import (
 from config import CORS
 from db_helpers import client_ip, current_user_id, json_response, user_agent
 from owner_stats import action_owner_dashboard
+from ad_campaigns import (
+    action_ad_campaigns_list,
+    action_ad_campaign_save,
+    action_ad_campaign_print,
+    action_ad_campaigns_overview,
+)
 from oauth import (
     action_list_identities,
     action_oauth_callback,
@@ -210,6 +216,28 @@ def handler(event: dict, context) -> dict:
             if not uid:
                 return json_response(401, {'error': 'unauthorized'})
             return action_owner_dashboard(conn, uid, params)
+
+        # === Рекламные кампании (требуют is_admin) ===
+        if action == 'ad-campaigns' and method == 'GET':
+            uid = current_user_id(event)
+            if not uid:
+                return json_response(401, {'error': 'unauthorized'})
+            return action_ad_campaigns_list(conn, uid, params)
+        if action == 'ad-campaigns-overview' and method == 'GET':
+            uid = current_user_id(event)
+            if not uid:
+                return json_response(401, {'error': 'unauthorized'})
+            return action_ad_campaigns_overview(conn, uid, params)
+        if action == 'ad-campaign-save' and method == 'POST':
+            uid = current_user_id(event)
+            if not uid:
+                return json_response(401, {'error': 'unauthorized'})
+            return action_ad_campaign_save(conn, uid, body)
+        if action == 'ad-campaign-print' and method == 'POST':
+            uid = current_user_id(event)
+            if not uid:
+                return json_response(401, {'error': 'unauthorized'})
+            return action_ad_campaign_print(conn, uid, body)
 
         return json_response(404, {'error': 'unknown_action'})
     except Exception as e:

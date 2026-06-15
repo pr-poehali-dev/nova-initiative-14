@@ -161,6 +161,32 @@
       "method": "GET",
       "path": "/?action=owner-dashboard",
       "expectedStatus": 401
+    },
+    {
+      "name": "Список рекламных кампаний без токена",
+      "method": "GET",
+      "path": "/?action=ad-campaigns",
+      "expectedStatus": 401
+    },
+    {
+      "name": "Сводка кампаний без токена",
+      "method": "GET",
+      "path": "/?action=ad-campaigns-overview",
+      "expectedStatus": 401
+    },
+    {
+      "name": "Сохранение кампании без токена",
+      "method": "POST",
+      "path": "/?action=ad-campaign-save",
+      "body": {"slug": "test", "name": "Test"},
+      "expectedStatus": 401
+    },
+    {
+      "name": "Заказ печати без токена",
+      "method": "POST",
+      "path": "/?action=ad-campaign-print",
+      "body": {"slug": "test", "quantity": 100, "total_rub": 500},
+      "expectedStatus": 401
     }
   ]
 }

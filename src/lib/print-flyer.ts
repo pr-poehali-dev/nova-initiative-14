@@ -72,6 +72,14 @@ export const QR_LANDINGS = [
   { path: "/urfu_qr_cae", label: "CAE — расчёты онлайн" },
 ] as const;
 
+/** Готовые рекламные площадки (utm_source) — без привязки к конкретному вузу. */
+export const AD_SOURCES = [
+  { value: "flyer", label: "Флаер (раздача из рук)" },
+  { value: "stand", label: "Стенд / доска объявлений" },
+  { value: "poster", label: "Плакат" },
+  { value: "partner", label: "Партнёрская точка" },
+] as const;
+
 /** Один QR-блок листовки: куда ведёт, подпись и описание. */
 export interface FlyerQrBlock {
   landing: string;
@@ -104,14 +112,14 @@ export interface FlyerOptions {
 
 /** Значения по умолчанию для нового макета. */
 export const DEFAULT_FLYER: FlyerOptions = {
-  source: "flyer_urfu",
+  source: "flyer",
   medium: "qr",
   campaign: "",
   format: "a6",
   theme: "light",
   qrCount: 2,
   logo: "ДИПЛОМ-ИНЖ.РФ",
-  eyebrow: "СТУДЕНТАМ УРФУ · ЕКАТЕРИНБУРГ",
+  eyebrow: "СТУДЕНТАМ-ИНЖЕНЕРАМ · ЕКАТЕРИНБУРГ",
   title: "ИНЖЕНЕРНАЯ\nПОМОЩЬ",
   subtitle: "Наведи камеру на QR-код",
   address: "ул. Мира, 34 / ул. Малышева, 132 · Екатеринбург",
