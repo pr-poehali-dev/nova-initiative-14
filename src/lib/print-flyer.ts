@@ -253,12 +253,12 @@ export async function buildFlyerSvg(o: FlyerOptions): Promise<string> {
 
   // === Два QR-столбца === (повтор геометрии renderQrFlyer)
   const colW = (W - margin * 2 - unit * 4) / 2;
-  const qrSize = Math.min(colW - unit * 2, unit * 34);
+  const qrSize = Math.min(colW - unit * 2, unit * 30);
   const colCenters = [
     margin + unit * 2 + colW / 2,
     margin + unit * 2 + colW + unit * 4 + colW / 2 - unit * 2,
   ];
-  const qrTop = y + unit * 2;
+  const qrTop = y + unit * 1;
   const pad = unit * 1.2;
 
   const blocks = [
@@ -303,19 +303,19 @@ export async function buildFlyerSvg(o: FlyerOptions): Promise<string> {
   }
 
   // === Адрес снизу ===
-  // Привязка к нижней границе контента (а не жёстко к низу) — текст не наезжает.
-  // Если контент короткий, опускаем блок к низу листа для аккуратной композиции.
+  // Разделитель ставим строго НИЖЕ конца самого длинного описания с гарантированным
+  // отступом — так текст никогда не наезжает на рамку «Мы находимся».
+  // maxBlockBottom — базовая линия последней строки описания; добавляем высоту
+  // descender (≈0.3em) и крупный воздушный зазор, как на онлайн-эталоне.
   const address = "ул. Мира, 34 / ул. Малышева, 132 · Екатеринбург";
   const addrLines = wrapMono(address, unit * 3, W - margin * 2 - unit * 8);
   const addrBlockH = unit * 4 + unit * 4 * (addrLines.length + 1); // разделитель..адрес
   const bottomLimit = H - margin - unit * 4;
-  let sepY = maxBlockBottom + unit * 6;
+  // воздух от конца описания: descender последней строки + зазор
+  let sepY = maxBlockBottom + noteSize * 0.3 + unit * 7;
+  // Если блок не помещается до нижней рамки — прижимаем к низу (но не выше контента).
   if (sepY + addrBlockH > bottomLimit) {
-    // не помещается — прижимаем к нижней границе
-    sepY = bottomLimit - addrBlockH;
-  } else {
-    // помещается с запасом — мягко опускаем к низу
-    sepY = Math.max(sepY, bottomLimit - addrBlockH);
+    sepY = Math.max(maxBlockBottom + noteSize * 0.3 + unit * 4, bottomLimit - addrBlockH);
   }
 
   // Разделитель
