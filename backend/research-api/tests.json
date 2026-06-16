@@ -38,6 +38,15 @@
       "expectedStatus": 401,
       "expectedBody": {"error": "unauthorized"},
       "bodyMatcher": "partial"
+    },
+    {
+      "name": "Mindmap get without auth returns 401",
+      "method": "POST",
+      "path": "/?action=mindmap-get",
+      "body": {"default_data": {"nodes": [], "edges": []}},
+      "expectedStatus": 401,
+      "expectedBody": {"error": "unauthorized"},
+      "bodyMatcher": "partial"
     }
   ]
 }

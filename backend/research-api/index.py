@@ -339,6 +339,70 @@ def action_expense_delete(conn, owner_id: int, body: dict) -> dict:
     return _json_response(200, {'ok': True})
 
 
+# ============ MINDMAP (бизнес-планы) ============
+
+def _get_or_create_default_map(conn, owner_id: int, default_data: dict, title: str):
+    """Возвращает первую карту владельца; если карт нет — создаёт со стартовыми
+    данными (default_data приходит с фронта — структура сайта)."""
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute(
+            "SELECT id, title, data, updated_at FROM owner_mindmaps "
+            "WHERE owner_id = %s ORDER BY id ASC LIMIT 1",
+            (owner_id,),
+        )
+        row = cur.fetchone()
+        if row:
+            return dict(row)
+        cur.execute(
+            "INSERT INTO owner_mindmaps (owner_id, title, data) "
+            "VALUES (%s, %s, %s) RETURNING id, title, data, updated_at",
+            (owner_id, title[:300] or 'Карта', json.dumps(default_data, ensure_ascii=False)),
+        )
+        new_row = dict(cur.fetchone())
+    conn.commit()
+    return new_row
+
+
+def action_mindmap_get(conn, owner_id: int, body: dict) -> dict:
+    """Возвращает карту владельца (создаёт стартовую при первом обращении)."""
+    default_data = body.get('default_data') or {'nodes': [], 'edges': []}
+    title = (body.get('default_title') or 'Архитектура сайта').strip()
+    row = _get_or_create_default_map(conn, owner_id, default_data, title)
+    data = row['data']
+    if isinstance(data, str):
+        try:
+            data = json.loads(data)
+        except Exception:
+            data = {'nodes': [], 'edges': []}
+    return _json_response(200, {
+        'id': int(row['id']),
+        'title': row['title'],
+        'data': data,
+        'updated_at': row['updated_at'].isoformat() if row.get('updated_at') else None,
+    })
+
+
+def action_mindmap_save(conn, owner_id: int, body: dict) -> dict:
+    """Сохраняет карту (узлы + связи) владельца."""
+    map_id = body.get('id')
+    if not map_id:
+        return _json_response(400, {'error': 'missing_id'})
+    title = (body.get('title') or 'Карта').strip()[:300]
+    data = body.get('data')
+    if not isinstance(data, dict) or 'nodes' not in data or 'edges' not in data:
+        return _json_response(400, {'error': 'bad_data'})
+    with conn.cursor() as cur:
+        cur.execute(
+            "UPDATE owner_mindmaps SET title = %s, data = %s, updated_at = now() "
+            "WHERE id = %s AND owner_id = %s",
+            (title, json.dumps(data, ensure_ascii=False), int(map_id), owner_id),
+        )
+        if cur.rowcount == 0:
+            return _json_response(404, {'error': 'not_found'})
+    conn.commit()
+    return _json_response(200, {'ok': True})
+
+
 def handler(event: dict, context) -> dict:
     """Маршрутизатор research-api по ?action= и httpMethod."""
     method = event.get('httpMethod', 'GET')
@@ -386,6 +450,11 @@ def handler(event: dict, context) -> dict:
             return action_expense_add(conn, owner_id, body)
         if action == 'expense-delete' and method == 'POST':
             return action_expense_delete(conn, owner_id, body)
+
+        if action == 'mindmap-get' and method == 'POST':
+            return action_mindmap_get(conn, owner_id, body)
+        if action == 'mindmap-save' and method == 'POST':
+            return action_mindmap_save(conn, owner_id, body)
 
         return _json_response(404, {'error': 'unknown_action'})
     except Exception as e:
