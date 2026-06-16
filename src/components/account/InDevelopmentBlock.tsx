@@ -43,9 +43,9 @@ const SERVICES: DevService[] = [
   {
     to: "/owner/business-plans",
     icon: "Briefcase",
-    title: "Бизнес-планы · MindMap",
+    title: "Бизнес-планы",
     description:
-      "MindMap-карта с drag-and-drop (как MindMeister). Внутри — готовая структура всего сайта. Далее: расчёты, графики, источники.",
+      "MindMap-карта структуры сайта (drag-and-drop) и финансовый калькулятор: юнит-экономика, точка безубыточности, окупаемость и графики.",
     state: "ready",
     ticket: 47,
   },

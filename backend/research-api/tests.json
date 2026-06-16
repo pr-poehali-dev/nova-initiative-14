@@ -47,6 +47,15 @@
       "expectedStatus": 401,
       "expectedBody": {"error": "unauthorized"},
       "bodyMatcher": "partial"
+    },
+    {
+      "name": "Finance get without auth returns 401",
+      "method": "POST",
+      "path": "/?action=finance-get",
+      "body": {"default_data": {}},
+      "expectedStatus": 401,
+      "expectedBody": {"error": "unauthorized"},
+      "bodyMatcher": "partial"
     }
   ]
 }
