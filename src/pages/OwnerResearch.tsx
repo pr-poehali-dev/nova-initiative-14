@@ -29,6 +29,7 @@ import {
 } from "@/lib/research";
 import {
   type NirDocument,
+  type NirWorkMode,
   createNirDocument,
   parseNirDocument,
   serializeNirDocument,
@@ -89,14 +90,27 @@ const OwnerResearch = () => {
     }
   }, []);
 
-  const onCreate = async () => {
+  const onCreate = async (mode: NirWorkMode) => {
     setBusy(true);
-    const r = await createResearch("Новая НИР");
-    setBusy(false);
+    const title = mode === "practice" ? "Отчёт по практике (НИР)" : "Новая НИР";
+    const r = await createResearch(title);
     if (r.ok && r.data) {
+      const id = r.data.id;
+      // Сразу кладём стартовый документ нужного режима.
+      const fresh = createNirDocument(mode);
+      await saveResearch({ id, title, content: serializeNirDocument(fresh), status: "draft" });
+      setBusy(false);
       await reloadList();
-      openPaper(r.data.id);
+      setActiveId(id);
+      setDocState(fresh);
+      setStatus("draft");
+      setNote("");
+      setMsg(null);
+      setDirty(false);
+      setVersionsOpen(false);
+      return;
     }
+    setBusy(false);
   };
 
   const onSave = async () => {
@@ -176,9 +190,14 @@ const OwnerResearch = () => {
         <div className="grid md:grid-cols-[260px_1fr] gap-6">
           {/* ── Список работ ── */}
           <div className="space-y-3">
-            <button onClick={onCreate} disabled={busy} className={`btn-drawing btn-drawing-accent text-xs w-full inline-flex items-center justify-center gap-1 ${busy ? "opacity-50 pointer-events-none" : ""}`}>
-              <Icon name="Plus" size={14} />Новая НИР
-            </button>
+            <div className="space-y-1.5">
+              <button onClick={() => onCreate("gost")} disabled={busy} className={`btn-drawing btn-drawing-accent text-xs w-full inline-flex items-center justify-center gap-1 ${busy ? "opacity-50 pointer-events-none" : ""}`}>
+                <Icon name="Plus" size={14} />НИР по ГОСТ
+              </button>
+              <button onClick={() => onCreate("practice")} disabled={busy} className={`btn-drawing text-xs w-full inline-flex items-center justify-center gap-1 ${busy ? "opacity-50 pointer-events-none" : ""}`}>
+                <Icon name="ClipboardList" size={14} />Отчёт по практике
+              </button>
+            </div>
             {loadingList ? (
               <p className="font-gost text-[11px] text-[var(--drawing-line-thin)] py-4 text-center">Загружаем список…</p>
             ) : papers.length === 0 ? (

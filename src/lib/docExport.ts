@@ -105,6 +105,7 @@ function buildCss(fmt: DocFormat): string {
 
 function renderTitlePage(doc: NirDocument): string {
   const t = doc.titleMeta;
+  const practice = doc.workMode === "practice";
   const line = (s: string, cls = "") => (s.trim() ? `<p class="${cls}">${esc(s).replace(/\n/g, "<br/>")}</p>` : "");
   return `
   <div class="title-page">
@@ -113,15 +114,19 @@ function renderTitlePage(doc: NirDocument): string {
       ${line(t.university)}
       ${line(t.institute)}
       ${line(t.department)}
+      ${t.directionCode.trim() ? `<p style="margin-top:.4em">Направление: ${esc(t.directionCode)}</p>` : ""}
+      ${t.programName.trim() ? `<p>Программа: «${esc(t.programName)}»</p>` : ""}
     </div>
     <div class="tp-mid">
       <p class="tp-worktype">${esc(t.workType).replace(/\n/g, "<br/>")}</p>
-      ${t.discipline.trim() ? `<p>по дисциплине: «${esc(t.discipline)}»</p>` : ""}
+      ${!practice && t.discipline.trim() ? `<p>по дисциплине: «${esc(t.discipline)}»</p>` : ""}
       ${t.topic.trim() ? `<p><b>Тема: ${esc(t.topic)}</b></p>` : ""}
     </div>
     <div class="tp-meta">
-      ${t.studentName.trim() ? `<p>Выполнил студент${t.studentGroup ? ` гр. ${esc(t.studentGroup)}` : ""}: ${esc(t.studentName)}</p>` : ""}
-      ${t.supervisorName.trim() ? `<p>Руководитель${t.supervisorPosition ? `, ${esc(t.supervisorPosition)}` : ""}: ${esc(t.supervisorName)}</p>` : ""}
+      ${t.studentName.trim() ? `<p>Студент${t.studentGroup ? ` гр. ${esc(t.studentGroup)}` : ""}: ${esc(t.studentName)} _________</p>` : ""}
+      ${t.supervisorName.trim() ? `<p>${esc(t.supervisorPosition || "Руководитель от УрФУ")}: ${esc(t.supervisorName)} _________</p>` : ""}
+      ${practice && t.enterpriseSupervisorName.trim() ? `<p>${esc(t.enterpriseSupervisorPosition || "Руководитель от предприятия")}: ${esc(t.enterpriseSupervisorName)} _________</p>` : ""}
+      ${practice && t.practicePeriod.trim() ? `<p>Срок практики: ${esc(t.practicePeriod)}</p>` : ""}
     </div>
     <div class="tp-top" style="margin-top:auto">
       <p>${esc(t.city)} ${esc(t.year)}</p>
@@ -129,42 +134,58 @@ function renderTitlePage(doc: NirDocument): string {
   </div>`;
 }
 
+/** Служебные листы практики не входят в содержание. */
+const SERVICE_KINDS = new Set(["task", "schedule", "review"]);
+
 function renderToc(doc: NirDocument): string {
   const rows = doc.sections
-    .filter((s) => s.enabled && s.kind !== "title" && s.kind !== "toc")
+    .filter((s) => s.enabled && s.kind !== "title" && s.kind !== "toc" && !SERVICE_KINDS.has(s.kind))
     .map((s) => `<p class="toc-row"><span>${esc(s.heading)}</span><span>...</span></p>`)
     .join("\n");
   return `<h1>СОДЕРЖАНИЕ</h1>${rows}`;
 }
 
 function renderSection(s: NirSection, first: boolean): string {
+  const cls = first ? ' class="first"' : "";
   if (s.kind === "references") {
-    const items = (s.body || "")
-      .split(/\n+/)
-      .map((l) => l.trim())
-      .filter(Boolean);
+    const items = (s.body || "").split(/\n+/).map((l) => l.trim()).filter(Boolean);
     const list = items.map((l, i) => `<p class="flush">${i + 1}. ${esc(l)}</p>`).join("\n");
-    return `<h1${first ? ' class="first"' : ""}>${esc(s.heading)}</h1>${list}`;
+    return `<h1${cls}>${esc(s.heading)}</h1>${list}`;
   }
-  return `<h1${first ? ' class="first"' : ""}>${esc(s.heading)}</h1>${textToParagraphs(s.body)}`;
+  // Служебные листы (задание, график) — строки без абзацного отступа.
+  if (s.kind === "schedule" || s.kind === "task") {
+    const lines = (s.body || "").split(/\n+/).map((l) => l.trim()).filter(Boolean);
+    const body = lines.map((l) => `<p class="flush">${esc(l)}</p>`).join("\n");
+    return `<h1${cls}>${esc(s.heading)}</h1>${body}`;
+  }
+  return `<h1${cls}>${esc(s.heading)}</h1>${textToParagraphs(s.body)}`;
 }
 
 /** Собирает тело документа (без титула — он отдельно). */
 function renderBody(doc: NirDocument): string {
   const parts: string[] = [];
-  let firstHeadingUsed = false;
   const enabled = doc.sections.filter((s) => s.enabled);
+  let firstUsed = false;
+
+  // 1. Служебные листы практики (идут сразу после титула, до содержания).
   for (const s of enabled) {
-    if (s.kind === "abstract") {
-      parts.push(`<h1${!firstHeadingUsed ? ' class="first"' : ""}>${esc(s.heading)}</h1>${textToParagraphs(s.body)}`);
-      firstHeadingUsed = true;
+    if (SERVICE_KINDS.has(s.kind)) {
+      parts.push(renderSection(s, !firstUsed));
+      firstUsed = true;
     }
   }
-  // Содержание после реферата.
-  parts.push(renderToc(doc));
-  firstHeadingUsed = true;
+  // 2. Реферат (для НИР по ГОСТ).
   for (const s of enabled) {
-    if (s.kind === "abstract") continue;
+    if (s.kind === "abstract") {
+      parts.push(`<h1${!firstUsed ? ' class="first"' : ""}>${esc(s.heading)}</h1>${textToParagraphs(s.body)}`);
+      firstUsed = true;
+    }
+  }
+  // 3. Содержание.
+  parts.push(renderToc(doc));
+  // 4. Остальные разделы.
+  for (const s of enabled) {
+    if (s.kind === "abstract" || SERVICE_KINDS.has(s.kind)) continue;
     parts.push(renderSection(s, false));
   }
   return parts.join("\n");

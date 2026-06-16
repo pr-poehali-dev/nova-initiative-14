@@ -21,7 +21,11 @@ export type SectionKind =
   | "chapter" // основная глава (можно много)
   | "conclusion" // заключение
   | "references" // список литературы
-  | "appendix"; // приложения
+  | "appendix" // приложения
+  // Служебные листы отчёта по практике.
+  | "task" // индивидуальное задание
+  | "schedule" // рабочий график (план)
+  | "review"; // отзыв руководителя
 
 export interface NirSection {
   id: string;
@@ -51,11 +55,23 @@ export interface NirTitleMeta {
   supervisorPosition: string;
   city: string;
   year: string;
+  // Расширенные поля (для отчёта по практике УрФУ).
+  directionCode: string; // код и наименование направления, напр. «15.04.06 Мехатроника и робототехника»
+  programName: string; // образовательная/магистерская программа
+  enterpriseSupervisorName: string; // руководитель практики от предприятия
+  enterpriseSupervisorPosition: string;
+  practicePeriod: string; // срок практики «с … по …»
+  reportDeadline: string; // срок сдачи отчёта
 }
+
+/** Тип создаваемой работы. */
+export type NirWorkMode = "gost" | "practice";
 
 /** Полный документ НИР, который хранится в content (JSON). */
 export interface NirDocument {
   schema: 1;
+  /** Режим: классическая НИР по ГОСТ 7.32 или отчёт по практике (НИР). */
+  workMode: NirWorkMode;
   titleMeta: NirTitleMeta;
   sections: NirSection[];
   format: DocFormat;
@@ -71,18 +87,24 @@ export function defaultTitleMeta(): NirTitleMeta {
   return {
     ministry: "Министерство науки и высшего образования Российской Федерации",
     university:
-      "Федеральное государственное автономное образовательное учреждение высшего образования «Уральский федеральный университет имени первого Президента России Б.Н. Ельцина»",
-    institute: "Институт новых материалов и технологий",
-    department: "Кафедра",
+      "ФГАОУ ВО «УрФУ имени первого Президента России Б.Н. Ельцина»",
+    institute: "Институт новых материалов и технологий (ИНМТ)",
+    department: "Кафедра «Электронное машиностроение»",
     workType: "ОТЧЁТ\nо научно-исследовательской работе",
     topic: "",
     discipline: "Научно-исследовательская работа",
     studentName: "",
     studentGroup: "",
-    supervisorName: "",
-    supervisorPosition: "",
+    supervisorName: "Огородникова О.М.",
+    supervisorPosition: "Руководитель от УрФУ",
     city: "Екатеринбург",
     year: String(new Date().getFullYear()),
+    directionCode: "15.04.06 Мехатроника и робототехника",
+    programName: "",
+    enterpriseSupervisorName: "",
+    enterpriseSupervisorPosition: "Руководитель практики от предприятия",
+    practicePeriod: "",
+    reportDeadline: "",
   };
 }
 
@@ -156,11 +178,100 @@ export function defaultSections(): NirSection[] {
   ];
 }
 
-export function createNirDocument(): NirDocument {
+/**
+ * Служебные листы отчёта по производственной практике (НИР) — по форме УрФУ.
+ * Идут перед содержательной частью: индивидуальное задание, рабочий график
+ * (план), отзыв руководителя.
+ */
+export function practiceServiceSections(): NirSection[] {
+  return [
+    {
+      id: uid("sec"),
+      kind: "task",
+      heading: "ИНДИВИДУАЛЬНОЕ ЗАДАНИЕ",
+      body: "1. Цель практики: \n2. Срок практики: \n3. Место прохождения практики: \n4. Вид практики (тип): производственная практика, научно-исследовательская работа\n5. Содержание отчёта: ",
+      enabled: true,
+      hint: "Индивидуальное задание на практику: цель, срок, место, вид (тип) практики и содержание отчёта. Согласуется с руководителями от УрФУ и от предприятия.",
+    },
+    {
+      id: uid("sec"),
+      kind: "schedule",
+      heading: "РАБОЧИЙ ГРАФИК (ПЛАН) ПРОВЕДЕНИЯ ПРАКТИКИ",
+      body: "Этап 1. Инструктаж, постановка задачи — \nЭтап 2. Поиск и анализ литературных источников — \nЭтап 3. Обработка и систематизация материала — \nЭтап 4. Оформление отчёта — ",
+      enabled: true,
+      hint: "Каждый этап с новой строки: содержание работы и сроки. Обычно оформляется таблицей «Этап — Содержание — Сроки».",
+    },
+    {
+      id: uid("sec"),
+      kind: "review",
+      heading: "ОТЗЫВ РУКОВОДИТЕЛЯ ПРАКТИКИ",
+      body: "",
+      enabled: true,
+      hint: "Характеристика уровня подготовки и отношения практиканта к работе, оценка выполнения программы практики. Заполняется руководителем от предприятия.",
+    },
+  ];
+}
+
+/** Содержательные разделы отчёта по практике (НИР). */
+export function practiceContentSections(): NirSection[] {
+  return [
+    {
+      id: uid("sec"),
+      kind: "intro",
+      heading: "ВВЕДЕНИЕ",
+      body: "",
+      enabled: true,
+      hint: "Цель и задачи практики, актуальность темы, объект и предмет исследования, краткое содержание работы.",
+    },
+    {
+      id: uid("sec"),
+      kind: "chapter",
+      heading: "1 Поиск и анализ литературных источников",
+      body: "",
+      enabled: true,
+      hint: "Стратегия поиска (БД, ключевые слова), обзор найденных источников по теме диссертации, систематизация, выявление нерешённых задач.",
+    },
+    {
+      id: uid("sec"),
+      kind: "chapter",
+      heading: "2 Анализ состояния вопроса по теме исследования",
+      body: "",
+      enabled: true,
+      hint: "Критический анализ существующих решений, методов, конструкций. Для мехатроники/робототехники: схемы, приводы, системы управления. Обоснование направления работы.",
+    },
+    {
+      id: uid("sec"),
+      kind: "conclusion",
+      heading: "ЗАКЛЮЧЕНИЕ",
+      body: "",
+      enabled: true,
+      hint: "Итоги практики: что выполнено, какие источники проанализированы, какие выводы для диссертации, задачи на следующий этап.",
+    },
+    {
+      id: uid("sec"),
+      kind: "references",
+      heading: "СПИСОК ИСПОЛЬЗОВАННЫХ ИСТОЧНИКОВ",
+      body: "",
+      enabled: true,
+      hint: "Оформление по ГОСТ Р 7.0.5-2008. Каждый источник с новой строки, сквозная нумерация.",
+    },
+  ];
+}
+
+export function createNirDocument(mode: NirWorkMode = "gost"): NirDocument {
+  const meta = defaultTitleMeta();
+  if (mode === "practice") {
+    meta.workType = "ОТЧЁТ\nпо производственной практике\n(Научно-исследовательская работа)";
+    meta.discipline = "Производственная практика (НИР)";
+    meta.programName = "Кибер-производство";
+  }
   return {
     schema: 1,
-    titleMeta: defaultTitleMeta(),
-    sections: defaultSections(),
+    workMode: mode,
+    titleMeta: meta,
+    sections: mode === "practice"
+      ? [...practiceServiceSections(), ...practiceContentSections()]
+      : defaultSections(),
     format: defaultDocFormat(),
     presetId: "urfu-inmt",
   };
@@ -172,9 +283,11 @@ export function parseNirDocument(raw: string | null | undefined): NirDocument {
   try {
     const obj = JSON.parse(raw);
     if (obj && obj.schema === 1 && Array.isArray(obj.sections)) {
-      const base = createNirDocument();
+      const mode: NirWorkMode = obj.workMode === "practice" ? "practice" : "gost";
+      const base = createNirDocument(mode);
       return {
         schema: 1,
+        workMode: mode,
         titleMeta: { ...base.titleMeta, ...(obj.titleMeta || {}) },
         sections: obj.sections.length ? obj.sections : base.sections,
         format: { ...base.format, ...(obj.format || {}) },

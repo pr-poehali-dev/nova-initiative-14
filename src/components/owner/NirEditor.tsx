@@ -143,7 +143,7 @@ export default function NirEditor({ doc, onChange }: Props) {
               open={openSection === "title"}
               onToggle={() => setOpenSection(openSection === "title" ? null : "title")}
             >
-              <TitleForm meta={doc.titleMeta} onChange={setMeta} />
+              <TitleForm meta={doc.titleMeta} onChange={setMeta} practice={doc.workMode === "practice"} />
             </AccordionRow>
           </div>
 
@@ -198,6 +198,9 @@ function sectionIcon(s: NirSection): string {
     references: "List",
     appendix: "Paperclip",
     toc: "ListTree",
+    task: "ClipboardList",
+    schedule: "CalendarRange",
+    review: "MessageSquareQuote",
   };
   return map[s.kind] || "FileText";
 }
@@ -277,7 +280,7 @@ function SectionForm({ section, onChange }: { section: NirSection; onChange: (pa
   );
 }
 
-function TitleForm({ meta, onChange }: { meta: NirTitleMeta; onChange: (patch: Partial<NirTitleMeta>) => void }) {
+function TitleForm({ meta, onChange, practice }: { meta: NirTitleMeta; onChange: (patch: Partial<NirTitleMeta>) => void; practice: boolean }) {
   const F = (label: string, key: keyof NirTitleMeta, area = false) => (
     <label className="block">
       <span className="lbl">{label}</span>
@@ -298,14 +301,26 @@ function TitleForm({ meta, onChange }: { meta: NirTitleMeta; onChange: (patch: P
       </div>
       {F("Вид работы", "workType", true)}
       <div className="grid sm:grid-cols-2 gap-3">
+        {F("Направление подготовки (код, наименование)", "directionCode")}
+        {F("Образовательная / магистерская программа", "programName")}
         {F("Дисциплина / практика", "discipline")}
         {F("Тема", "topic")}
       </div>
       <div className="grid sm:grid-cols-2 gap-3">
         {F("ФИО студента", "studentName")}
         {F("Группа", "studentGroup")}
-        {F("ФИО руководителя", "supervisorName")}
-        {F("Должность руководителя", "supervisorPosition")}
+        {F("ФИО руководителя от УрФУ", "supervisorName")}
+        {F("Должность руководителя от УрФУ", "supervisorPosition")}
+      </div>
+      {practice && (
+        <div className="grid sm:grid-cols-2 gap-3 border-l-2 border-[var(--drawing-accent)] pl-3">
+          {F("ФИО руководителя от предприятия", "enterpriseSupervisorName")}
+          {F("Должность руководителя от предприятия", "enterpriseSupervisorPosition")}
+          {F("Срок практики (с … по …)", "practicePeriod")}
+          {F("Срок сдачи отчёта", "reportDeadline")}
+        </div>
+      )}
+      <div className="grid sm:grid-cols-2 gap-3">
         {F("Город", "city")}
         {F("Год", "year")}
       </div>
