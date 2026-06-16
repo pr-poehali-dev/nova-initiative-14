@@ -16,6 +16,12 @@ import { useCaeHistory } from "./useCaeHistory";
 export function useCaeProject(projectId: number) {
   const nav = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  // Грузим проект, опираясь на СТАБИЛЬНЫЙ идентификатор пользователя, а не на
+  // объект user целиком. При возврате на вкладку AuthContext перепроверяет
+  // сессию и кладёт в state НОВЫЙ объект user (та же личность, но другая
+  // ссылка). Если завязать загрузку на сам объект — проект каждый раз
+  // перезагружался бы и терял состояние (тикеты #65, #66).
+  const userId = user?.id ?? null;
 
   const history = useCaeHistory(emptyModel("2d"));
   const { model, pushModel, setModelDirect, resetHistory, undo, redo, canUndo, canRedo } = history;
@@ -67,7 +73,7 @@ export function useCaeProject(projectId: number) {
       })
       .finally(() => setLoadingModel(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, user, authLoading]);
+  }, [projectId, userId, authLoading]);
 
   // Синхронизируем флаг несохранённых изменений с глобальным сторожем и
   // предупреждаем при попытке закрыть/обновить вкладку с правками.

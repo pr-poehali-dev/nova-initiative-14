@@ -131,28 +131,66 @@ const EditorCanvasArea = ({
   fullHeight,
 }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  // CSS-фуллскрин (fixed inset-0), а НЕ requestFullscreen API.
-  // Браузерный requestFullscreen выносит fullscreen-элемент в отдельный слой,
-  // из-за чего модалки (рендерятся в body) оказываются ЗА ним и не видны.
-  // CSS-вариант оставляет всё в обычном потоке — модалки видны поверх канвы.
+  // Полноэкранный режим через нативный Fullscreen API — канва раскрывается на
+  // ВЕСЬ экран устройства (а не только окно браузера), как просили в тикете
+  // #64. Esc и системный выход обрабатывает сам браузер. Если API недоступен
+  // (старый/мобильный браузер), мягко откатываемся на CSS-фуллскрин
+  // (fixed inset-0) — он раскрывает хотя бы на окно браузера.
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [cssFallback, setCssFallback] = useState(false);
 
-  // Esc выходит из полноэкранного режима.
+  // Держим состояние в синхроне с браузером: выход по Esc/кнопке системы
+  // тоже сбрасывает флаг и пересчитывает масштаб канвы.
   useEffect(() => {
-    if (!isFullscreen) return;
+    const onFsChange = () => {
+      const on = document.fullscreenElement === containerRef.current;
+      setIsFullscreen(on);
+      if (!on) setCssFallback(false);
+      setTimeout(() => setFitRequestId((x) => x + 1), 50);
+    };
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, [setFitRequestId]);
+
+  // Esc выходит из CSS-фолбэка (нативный fullscreen Esc обрабатывает сам).
+  useEffect(() => {
+    if (!cssFallback) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setIsFullscreen(false);
+      if (e.key === "Escape") {
+        setCssFallback(false);
+        setIsFullscreen(false);
+        setTimeout(() => setFitRequestId((x) => x + 1), 50);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [isFullscreen]);
+  }, [cssFallback, setFitRequestId]);
 
-  const toggleFullscreen = () => {
-    setIsFullscreen((v) => {
-      // После смены размера канвы пересчитываем масштаб под новый размер.
-      setTimeout(() => setFitRequestId((x) => x + 1), 50);
-      return !v;
-    });
+  const toggleFullscreen = async () => {
+    const el = containerRef.current;
+    // Уже в полноэкранном — выходим (нативно или из CSS-фолбэка).
+    if (isFullscreen) {
+      if (document.fullscreenElement) {
+        try { await document.exitFullscreen(); } catch { /* игнорируем */ }
+      } else {
+        setCssFallback(false);
+        setIsFullscreen(false);
+        setTimeout(() => setFitRequestId((x) => x + 1), 50);
+      }
+      return;
+    }
+    // Пробуем нативный полноэкранный режим (на весь экран устройства).
+    if (el && el.requestFullscreen) {
+      try {
+        await el.requestFullscreen();
+        // Состояние выставит обработчик fullscreenchange.
+        return;
+      } catch { /* не получилось — уходим в CSS-фолбэк ниже */ }
+    }
+    // Фолбэк: на окно браузера через CSS.
+    setCssFallback(true);
+    setIsFullscreen(true);
+    setTimeout(() => setFitRequestId((x) => x + 1), 50);
   };
 
   return (
@@ -160,7 +198,9 @@ const EditorCanvasArea = ({
     ref={containerRef}
     className={`border-2 border-[var(--drawing-line)] ${
       isFullscreen
-        ? "fixed inset-0 z-[55] h-screen w-screen bg-[var(--drawing-bg)]"
+        ? cssFallback
+          ? "fixed inset-0 z-[55] h-screen w-screen bg-[var(--drawing-bg)]"
+          : "h-screen w-screen bg-[var(--drawing-bg)]"
         : `relative ${
             fullHeight
               ? "h-[calc(100vh-72px)] min-h-[480px]"
