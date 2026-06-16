@@ -461,6 +461,64 @@ def action_finance_save(conn, owner_id: int, body: dict) -> dict:
     return _json_response(200, {'ok': True})
 
 
+# ============ БИЗНЕС-ПЛАН МСП (учебная тетрадь) ============
+
+def action_bizplan_get(conn, owner_id: int, body: dict) -> dict:
+    """Возвращает бизнес-план владельца (создаёт стартовый при первом обращении)."""
+    default_data = body.get('default_data') or {}
+    title = (body.get('default_title') or 'Бизнес-план').strip()
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute(
+            "SELECT id, title, data, updated_at FROM owner_business_plans "
+            "WHERE owner_id = %s ORDER BY id ASC LIMIT 1",
+            (owner_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            cur.execute(
+                "INSERT INTO owner_business_plans (owner_id, title, data) "
+                "VALUES (%s, %s, %s) RETURNING id, title, data, updated_at",
+                (owner_id, title[:300] or 'Бизнес-план',
+                 json.dumps(default_data, ensure_ascii=False)),
+            )
+            row = cur.fetchone()
+            conn.commit()
+    row = dict(row)
+    data = row['data']
+    if isinstance(data, str):
+        try:
+            data = json.loads(data)
+        except Exception:
+            data = {}
+    return _json_response(200, {
+        'id': int(row['id']),
+        'title': row['title'],
+        'data': data,
+        'updated_at': row['updated_at'].isoformat() if row.get('updated_at') else None,
+    })
+
+
+def action_bizplan_save(conn, owner_id: int, body: dict) -> dict:
+    """Сохраняет бизнес-план владельца."""
+    plan_id = body.get('id')
+    if not plan_id:
+        return _json_response(400, {'error': 'missing_id'})
+    title = (body.get('title') or 'Бизнес-план').strip()[:300]
+    data = body.get('data')
+    if not isinstance(data, dict):
+        return _json_response(400, {'error': 'bad_data'})
+    with conn.cursor() as cur:
+        cur.execute(
+            "UPDATE owner_business_plans SET title = %s, data = %s, updated_at = now() "
+            "WHERE id = %s AND owner_id = %s",
+            (title, json.dumps(data, ensure_ascii=False), int(plan_id), owner_id),
+        )
+        if cur.rowcount == 0:
+            return _json_response(404, {'error': 'not_found'})
+    conn.commit()
+    return _json_response(200, {'ok': True})
+
+
 def handler(event: dict, context) -> dict:
     """Маршрутизатор research-api по ?action= и httpMethod."""
     method = event.get('httpMethod', 'GET')
@@ -518,6 +576,11 @@ def handler(event: dict, context) -> dict:
             return action_finance_get(conn, owner_id, body)
         if action == 'finance-save' and method == 'POST':
             return action_finance_save(conn, owner_id, body)
+
+        if action == 'bizplan-get' and method == 'POST':
+            return action_bizplan_get(conn, owner_id, body)
+        if action == 'bizplan-save' and method == 'POST':
+            return action_bizplan_save(conn, owner_id, body)
 
         return _json_response(404, {'error': 'unknown_action'})
     except Exception as e:

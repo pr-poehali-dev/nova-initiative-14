@@ -56,6 +56,15 @@
       "expectedStatus": 401,
       "expectedBody": {"error": "unauthorized"},
       "bodyMatcher": "partial"
+    },
+    {
+      "name": "Bizplan get without auth returns 401",
+      "method": "POST",
+      "path": "/?action=bizplan-get",
+      "body": {"default_data": {}},
+      "expectedStatus": 401,
+      "expectedBody": {"error": "unauthorized"},
+      "bodyMatcher": "partial"
     }
   ]
 }

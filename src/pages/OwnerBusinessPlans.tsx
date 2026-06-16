@@ -13,6 +13,7 @@ import Icon from "@/components/ui/icon";
 import OwnerGuard from "@/components/owner/OwnerGuard";
 import MindMapCanvas from "@/components/owner/MindMapCanvas";
 import FinanceCalculator from "@/components/owner/FinanceCalculator";
+import BizPlanMSP from "@/components/owner/BizPlanMSP";
 import { SITE_URL } from "@/lib/seo";
 import {
   getMindMap,
@@ -26,11 +27,17 @@ import {
   defaultFinanceData,
   type FinanceData,
 } from "@/lib/finance";
+import {
+  getBizPlan,
+  saveBizPlan,
+  defaultBizPlanData,
+  type BizPlanData,
+} from "@/lib/bizplan";
 
-type Tab = "mindmap" | "finance";
+type Tab = "mindmap" | "finance" | "bizplan";
 
 function BusinessPlansInner() {
-  const [tab, setTab] = useState<Tab>("mindmap");
+  const [tab, setTab] = useState<Tab>("bizplan");
 
   return (
     <>
@@ -52,11 +59,14 @@ function BusinessPlansInner() {
 
         {/* Вкладки */}
         <div className="flex gap-0 border-b border-[var(--drawing-line)]/40 mb-4">
-          <TabBtn active={tab === "mindmap"} icon="Network" label="MindMap" onClick={() => setTab("mindmap")} />
+          <TabBtn active={tab === "bizplan"} icon="BookOpenCheck" label="Бизнес-план" onClick={() => setTab("bizplan")} />
           <TabBtn active={tab === "finance"} icon="Calculator" label="Финансы" onClick={() => setTab("finance")} />
+          <TabBtn active={tab === "mindmap"} icon="Network" label="MindMap" onClick={() => setTab("mindmap")} />
         </div>
 
-        {tab === "mindmap" ? <MindMapTab /> : <FinanceTab />}
+        {tab === "mindmap" && <MindMapTab />}
+        {tab === "finance" && <FinanceTab />}
+        {tab === "bizplan" && <BizPlanTab />}
       </div>
     </>
   );
@@ -227,6 +237,75 @@ function FinanceTab() {
       </div>
 
       <FinanceCalculator data={data} onChange={(next) => { setData(next); setDirty(true); }} />
+    </>
+  );
+}
+
+// ===== Вкладка Бизнес-план (методика МСП) =====
+
+function BizPlanTab() {
+  const [planId, setPlanId] = useState<number | null>(null);
+  const [title, setTitle] = useState("Бизнес-план");
+  const [data, setData] = useState<BizPlanData>(defaultBizPlanData());
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const loadedRef = useRef(false);
+
+  useEffect(() => {
+    (async () => {
+      const r = await getBizPlan();
+      setLoading(false);
+      if (r.ok && r.data) {
+        setPlanId(r.data.id);
+        setTitle(r.data.title);
+        setData({ ...defaultBizPlanData(), ...(r.data.data || {}) });
+        loadedRef.current = true;
+      }
+    })();
+  }, []);
+
+  const onSave = useCallback(async () => {
+    if (planId == null) return;
+    setSaving(true);
+    const r = await saveBizPlan(planId, title, data);
+    setSaving(false);
+    if (r.ok) {
+      setDirty(false);
+      setSavedAt(new Date().toLocaleTimeString("ru-RU"));
+    }
+  }, [planId, title, data]);
+
+  useEffect(() => {
+    if (!loadedRef.current || !dirty || planId == null) return;
+    const t = setTimeout(() => { onSave(); }, 1200);
+    return () => clearTimeout(t);
+  }, [data, title, dirty, planId, onSave]);
+
+  if (loading) {
+    return (
+      <div className="border-2 border-[var(--drawing-line)] h-[300px] flex items-center justify-center font-gost text-[var(--drawing-line-thin)]">
+        Загружаем бизнес-план…
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <input
+          value={title}
+          onChange={(e) => { setTitle(e.target.value); setDirty(true); }}
+          className="drawing-input font-gost-upright font-black text-xl uppercase tracking-wide flex-1 min-w-[200px]"
+        />
+        <button onClick={onSave} disabled={saving || planId == null} className={`btn-drawing btn-drawing-accent text-xs inline-flex items-center gap-1 ${saving || planId == null ? "opacity-50 pointer-events-none" : ""}`}>
+          <Icon name="Save" size={14} />Сохранить
+        </button>
+        <SaveStatus saving={saving} dirty={dirty} savedAt={savedAt} />
+      </div>
+
+      <BizPlanMSP data={data} onChange={(next) => { setData(next); setDirty(true); }} />
     </>
   );
 }
