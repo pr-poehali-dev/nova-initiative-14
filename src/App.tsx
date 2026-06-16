@@ -42,6 +42,10 @@ import RoadmapView from "./pages/RoadmapView";
 import AdGenerator from "./pages/AdGenerator";
 import AdminStats from "./pages/AdminStats";
 import OwnerVisitors from "./pages/OwnerVisitors";
+import OwnerResearch from "./pages/OwnerResearch";
+import OwnerBusinessPlans from "./pages/OwnerBusinessPlans";
+import OwnerVisitorResearch from "./pages/OwnerVisitorResearch";
+import OwnerCaeNaming from "./pages/OwnerCaeNaming";
 import AdminQr from "./pages/AdminQr";
 import PrintFlyer from "./pages/PrintFlyer";
 import UrfuQrCae from "./pages/UrfuQrCae";
@@ -173,6 +177,10 @@ const App = () => (
                 <Route path="/admin/generator" element={<AdGenerator />} />
                 <Route path="/admin/stats" element={<AdminStats />} />
                 <Route path="/admin/visitors" element={<OwnerVisitors />} />
+                <Route path="/owner/research" element={<OwnerResearch />} />
+                <Route path="/owner/business-plans" element={<OwnerBusinessPlans />} />
+                <Route path="/owner/visitor-research" element={<OwnerVisitorResearch />} />
+                <Route path="/owner/cae-naming" element={<OwnerCaeNaming />} />
                 <Route path="/admin/qr" element={<AdminQr />} />
                 <Route path="/admin/print" element={<PrintFlyer />} />
                 <Route path="/urfu_qr_cae" element={<UrfuQrCae />} />

@@ -9,6 +9,7 @@ Disallow: /reset-password
 Disallow: /oauth/
 Disallow: /cae/projects
 Disallow: /admin/
+Disallow: /owner/
 Disallow: /roadmaps/
 
 Sitemap: https://xn----gtbhgbqhkfi.xn--p1ai/sitemap.xml

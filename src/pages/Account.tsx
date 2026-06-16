@@ -11,6 +11,7 @@ import DisciplinePreferenceBlock from "@/components/account/DisciplinePreference
 import ProfileEditBlock from "@/components/account/ProfileEditBlock";
 import SubscriptionBlock from "@/components/account/SubscriptionBlock";
 import RoadmapsBlock from "@/components/account/RoadmapsBlock";
+import InDevelopmentBlock from "@/components/account/InDevelopmentBlock";
 import AdminPanel from "@/components/account/AdminPanel";
 import InviteFriendModal from "@/components/cae/InviteFriendModal";
 import SupportTicketModal from "@/components/SupportTicketModal";
@@ -74,6 +75,9 @@ const Account = () => {
 
         {/* Дорожные карты — для администратора и владельца */}
         {(user.is_admin || user.is_owner) && <RoadmapsBlock />}
+
+        {/* В разработке — внутренние сервисы, только владелец */}
+        {user.is_owner && <InDevelopmentBlock />}
 
         {/* Моя подписка — реальный статус доступа */}
         <SubscriptionBlock />
