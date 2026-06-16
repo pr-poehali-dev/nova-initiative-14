@@ -39,6 +39,42 @@ export default function MindMapCanvas({ data, onChange }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
+  const didFit = useRef(false);
+
+  /** Подогнать вид так, чтобы все узлы поместились по центру экрана. */
+  const fitToView = useCallback(() => {
+    const rect = svgRef.current?.getBoundingClientRect();
+    if (!rect || rect.width === 0 || data.nodes.length === 0) return;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const n of data.nodes) {
+      minX = Math.min(minX, n.x - NODE_W / 2);
+      minY = Math.min(minY, n.y - NODE_H / 2);
+      maxX = Math.max(maxX, n.x + NODE_W / 2);
+      maxY = Math.max(maxY, n.y + NODE_H / 2);
+    }
+    const pad = 60;
+    const contentW = maxX - minX + pad * 2;
+    const contentH = maxY - minY + pad * 2;
+    const zoom = Math.min(2.5, Math.max(0.2, Math.min(rect.width / contentW, rect.height / contentH)));
+    const cx = (minX + maxX) / 2;
+    const cy = (minY + maxY) / 2;
+    setView({
+      zoom,
+      x: rect.width / 2 - cx * zoom,
+      y: rect.height / 2 - cy * zoom,
+    });
+  }, [data.nodes]);
+
+  // Один раз после появления узлов центрируем карту по содержимому.
+  useEffect(() => {
+    if (didFit.current || data.nodes.length === 0) return;
+    // Ждём, пока svg получит реальные размеры.
+    const id = requestAnimationFrame(() => {
+      fitToView();
+      didFit.current = true;
+    });
+    return () => cancelAnimationFrame(id);
+  }, [data.nodes.length, fitToView]);
 
   // Текущее перетаскивание: узел или поле (pan).
   const drag = useRef<
@@ -192,6 +228,7 @@ export default function MindMapCanvas({ data, onChange }: Props) {
         <ToolBtn icon="Trash2" title="Удалить выбранный (Del)" onClick={deleteSelected} disabled={!selectedId || selectedId === "root"} />
         <ToolBtn icon="ZoomIn" title="Приблизить" onClick={() => zoomBy(1.2)} />
         <ToolBtn icon="ZoomOut" title="Отдалить" onClick={() => zoomBy(0.8)} />
+        <ToolBtn icon="Maximize" title="Показать всю карту" onClick={fitToView} />
       </div>
       <div className="absolute top-2 right-2 z-10 font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)] bg-[var(--drawing-bg)] border border-[var(--drawing-line)] px-2 py-1">
         Перетаскивайте узлы · 2 клика — переименовать · {Math.round(view.zoom * 100)}%
