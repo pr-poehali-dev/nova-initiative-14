@@ -18,8 +18,10 @@ interface Props {
   errorsCount?: number;
   onSave: () => void;
   onSolve: () => void;
-  /** Перенести текущий плоский 2D-проект в 3D-режим. */
+  /** Перенести текущий плоский 2D-проект в 3D-режим (создаёт новый проект). */
   onConvertTo3d?: () => void;
+  /** Идёт создание 3D-копии — блокируем кнопку. */
+  converting3d?: boolean;
 }
 
 const EditorTopBar = ({
@@ -36,6 +38,7 @@ const EditorTopBar = ({
   onSave,
   onSolve,
   onConvertTo3d,
+  converting3d = false,
 }: Props) => {
   const [pdfBusy, setPdfBusy] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
@@ -123,29 +126,7 @@ const EditorTopBar = ({
         </p>
         <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)]">
           {model.meta.dim === "2d" ? (
-            <>
-              Плоская рама 2D
-              {onConvertTo3d && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        "Перенести проект в 3D-режим? Плоская схема станет пространственной (Z=0). " +
-                          "Вернуться в 2D можно будет вручную. Продолжить?",
-                      )
-                    ) {
-                      onConvertTo3d();
-                    }
-                  }}
-                  title="Перенести плоский проект в 3D-режим без потери геометрии"
-                  className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 border border-[var(--drawing-accent)] text-[var(--drawing-accent)] hover:bg-[var(--drawing-accent)] hover:text-white transition-colors align-middle"
-                >
-                  <Icon name="Box" size={11} />
-                  В 3D
-                </button>
-              )}
-            </>
+            "Плоская рама 2D"
           ) : (
             <>
               Пространственная 3D{" "}
@@ -239,6 +220,29 @@ const EditorTopBar = ({
           <Icon name="Braces" size={12} className="mr-1" />
           JSON
         </button>
+
+        {/* Перенос плоского проекта в 3D — рядом с PDF/JSON (тикет #62).
+            Создаёт ОТДЕЛЬНЫЙ 3D-проект, исходный 2D остаётся. */}
+        {model.meta.dim === "2d" && onConvertTo3d && (
+          <button
+            onClick={() => {
+              if (
+                window.confirm(
+                  "Создать 3D-копию этого проекта? Откроется новый 3D-проект с той же " +
+                    "геометрией. Исходный 2D-проект останется без изменений.",
+                )
+              ) {
+                onConvertTo3d();
+              }
+            }}
+            disabled={converting3d}
+            className="btn-drawing text-[11px] disabled:opacity-50"
+            title="Создать 3D-копию проекта (исходный 2D сохранится)"
+          >
+            <Icon name="Box" size={12} className="mr-1" />
+            {converting3d ? "Создаём…" : "В 3D"}
+          </button>
+        )}
 
         {/* Мобила: PDF и JSON свёрнуты в выпадающее меню «Ещё» */}
         <div ref={menuRef} className="md:hidden relative">

@@ -247,7 +247,7 @@ const ContextPropertiesPopup = ({
       {/* Подложка — только на мобиле, чтобы было видно «модальность».
           touchAction:none — гасит скролл фона при свайпе по подложке. */}
       <div
-        className="fixed inset-0 bg-black/30 z-40 md:hidden"
+        className="fixed inset-0 bg-black/30 z-[65] md:hidden"
         style={{ touchAction: "none" }}
         onPointerDown={onClose}
         aria-hidden="true"
@@ -258,7 +258,7 @@ const ContextPropertiesPopup = ({
         role="dialog"
         aria-label={title}
         className="
-          fixed z-50 bg-[var(--drawing-bg)] border-2 border-[var(--drawing-line)] shadow-2xl
+          fixed z-[70] bg-[var(--drawing-bg)] border-2 border-[var(--drawing-line)] shadow-2xl
           flex flex-col
           md:max-h-[80vh]
           inset-x-0 bottom-0 max-h-[85vh]

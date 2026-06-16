@@ -331,19 +331,15 @@
             }
           }).catch(function () {});
         };
-        // 1) Каждые 30 секунд (раньше было 60) — быстрее ловим деплой.
+        // Проверяем версию ТОЛЬКО фоновым интервалом раз в 60 секунд.
+        // НАМЕРЕННО не вешаем проверку на visibilitychange/focus: на превью
+        // ETag/Last-Modified меняется почти при каждом запросе, из-за чего
+        // переключение вкладки вызывало ложную перезагрузку и сбрасывало
+        // несохранённую работу в редакторе и текст тикета (тикеты #61).
         setInterval(function () {
           if (document.hidden) return;
           checkVersion("version_mismatch");
-        }, 30000);
-        // 2) При возврате во вкладку — твой главный сценарий "после нового билда".
-        document.addEventListener("visibilitychange", function () {
-          if (!document.hidden) checkVersion("version_mismatch_visibility");
-        });
-        // 3) При фокусе окна (Alt-Tab из другого приложения).
-        window.addEventListener("focus", function () {
-          checkVersion("version_mismatch_focus");
-        });
+        }, 60000);
         // И один раз сразу — через 5 сек после старта (поймаем "ты пришёл со
         // старым кэшем", если он есть).
         setTimeout(function () {

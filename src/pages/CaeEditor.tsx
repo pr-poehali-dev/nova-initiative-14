@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Helmet } from "@/lib/helmet-shim";
 import { type ContextTarget } from "@/components/cae/editor/ContextPropertiesPopup";
-import { DEFAULT_ANALYSIS_SETTINGS } from "@/lib/cae-model";
+import { DEFAULT_ANALYSIS_SETTINGS, saveProjectModel, type FrameModel } from "@/lib/cae-model";
+import { createProject } from "@/lib/cae";
 import { useCaeProject } from "./cae-editor/useCaeProject";
 import { useCaeActions } from "./cae-editor/useCaeActions";
 import { useCaeSolver } from "./cae-editor/useCaeSolver";
@@ -16,6 +17,7 @@ import CaeEditorContextPopup from "./cae-editor/CaeEditorContextPopup";
 
 const CaeEditor = () => {
   const { id } = useParams<{ id: string }>();
+  const nav = useNavigate();
   const projectId = id ? parseInt(id, 10) : 0;
 
   const {
@@ -89,6 +91,36 @@ const CaeEditor = () => {
   // Контекстный popup свойств (правый клик / long-press).
   // null = закрыт. Содержит координаты клика и тип/id объекта.
   const [contextTarget, setContextTarget] = useState<ContextTarget | null>(null);
+
+  // Перенос плоского проекта в 3D (тикет #62): создаём ОТДЕЛЬНЫЙ 3D-проект
+  // с копией геометрии, исходный 2D остаётся нетронутым. Координаты узлов
+  // уже хранятся как [x, y, z] (z=0), поэтому переносятся без потерь.
+  const [converting3d, setConverting3d] = useState(false);
+  const convertTo3d = async () => {
+    if (converting3d) return;
+    setConverting3d(true);
+    try {
+      const r = await createProject({
+        name: `${projectName || "Проект"} (3D)`,
+        description: `3D-копия проекта #${projectId}`,
+        project_type: "frame_3d",
+      });
+      if (!r.ok || !r.data?.project) {
+        alert(r.message || "Не удалось создать 3D-проект");
+        return;
+      }
+      const newId = r.data.project.id;
+      const model3d: FrameModel = { ...model, meta: { ...model.meta, dim: "3d" } };
+      const sr = await saveProjectModel(newId, model3d, `Перенос из 2D-проекта #${projectId}`);
+      if (!sr.ok) {
+        alert("3D-проект создан, но геометрия не сохранилась. Откроем пустой.");
+      }
+      // Уходим в новый проект; исходный 2D остаётся как был.
+      nav(`/cae/projects/${newId}`);
+    } finally {
+      setConverting3d(false);
+    }
+  };
 
   // 3D-редактор: канва во всю ширину, левая/правая панели — скрываемые
   // оверлеи поверх сцены (по референсу Bambu Studio). Видимость по кнопкам.
@@ -207,12 +239,8 @@ const CaeEditor = () => {
           errorsCount,
           onSave,
           onSolve,
-          onConvertTo3d: () => {
-            // Перенос плоского проекта в 3D: меняем размерность модели.
-            // Координаты узлов уже хранятся как [x, y, z] (z=0 для 2D),
-            // поэтому геометрия переносится без потерь.
-            updateModel({ ...model, meta: { ...model.meta, dim: "3d" } });
-          },
+          onConvertTo3d: convertTo3d,
+          converting3d,
         }}
         leftPanelProps={{
           mode,

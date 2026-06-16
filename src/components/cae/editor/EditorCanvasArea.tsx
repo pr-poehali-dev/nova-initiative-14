@@ -160,7 +160,7 @@ const EditorCanvasArea = ({
     ref={containerRef}
     className={`border-2 border-[var(--drawing-line)] ${
       isFullscreen
-        ? "fixed inset-0 z-30 h-screen w-screen bg-[var(--drawing-bg)]"
+        ? "fixed inset-0 z-[55] h-screen w-screen bg-[var(--drawing-bg)]"
         : `relative ${
             fullHeight
               ? "h-[calc(100vh-72px)] min-h-[480px]"

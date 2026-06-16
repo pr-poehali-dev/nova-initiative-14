@@ -121,11 +121,7 @@ export default function FrameScene3D({
     return m;
   }, [result]);
 
-  const handleSelectNode = (
-    id: string,
-    additive: boolean,
-    screen?: { clientX: number; clientY: number },
-  ) => {
+  const handleSelectNode = (id: string, additive: boolean) => {
     onSelectElements([]);
 
     // Режим «Балка»: клик по узлам подряд соединяет их стержнем (как в 2D).
@@ -145,22 +141,28 @@ export default function FrameScene3D({
           : [...selectedNodeIds, id],
       );
     } else {
+      // Левый клик = ТОЛЬКО выделение. Свойства показываются в правом
+      // инспекторе. Окно у курсора открывается контекстным меню (см. ниже),
+      // чтобы клик-выбор не «прыгал» модалкой при каждом тапе.
       onSelectNodes([id]);
-      // Одиночный клик в режиме выбора — окно свойств у курсора (тикет #60).
-      if (mode === "select" && screen && onRequestContext) {
-        onRequestContext({ kind: "node", id, clientX: screen.clientX, clientY: screen.clientY });
-      }
     }
   };
 
-  const handleSelectElement = (
-    id: string,
-    screen?: { clientX: number; clientY: number },
-  ) => {
+  const handleSelectElement = (id: string) => {
     onSelectNodes([]);
     onSelectElements([id]);
-    if (mode === "select" && screen && onRequestContext) {
-      onRequestContext({ kind: "element", id, clientX: screen.clientX, clientY: screen.clientY });
+  };
+
+  // Контекстное меню (правый клик мыши) по узлу/элементу — открывает окно
+  // свойств у курсора. На правую кнопку также висит вращение камеры
+  // (OrbitControls), но onContextMenu гасит системное меню и даёт popup.
+  const requestContextAt = (
+    kind: "node" | "element",
+    id: string,
+    e: { clientX: number; clientY: number },
+  ) => {
+    if (onRequestContext) {
+      onRequestContext({ kind, id, clientX: e.clientX, clientY: e.clientY });
     }
   };
 
@@ -290,8 +292,14 @@ export default function FrameScene3D({
               lineWidth={selected ? 4 : 2.5}
               onClick={(e) => {
                 e.stopPropagation();
+                handleSelectElement(el.id);
+              }}
+              onContextMenu={(e) => {
+                e.stopPropagation();
+                e.nativeEvent.preventDefault();
                 const ne = e.nativeEvent as PointerEvent;
-                handleSelectElement(el.id, { clientX: ne.clientX, clientY: ne.clientY });
+                handleSelectElement(el.id);
+                requestContextAt("element", el.id, { clientX: ne.clientX, clientY: ne.clientY });
               }}
             />
           </group>
@@ -340,6 +348,10 @@ export default function FrameScene3D({
           scale={markerScale * 1.4}
           palette={palette}
           onSelect={handleSelectNode}
+          onContext={(id, scr) => {
+            handleSelectNode(id, false);
+            requestContextAt("node", id, scr);
+          }}
         />
       ))}
 

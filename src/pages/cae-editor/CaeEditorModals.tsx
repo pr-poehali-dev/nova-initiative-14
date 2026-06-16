@@ -61,7 +61,7 @@ const CaeEditorModals = ({
     {showLoadButton && (
       <button
         onClick={onOpenLoadModal}
-        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-[var(--drawing-accent)] text-white font-gost-upright font-bold text-xs uppercase tracking-wider px-5 py-3 shadow-2xl border-2 border-[var(--drawing-line)] flex items-center gap-2 hover:brightness-110 active:scale-95 transition"
+        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] bg-[var(--drawing-accent)] text-white font-gost-upright font-bold text-xs uppercase tracking-wider px-5 py-3 shadow-2xl border-2 border-[var(--drawing-line)] flex items-center gap-2 hover:brightness-110 active:scale-95 transition"
       >
         <Icon name="MoveDown" size={16} />
         Нагрузки на узел {loadButtonNodeId}

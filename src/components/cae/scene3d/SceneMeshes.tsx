@@ -24,11 +24,9 @@ export function NodeMesh({
   selected: boolean;
   scale: number;
   palette: ScenePalette;
-  onSelect: (
-    id: string,
-    additive: boolean,
-    screen?: { clientX: number; clientY: number },
-  ) => void;
+  onSelect: (id: string, additive: boolean) => void;
+  /** Правый клик по узлу — окно свойств у курсора. */
+  onContext?: (id: string, screen: { clientX: number; clientY: number }) => void;
 }) {
   const [hover, setHover] = useState(false);
   return (
@@ -36,11 +34,13 @@ export function NodeMesh({
       position={pos}
       onClick={(e) => {
         e.stopPropagation();
+        onSelect(id, e.shiftKey || e.ctrlKey || e.metaKey);
+      }}
+      onContextMenu={(e) => {
+        e.stopPropagation();
+        e.nativeEvent.preventDefault();
         const ne = e.nativeEvent as PointerEvent;
-        onSelect(id, e.shiftKey || e.ctrlKey || e.metaKey, {
-          clientX: ne.clientX,
-          clientY: ne.clientY,
-        });
+        onContext?.(id, { clientX: ne.clientX, clientY: ne.clientY });
       }}
       onPointerOver={(e) => {
         e.stopPropagation();
