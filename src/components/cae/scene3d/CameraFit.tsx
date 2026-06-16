@@ -55,6 +55,20 @@ export default function CameraFit({
   }, [viewRequest?.id]);
 
   return (
-    <OrbitControls target={center} enableDamping dampingFactor={0.1} makeDefault />
+    <OrbitControls
+      target={center}
+      enableDamping
+      dampingFactor={0.1}
+      makeDefault
+      // Управление мышью по запросу пользователя (тикет #60):
+      //  — правая кнопка вращает камеру,
+      //  — колёсико (зажатое) перемещает (pan),
+      //  — левая кнопка свободна под выделение объектов сцены.
+      mouseButtons={{
+        LEFT: undefined as unknown as THREE.MOUSE,
+        MIDDLE: THREE.MOUSE.PAN,
+        RIGHT: THREE.MOUSE.ROTATE,
+      }}
+    />
   );
 }

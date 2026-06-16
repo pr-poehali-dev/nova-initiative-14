@@ -207,6 +207,12 @@ const CaeEditor = () => {
           errorsCount,
           onSave,
           onSolve,
+          onConvertTo3d: () => {
+            // Перенос плоского проекта в 3D: меняем размерность модели.
+            // Координаты узлов уже хранятся как [x, y, z] (z=0 для 2D),
+            // поэтому геометрия переносится без потерь.
+            updateModel({ ...model, meta: { ...model.meta, dim: "3d" } });
+          },
         }}
         leftPanelProps={{
           mode,

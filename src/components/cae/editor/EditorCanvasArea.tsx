@@ -131,38 +131,41 @@ const EditorCanvasArea = ({
   fullHeight,
 }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  // CSS-фуллскрин (fixed inset-0), а НЕ requestFullscreen API.
+  // Браузерный requestFullscreen выносит fullscreen-элемент в отдельный слой,
+  // из-за чего модалки (рендерятся в body) оказываются ЗА ним и не видны.
+  // CSS-вариант оставляет всё в обычном потоке — модалки видны поверх канвы.
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Синхронизируем состояние с реальным fullscreen (вкл/выкл, в т.ч. по Esc).
+  // Esc выходит из полноэкранного режима.
   useEffect(() => {
-    const onChange = () =>
-      setIsFullscreen(document.fullscreenElement === containerRef.current);
-    document.addEventListener("fullscreenchange", onChange);
-    return () => document.removeEventListener("fullscreenchange", onChange);
-  }, []);
+    if (!isFullscreen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsFullscreen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isFullscreen]);
 
   const toggleFullscreen = () => {
-    const el = containerRef.current;
-    if (!el) return;
-    if (document.fullscreenElement) {
-      void document.exitFullscreen();
-    } else if (el.requestFullscreen) {
-      void el.requestFullscreen().then(() => {
-        // После входа в полный экран пересчитываем масштаб под новый размер.
-        setFitRequestId((x) => x + 1);
-      });
-    }
+    setIsFullscreen((v) => {
+      // После смены размера канвы пересчитываем масштаб под новый размер.
+      setTimeout(() => setFitRequestId((x) => x + 1), 50);
+      return !v;
+    });
   };
 
   return (
   <div
     ref={containerRef}
-    className={`border-2 border-[var(--drawing-line)] relative ${
+    className={`border-2 border-[var(--drawing-line)] ${
       isFullscreen
-        ? "h-screen w-screen bg-[var(--drawing-bg)]"
-        : fullHeight
-          ? "h-[calc(100vh-72px)] min-h-[480px]"
-          : "h-[75vh] min-h-[420px] lg:h-[70vh] lg:min-h-[480px]"
+        ? "fixed inset-0 z-30 h-screen w-screen bg-[var(--drawing-bg)]"
+        : `relative ${
+            fullHeight
+              ? "h-[calc(100vh-72px)] min-h-[480px]"
+              : "h-[75vh] min-h-[420px] lg:h-[70vh] lg:min-h-[480px]"
+          }`
     }`}
     data-tutorial="canvas"
   >
@@ -198,18 +201,20 @@ const EditorCanvasArea = ({
       <button
         onClick={() => setFitRequestId((x) => x + 1)}
         className="min-w-[44px] min-h-[44px] lg:min-w-0 lg:min-h-0 p-2 border-r border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)] active:bg-[var(--drawing-paper)] flex items-center justify-center"
-        title="Подогнать масштаб под содержимое (F)"
-        aria-label="Подогнать масштаб"
+        title="Центрировать и подогнать масштаб под содержимое (F)"
+        aria-label="Центрировать вид"
       >
-        <Icon name="Scan" size={18} />
+        <Icon name="Focus" size={18} />
       </button>
       <button
         onClick={toggleFullscreen}
-        className="min-w-[44px] min-h-[44px] lg:min-w-0 lg:min-h-0 p-2 border-r border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)] active:bg-[var(--drawing-paper)] flex items-center justify-center"
+        className={`min-w-[44px] min-h-[44px] lg:min-w-0 lg:min-h-0 p-2 border-r border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)] active:bg-[var(--drawing-paper)] flex items-center justify-center ${
+          isFullscreen ? "bg-[var(--drawing-accent)] text-white" : ""
+        }`}
         title={isFullscreen ? "Свернуть из полного экрана (Esc)" : "Развернуть на весь экран"}
         aria-label={isFullscreen ? "Свернуть" : "На весь экран"}
       >
-        <Icon name={isFullscreen ? "Minimize" : "Maximize"} size={18} />
+        <Icon name={isFullscreen ? "Minimize2" : "Maximize2"} size={18} />
       </button>
       <button
         onClick={onOpenSettings}

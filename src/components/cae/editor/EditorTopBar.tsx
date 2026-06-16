@@ -18,6 +18,8 @@ interface Props {
   errorsCount?: number;
   onSave: () => void;
   onSolve: () => void;
+  /** Перенести текущий плоский 2D-проект в 3D-режим. */
+  onConvertTo3d?: () => void;
 }
 
 const EditorTopBar = ({
@@ -33,6 +35,7 @@ const EditorTopBar = ({
   errorsCount = 0,
   onSave,
   onSolve,
+  onConvertTo3d,
 }: Props) => {
   const [pdfBusy, setPdfBusy] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
@@ -120,7 +123,29 @@ const EditorTopBar = ({
         </p>
         <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)]">
           {model.meta.dim === "2d" ? (
-            "Плоская рама 2D"
+            <>
+              Плоская рама 2D
+              {onConvertTo3d && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        "Перенести проект в 3D-режим? Плоская схема станет пространственной (Z=0). " +
+                          "Вернуться в 2D можно будет вручную. Продолжить?",
+                      )
+                    ) {
+                      onConvertTo3d();
+                    }
+                  }}
+                  title="Перенести плоский проект в 3D-режим без потери геометрии"
+                  className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 border border-[var(--drawing-accent)] text-[var(--drawing-accent)] hover:bg-[var(--drawing-accent)] hover:text-white transition-colors align-middle"
+                >
+                  <Icon name="Box" size={11} />
+                  В 3D
+                </button>
+              )}
+            </>
           ) : (
             <>
               Пространственная 3D{" "}
