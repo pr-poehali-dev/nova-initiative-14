@@ -238,6 +238,30 @@ def action_changelog_create(conn, body: dict) -> dict:
     return _resp(200, {'ok': True, 'id': cid})
 
 
+def action_broadcast(conn, body: dict) -> dict:
+    """
+    Системное объявление всем пользователям (broadcast).
+
+    Создаёт ОДНУ запись user_notifications с user_id = NULL — она показывается
+    всем в колокольчике, прочитанность трекается через notification_reads.
+    Это дёшево: одна строка вместо записи на каждого пользователя.
+    """
+    title = (body.get('title') or '').strip()[:200]
+    text = (body.get('body') or '').strip()
+    link = (body.get('link') or '').strip()[:500] or None
+    if not title:
+        return _resp(400, {'error': 'missing_title', 'message': 'Нужен заголовок'})
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO user_notifications (user_id, type, title, body, link) "
+            "VALUES (NULL, 'system', %s, %s, %s) RETURNING id",
+            (title, text or None, link),
+        )
+        nid = int(cur.fetchone()[0])
+    conn.commit()
+    return _resp(200, {'ok': True, 'id': nid})
+
+
 def handler(event: dict, context) -> dict:
     """Точка входа: маршрутизация по action."""
     method = event.get('httpMethod', 'GET')
@@ -296,6 +320,11 @@ def handler(event: dict, context) -> dict:
                 return _resp(403, {'error': 'forbidden', 'message': 'Только администратор'})
             body = json.loads(event.get('body') or '{}')
             return action_changelog_create(conn, body)
+        if action == 'broadcast' and method == 'POST':
+            if not _is_admin(conn, user_id):
+                return _resp(403, {'error': 'forbidden', 'message': 'Только администратор'})
+            body = json.loads(event.get('body') or '{}')
+            return action_broadcast(conn, body)
         return _resp(400, {'error': 'unknown_action'})
     finally:
         conn.close()

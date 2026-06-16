@@ -27,6 +27,15 @@
       "method": "GET",
       "path": "/?action=changelog-list&limit=5",
       "expectedStatus": 200
+    },
+    {
+      "name": "Broadcast без авторизации → 401",
+      "method": "POST",
+      "path": "/?action=broadcast",
+      "body": { "title": "Тест" },
+      "expectedStatus": 401,
+      "expectedBody": { "error": "unauthorized" },
+      "bodyMatcher": "partial"
     }
   ]
 }

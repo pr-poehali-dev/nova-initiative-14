@@ -91,6 +91,19 @@ def action_register(conn, body: dict, ua: str, ip: str) -> dict:
             (user_id,),
         )
 
+        # Приветственное уведомление в колокольчик (одно на пользователя).
+        cur.execute(
+            "INSERT INTO user_notifications (user_id, type, title, body, link) "
+            "VALUES (%s, 'system', %s, %s, %s)",
+            (
+                user_id,
+                'Добро пожаловать в Диплом-Инж.рф',
+                'Рады видеть вас на борту! Откройте CAE-сервис и посчитайте '
+                'первую балку, раму или ферму — это бесплатно в период альфа-теста.',
+                '/cae',
+            ),
+        )
+
         # Подключаем к листу ожидания (если согласился)
         if join_waitlist:
             cur.execute(

@@ -89,6 +89,11 @@ export function markAllNotificationsRead() {
   return call<{ ok: boolean }>("mark-all-read", "POST");
 }
 
+/** Системное объявление всем пользователям (только для администратора). */
+export function sendBroadcast(input: { title: string; body?: string; link?: string }) {
+  return call<{ ok: boolean; id: number }>("broadcast", "POST", input);
+}
+
 // === Журнал версий CAE ===
 
 export type ChangelogCategory = "feature" | "fix" | "improvement" | "breaking";
