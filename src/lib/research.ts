@@ -124,3 +124,69 @@ export const RESEARCH_STATUS_LABELS: Record<ResearchStatus, string> = {
   active: "В работе",
   archived: "В архиве",
 };
+
+// ===== Экономика сайта (расходы) =====
+
+export type ExpenseCategory =
+  | "platform"
+  | "domain"
+  | "design"
+  | "ads"
+  | "content"
+  | "other";
+
+export interface SiteExpense {
+  id: number;
+  category: ExpenseCategory;
+  title: string;
+  amount_kopecks: number;
+  is_recurring: boolean;
+  spent_on: string | null;
+  note: string | null;
+  created_at: string | null;
+}
+
+export interface ExpensesSummary {
+  total_kopecks: number;
+  recurring_monthly_kopecks: number;
+  count: number;
+  by_category: Partial<Record<ExpenseCategory, number>>;
+}
+
+export function listExpenses() {
+  return call<{ expenses: SiteExpense[]; summary: ExpensesSummary }>(
+    "expenses-list",
+    "GET",
+  );
+}
+
+export function addExpense(input: {
+  title: string;
+  category: ExpenseCategory;
+  amount_rub: number;
+  is_recurring?: boolean;
+  spent_on?: string;
+  note?: string;
+}) {
+  return call<{ ok: boolean; id: number }>("expense-add", "POST", input);
+}
+
+export function deleteExpense(id: number) {
+  return call<{ ok: boolean }>("expense-delete", "POST", { id });
+}
+
+/** Подписи категорий расходов для UI. */
+export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
+  platform: "Платформа / хостинг",
+  domain: "Домен",
+  design: "Дизайн / графика",
+  ads: "Реклама",
+  content: "Контент",
+  other: "Прочее",
+};
+
+/** Сумма в копейках → «1 234 ₽». */
+export function formatRubFromKopecks(kopecks: number): string {
+  const rub = Math.round((kopecks || 0) / 100);
+  return `${rub.toLocaleString("ru-RU")} ₽`;
+}

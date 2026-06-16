@@ -238,6 +238,107 @@ def action_version_content(conn, owner_id: int, params: dict) -> dict:
     })
 
 
+# ============ ЭКОНОМИКА САЙТА (расходы) ============
+
+EXPENSE_CATEGORIES = {'platform', 'domain', 'design', 'ads', 'content', 'other'}
+
+
+def action_expenses_list(conn, owner_id: int) -> dict:
+    """Список расходов + сводка: всего, по категориям, регулярные в месяц."""
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute(
+            "SELECT id, category, title, amount_kopecks, is_recurring, spent_on, note, created_at "
+            "FROM owner_site_expenses WHERE owner_id = %s "
+            "ORDER BY spent_on DESC, id DESC LIMIT 500",
+            (owner_id,),
+        )
+        rows = cur.fetchall()
+
+    items = []
+    total = 0
+    recurring_monthly = 0
+    by_category: dict = {}
+    for r in rows:
+        amt = int(r['amount_kopecks'] or 0)
+        total += amt
+        if r['is_recurring']:
+            recurring_monthly += amt
+        cat = r['category'] or 'other'
+        by_category[cat] = by_category.get(cat, 0) + amt
+        items.append({
+            'id': int(r['id']),
+            'category': cat,
+            'title': r['title'],
+            'amount_kopecks': amt,
+            'is_recurring': bool(r['is_recurring']),
+            'spent_on': r['spent_on'].isoformat() if r['spent_on'] else None,
+            'note': r['note'],
+            'created_at': r['created_at'].isoformat() if r['created_at'] else None,
+        })
+
+    return _json_response(200, {
+        'expenses': items,
+        'summary': {
+            'total_kopecks': total,
+            'recurring_monthly_kopecks': recurring_monthly,
+            'count': len(items),
+            'by_category': by_category,
+        },
+    })
+
+
+def action_expense_add(conn, owner_id: int, body: dict) -> dict:
+    """Добавляет статью расхода."""
+    title = (body.get('title') or '').strip()[:300]
+    if not title:
+        return _json_response(400, {'error': 'missing_title', 'message': 'Укажите название статьи'})
+    category = (body.get('category') or 'other').strip()
+    if category not in EXPENSE_CATEGORIES:
+        category = 'other'
+    try:
+        amount_kopecks = int(round(float(body.get('amount_rub') or 0) * 100))
+    except (TypeError, ValueError):
+        return _json_response(400, {'error': 'bad_amount'})
+    if amount_kopecks < 0:
+        amount_kopecks = 0
+    is_recurring = bool(body.get('is_recurring'))
+    note = (body.get('note') or '').strip()[:500]
+    spent_on = (body.get('spent_on') or '').strip()  # YYYY-MM-DD или пусто
+
+    with conn.cursor() as cur:
+        if spent_on:
+            cur.execute(
+                "INSERT INTO owner_site_expenses "
+                "(owner_id, category, title, amount_kopecks, is_recurring, spent_on, note) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
+                (owner_id, category, title, amount_kopecks, is_recurring, spent_on, note or None),
+            )
+        else:
+            cur.execute(
+                "INSERT INTO owner_site_expenses "
+                "(owner_id, category, title, amount_kopecks, is_recurring, note) "
+                "VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
+                (owner_id, category, title, amount_kopecks, is_recurring, note or None),
+            )
+        expense_id = int(cur.fetchone()[0])
+    conn.commit()
+    return _json_response(200, {'ok': True, 'id': expense_id})
+
+
+def action_expense_delete(conn, owner_id: int, body: dict) -> dict:
+    """Удаляет статью расхода (только свою)."""
+    expense_id = body.get('id')
+    if not expense_id:
+        return _json_response(400, {'error': 'missing_id'})
+    with conn.cursor() as cur:
+        cur.execute(
+            "DELETE FROM owner_site_expenses WHERE id = %s AND owner_id = %s",
+            (int(expense_id), owner_id),
+        )
+    conn.commit()
+    return _json_response(200, {'ok': True})
+
+
 def handler(event: dict, context) -> dict:
     """Маршрутизатор research-api по ?action= и httpMethod."""
     method = event.get('httpMethod', 'GET')
@@ -278,6 +379,13 @@ def handler(event: dict, context) -> dict:
             return action_create(conn, owner_id, body)
         if action == 'save' and method == 'POST':
             return action_save(conn, owner_id, body)
+
+        if action == 'expenses-list' and method == 'GET':
+            return action_expenses_list(conn, owner_id)
+        if action == 'expense-add' and method == 'POST':
+            return action_expense_add(conn, owner_id, body)
+        if action == 'expense-delete' and method == 'POST':
+            return action_expense_delete(conn, owner_id, body)
 
         return _json_response(404, {'error': 'unknown_action'})
     except Exception as e:

@@ -46,6 +46,7 @@ import OwnerResearch from "./pages/OwnerResearch";
 import OwnerBusinessPlans from "./pages/OwnerBusinessPlans";
 import OwnerVisitorResearch from "./pages/OwnerVisitorResearch";
 import OwnerCaeNaming from "./pages/OwnerCaeNaming";
+import OwnerEconomics from "./pages/OwnerEconomics";
 import AdminQr from "./pages/AdminQr";
 import PrintFlyer from "./pages/PrintFlyer";
 import UrfuQrCae from "./pages/UrfuQrCae";
@@ -181,6 +182,7 @@ const App = () => (
                 <Route path="/owner/business-plans" element={<OwnerBusinessPlans />} />
                 <Route path="/owner/visitor-research" element={<OwnerVisitorResearch />} />
                 <Route path="/owner/cae-naming" element={<OwnerCaeNaming />} />
+                <Route path="/owner/economics" element={<OwnerEconomics />} />
                 <Route path="/admin/qr" element={<AdminQr />} />
                 <Route path="/admin/print" element={<PrintFlyer />} />
                 <Route path="/urfu_qr_cae" element={<UrfuQrCae />} />

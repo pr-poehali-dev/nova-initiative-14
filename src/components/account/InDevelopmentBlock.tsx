@@ -33,6 +33,14 @@ const SERVICES: DevService[] = [
     state: "ready",
   },
   {
+    to: "/owner/economics",
+    icon: "Wallet",
+    title: "Экономика сайта",
+    description:
+      "Учёт расходов на создание и поддержку: итог затрат, регулярные платежи в месяц и разбивка по категориям. Данные на сервере.",
+    state: "ready",
+  },
+  {
     to: "/owner/business-plans",
     icon: "Briefcase",
     title: "Бизнес-планы",
