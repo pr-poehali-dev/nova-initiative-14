@@ -417,6 +417,17 @@ select.drawing-input {
   width: 100%;
 }
 
+/* Мелкая подпись над полем формы (используется в настройках оформления). */
+.lbl {
+  display: block;
+  margin-bottom: 4px;
+  font-family: "Roboto Condensed", system-ui, sans-serif;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--drawing-line-thin);
+}
+
 /* На мобиле iOS зумит страницу, если шрифт инпута < 16px.
    Принудительно ставим 16px на узких экранах — текст в редакторе CAE
    обычно меньше, но это критично для UX: без этого фикса при каждом

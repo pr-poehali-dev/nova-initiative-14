@@ -519,6 +519,87 @@ def action_bizplan_save(conn, owner_id: int, body: dict) -> dict:
     return _json_response(200, {'ok': True})
 
 
+# ============ ПРЕСЕТЫ ОФОРМЛЕНИЯ (вуз/кафедра) ============
+
+def action_presets_list(conn, owner_id: int) -> dict:
+    """Сохранённые пользователем пресеты оформления документов."""
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute(
+            "SELECT id, name, university, department, format, updated_at "
+            "FROM owner_format_presets WHERE owner_id = %s ORDER BY updated_at DESC LIMIT 200",
+            (owner_id,),
+        )
+        rows = cur.fetchall()
+    presets = []
+    for r in rows:
+        fmt = r['format']
+        if isinstance(fmt, str):
+            try:
+                fmt = json.loads(fmt)
+            except Exception:
+                fmt = {}
+        presets.append({
+            'id': int(r['id']),
+            'name': r['name'],
+            'university': r['university'],
+            'department': r['department'],
+            'format': fmt,
+            'updated_at': r['updated_at'].isoformat() if r.get('updated_at') else None,
+        })
+    return _json_response(200, {'presets': presets})
+
+
+def action_preset_save(conn, owner_id: int, body: dict) -> dict:
+    """Создаёт или обновляет пресет оформления."""
+    name = (body.get('name') or '').strip()[:300]
+    if not name:
+        return _json_response(400, {'error': 'missing_name'})
+    fmt = body.get('format')
+    if not isinstance(fmt, dict):
+        return _json_response(400, {'error': 'bad_data'})
+    university = (body.get('university') or '').strip()[:400]
+    department = (body.get('department') or '').strip()[:400]
+    preset_id = body.get('id')
+    fmt_json = json.dumps(fmt, ensure_ascii=False)
+    with conn.cursor() as cur:
+        if preset_id:
+            cur.execute(
+                "UPDATE owner_format_presets SET name = %s, university = %s, "
+                "department = %s, format = %s, updated_at = now() "
+                "WHERE id = %s AND owner_id = %s RETURNING id",
+                (name, university, department, fmt_json, int(preset_id), owner_id),
+            )
+            row = cur.fetchone()
+            if not row:
+                return _json_response(404, {'error': 'not_found'})
+            new_id = int(row[0])
+        else:
+            cur.execute(
+                "INSERT INTO owner_format_presets (owner_id, name, university, department, format) "
+                "VALUES (%s, %s, %s, %s, %s) RETURNING id",
+                (owner_id, name, university, department, fmt_json),
+            )
+            new_id = int(cur.fetchone()[0])
+    conn.commit()
+    return _json_response(200, {'ok': True, 'id': new_id})
+
+
+def action_preset_delete(conn, owner_id: int, body: dict) -> dict:
+    """Удаляет сохранённый пресет."""
+    preset_id = body.get('id')
+    if not preset_id:
+        return _json_response(400, {'error': 'missing_id'})
+    with conn.cursor() as cur:
+        cur.execute(
+            "DELETE FROM owner_format_presets WHERE id = %s AND owner_id = %s",
+            (int(preset_id), owner_id),
+        )
+        if cur.rowcount == 0:
+            return _json_response(404, {'error': 'not_found'})
+    conn.commit()
+    return _json_response(200, {'ok': True})
+
+
 def handler(event: dict, context) -> dict:
     """Маршрутизатор research-api по ?action= и httpMethod."""
     method = event.get('httpMethod', 'GET')
@@ -581,6 +662,13 @@ def handler(event: dict, context) -> dict:
             return action_bizplan_get(conn, owner_id, body)
         if action == 'bizplan-save' and method == 'POST':
             return action_bizplan_save(conn, owner_id, body)
+
+        if action == 'presets-list' and method == 'GET':
+            return action_presets_list(conn, owner_id)
+        if action == 'preset-save' and method == 'POST':
+            return action_preset_save(conn, owner_id, body)
+        if action == 'preset-delete' and method == 'POST':
+            return action_preset_delete(conn, owner_id, body)
 
         return _json_response(404, {'error': 'unknown_action'})
     except Exception as e:

@@ -190,3 +190,34 @@ export function formatRubFromKopecks(kopecks: number): string {
   const rub = Math.round((kopecks || 0) / 100);
   return `${rub.toLocaleString("ru-RU")} ₽`;
 }
+
+// ===== Сохранённые пресеты оформления (вуз/кафедра) =====
+
+import type { DocFormat } from "@/lib/docFormat";
+
+export interface SavedFormatPreset {
+  id: number;
+  name: string;
+  university: string;
+  department: string;
+  format: DocFormat;
+  updated_at: string | null;
+}
+
+export function listFormatPresets() {
+  return call<{ presets: SavedFormatPreset[] }>("presets-list", "GET");
+}
+
+export function saveFormatPreset(input: {
+  id?: number;
+  name: string;
+  university?: string;
+  department?: string;
+  format: DocFormat;
+}) {
+  return call<{ ok: boolean; id: number }>("preset-save", "POST", input);
+}
+
+export function deleteFormatPreset(id: number) {
+  return call<{ ok: boolean }>("preset-delete", "POST", { id });
+}

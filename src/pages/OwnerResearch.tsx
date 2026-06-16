@@ -1,10 +1,12 @@
 /**
  * Раздел НИР владельца (/owner/research).
  *
- * Слева список научно-исследовательских работ, по выбору — редактор с
- * серверным хранением и автоучётом версий. Каждое «Сохранить» создаёт новую
- * версию, историю можно посмотреть и восстановить. Доступ только владельцу
- * (is_owner), страница закрыта от индексации.
+ * Слева — список научно-исследовательских работ. Справа — современный
+ * структурированный редактор НИР по ГОСТ 7.32-2017 с дорожной картой
+ * прогресса, настройками оформления (модалка) и формирователем отчёта в
+ * Word/PDF (в т.ч. рамка по ЕСКД). Сервер хранит документ как JSON и ведёт
+ * историю версий: каждое «Сохранить» создаёт новую версию. Доступ только
+ * владельцу (is_owner), страница закрыта от индексации.
  */
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
@@ -12,6 +14,7 @@ import { Helmet } from "@/lib/helmet-shim";
 import Icon from "@/components/ui/icon";
 import { useAuth } from "@/contexts/AuthContext";
 import { SITE_URL } from "@/lib/seo";
+import NirEditor from "@/components/owner/NirEditor";
 import {
   listResearch,
   getResearch,
@@ -24,6 +27,12 @@ import {
   type ResearchVersion,
   type ResearchStatus,
 } from "@/lib/research";
+import {
+  type NirDocument,
+  createNirDocument,
+  parseNirDocument,
+  serializeNirDocument,
+} from "@/lib/nir";
 
 const OwnerResearch = () => {
   const { user, loading } = useAuth();
@@ -33,9 +42,8 @@ const OwnerResearch = () => {
   const [loadingList, setLoadingList] = useState(true);
   const [activeId, setActiveId] = useState<number | null>(null);
 
-  // Редактор.
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
+  // Документ НИР.
+  const [docState, setDocState] = useState<NirDocument>(createNirDocument());
   const [status, setStatus] = useState<ResearchStatus>("draft");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -72,8 +80,7 @@ const OwnerResearch = () => {
     setBusy(false);
     if (r.ok && r.data) {
       setActiveId(id);
-      setTitle(r.data.paper.title);
-      setContent(r.data.paper.content);
+      setDocState(parseNirDocument(r.data.paper.content));
       setStatus(r.data.paper.status);
       setNote("");
       setMsg(null);
@@ -95,7 +102,14 @@ const OwnerResearch = () => {
   const onSave = async () => {
     if (activeId == null) return;
     setBusy(true);
-    const r = await saveResearch({ id: activeId, title, content, status, note });
+    const title = (docState.titleMeta.topic || "Без названия").slice(0, 300);
+    const r = await saveResearch({
+      id: activeId,
+      title,
+      content: serializeNirDocument(docState),
+      status,
+      note,
+    });
     setBusy(false);
     if (r.ok && r.data) {
       setMsg(`Сохранено · версия ${r.data.version_no}`);
@@ -117,12 +131,16 @@ const OwnerResearch = () => {
   const restoreVersion = async (versionId: number) => {
     const r = await getResearchVersionContent(versionId);
     if (r.ok && r.data) {
-      setTitle(r.data.title);
-      setContent(r.data.content);
+      setDocState(parseNirDocument(r.data.content));
       setDirty(true);
       setVersionsOpen(false);
       setMsg(`Загружена версия ${r.data.version_no}. Нажмите «Сохранить», чтобы зафиксировать.`);
     }
+  };
+
+  const onDocChange = (next: NirDocument) => {
+    setDocState(next);
+    setDirty(true);
   };
 
   if (loading) {
@@ -142,7 +160,7 @@ const OwnerResearch = () => {
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
 
-      <div className="max-w-[1100px] mx-auto px-4 pt-20 md:pt-24 pb-12">
+      <div className="max-w-[1280px] mx-auto px-4 pt-20 md:pt-24 pb-12">
         <div className="flex items-center justify-between gap-3 mb-1">
           <p className="font-gost text-[11px] uppercase tracking-[0.3em] text-[var(--drawing-line-thin)]">
             Владелец · В разработке
@@ -152,10 +170,10 @@ const OwnerResearch = () => {
           </Link>
         </div>
         <h1 className="font-gost-upright text-2xl md:text-3xl font-black uppercase tracking-wide mb-4">
-          НИР
+          Редактор НИР
         </h1>
 
-        <div className="grid md:grid-cols-[280px_1fr] gap-6">
+        <div className="grid md:grid-cols-[260px_1fr] gap-6">
           {/* ── Список работ ── */}
           <div className="space-y-3">
             <button onClick={onCreate} disabled={busy} className={`btn-drawing btn-drawing-accent text-xs w-full inline-flex items-center justify-center gap-1 ${busy ? "opacity-50 pointer-events-none" : ""}`}>
@@ -194,7 +212,7 @@ const OwnerResearch = () => {
           </div>
 
           {/* ── Редактор ── */}
-          <div>
+          <div className="min-w-0">
             {activeId == null ? (
               <div className="border-2 border-dashed border-[var(--drawing-line)]/40 p-10 text-center">
                 <Icon name="FlaskConical" size={28} className="mx-auto mb-2 text-[var(--drawing-line-thin)]" />
@@ -204,12 +222,7 @@ const OwnerResearch = () => {
               </div>
             ) : (
               <div className="space-y-3">
-                <input
-                  value={title}
-                  onChange={(e) => { setTitle(e.target.value); setDirty(true); }}
-                  placeholder="Название НИР"
-                  className="drawing-input w-full font-gost-upright font-bold text-lg"
-                />
+                {/* Панель сохранения */}
                 <div className="flex flex-wrap items-center gap-2">
                   <select
                     value={status}
@@ -239,16 +252,8 @@ const OwnerResearch = () => {
                   </p>
                 )}
                 {msg && <p className="font-gost text-[11px] text-[var(--drawing-line-thin)]">{msg}</p>}
-                <textarea
-                  value={content}
-                  onChange={(e) => { setContent(e.target.value); setDirty(true); }}
-                  placeholder="Текст научно-исследовательской работы…"
-                  rows={22}
-                  className="drawing-input w-full resize-y font-mono text-sm leading-relaxed"
-                />
-                <p className="font-gost text-[10px] text-[var(--drawing-line-thin)]">
-                  {content.length.toLocaleString("ru-RU")} символов. Хранение на сервере, доступ только владельцу.
-                </p>
+
+                <NirEditor doc={docState} onChange={onDocChange} />
               </div>
             )}
           </div>
