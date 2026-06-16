@@ -24,7 +24,11 @@ export function NodeMesh({
   selected: boolean;
   scale: number;
   palette: ScenePalette;
-  onSelect: (id: string, additive: boolean) => void;
+  onSelect: (
+    id: string,
+    additive: boolean,
+    screen?: { clientX: number; clientY: number },
+  ) => void;
 }) {
   const [hover, setHover] = useState(false);
   return (
@@ -32,7 +36,11 @@ export function NodeMesh({
       position={pos}
       onClick={(e) => {
         e.stopPropagation();
-        onSelect(id, e.shiftKey || e.ctrlKey || e.metaKey);
+        const ne = e.nativeEvent as PointerEvent;
+        onSelect(id, e.shiftKey || e.ctrlKey || e.metaKey, {
+          clientX: ne.clientX,
+          clientY: ne.clientY,
+        });
       }}
       onPointerOver={(e) => {
         e.stopPropagation();

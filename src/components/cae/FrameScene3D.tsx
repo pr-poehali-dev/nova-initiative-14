@@ -27,6 +27,7 @@ import type { FrameModel, SolverResponse } from "@/lib/cae-model";
 import { useScenePalette, type Vec3, type ViewName, vec } from "./scene3d/palette";
 import CameraFit from "./scene3d/CameraFit";
 import { NodeMesh, ForceArrow } from "./scene3d/SceneMeshes";
+import BoxSelect3D, { type SelectRect } from "./scene3d/BoxSelect3D";
 
 interface Props {
   model: FrameModel;
@@ -47,6 +48,16 @@ interface Props {
   onAddNodeAt?: (x: number, y: number, z: number) => void;
   /** Соединить два узла стержнем по id (режим «Балка», клик по двум узлам). */
   onConnectTwoNodes?: (a: string, b: string) => void;
+  /**
+   * Открыть окно свойств у курсора при клике по узлу/стержню (тикет #60).
+   * Координаты — экранные (clientX/clientY) для позиционирования popup.
+   */
+  onRequestContext?: (req: {
+    kind: "node" | "element";
+    id: string;
+    clientX: number;
+    clientY: number;
+  }) => void;
 }
 
 export default function FrameScene3D({
@@ -62,6 +73,7 @@ export default function FrameScene3D({
   gridStep = 0.5,
   onAddNodeAt,
   onConnectTwoNodes,
+  onRequestContext,
 }: Props) {
   const palette = useScenePalette();
   const nodeById = useMemo(
@@ -109,7 +121,11 @@ export default function FrameScene3D({
     return m;
   }, [result]);
 
-  const handleSelectNode = (id: string, additive: boolean) => {
+  const handleSelectNode = (
+    id: string,
+    additive: boolean,
+    screen?: { clientX: number; clientY: number },
+  ) => {
     onSelectElements([]);
 
     // Режим «Балка»: клик по узлам подряд соединяет их стержнем (как в 2D).
@@ -130,16 +146,29 @@ export default function FrameScene3D({
       );
     } else {
       onSelectNodes([id]);
+      // Одиночный клик в режиме выбора — окно свойств у курсора (тикет #60).
+      if (mode === "select" && screen && onRequestContext) {
+        onRequestContext({ kind: "node", id, clientX: screen.clientX, clientY: screen.clientY });
+      }
     }
   };
 
-  const handleSelectElement = (id: string) => {
+  const handleSelectElement = (
+    id: string,
+    screen?: { clientX: number; clientY: number },
+  ) => {
     onSelectNodes([]);
     onSelectElements([id]);
+    if (mode === "select" && screen && onRequestContext) {
+      onRequestContext({ kind: "element", id, clientX: screen.clientX, clientY: screen.clientY });
+    }
   };
 
   // Точка-«призрак» под курсором в режиме «Узел» — куда встанет узел.
   const [ghost, setGhost] = useState<Vec3 | null>(null);
+
+  // Рамка массового выделения (экранные координаты) для DOM-оверлея.
+  const [selectRect, setSelectRect] = useState<SelectRect | null>(null);
 
   // Запрос быстрого вида: меняем id, чтобы триггерить эффект камеры даже при
   // повторном выборе того же вида.
@@ -261,7 +290,8 @@ export default function FrameScene3D({
               lineWidth={selected ? 4 : 2.5}
               onClick={(e) => {
                 e.stopPropagation();
-                handleSelectElement(el.id);
+                const ne = e.nativeEvent as PointerEvent;
+                handleSelectElement(el.id, { clientX: ne.clientX, clientY: ne.clientY });
               }}
             />
           </group>
@@ -386,6 +416,18 @@ export default function FrameScene3D({
         </Html>
       )}
 
+      {/* Рамка массового выделения левой кнопкой (тикет #60). Только в режиме
+          выбора — в режимах рисования левая кнопка занята созданием узлов. */}
+      <BoxSelect3D
+        nodes={model.nodes}
+        enabled={mode === "select"}
+        onSelectNodes={(ids) => {
+          onSelectElements([]);
+          onSelectNodes(ids);
+        }}
+        onRectChange={setSelectRect}
+      />
+
       <CameraFit
         center={center}
         radius={radius}
@@ -402,6 +444,21 @@ export default function FrameScene3D({
         />
       </GizmoHelper>
     </Canvas>
+
+    {/* Визуальный прямоугольник рамки выделения (поверх canvas, не мешает мыши). */}
+    {selectRect && (
+      <div
+        className="fixed pointer-events-none z-20 border-2 border-dashed"
+        style={{
+          left: Math.min(selectRect.x0, selectRect.x1),
+          top: Math.min(selectRect.y0, selectRect.y1),
+          width: Math.abs(selectRect.x1 - selectRect.x0),
+          height: Math.abs(selectRect.y1 - selectRect.y0),
+          borderColor: palette.accent,
+          background: `${palette.accent}1a`,
+        }}
+      />
+    )}
     </div>
   );
 }

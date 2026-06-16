@@ -247,6 +247,7 @@ const EditorCanvasArea = ({
           gridStep={gridStep}
           onAddNodeAt={addNodeAtCoords}
           onConnectTwoNodes={connectTwoNodes}
+          onRequestContext={onRequestContext}
         />
         {addNodeAtCoords && connectSelectedNodes && (
           <Scene3DBuilder
