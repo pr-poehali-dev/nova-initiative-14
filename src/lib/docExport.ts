@@ -96,6 +96,9 @@ function buildCss(fmt: DocFormat): string {
     .tp-meta { text-align: right !important; }
     .tp-meta p { text-align: right !important; }
     .toc-row { display: flex; justify-content: space-between; text-indent: 0; }
+    table.grid { border-collapse: collapse; width: 100%; margin: 0.4em 0; font-size: ${Math.max(10, fmt.fontSize - 2)}pt; }
+    table.grid th, table.grid td { border: 1px solid #000; padding: 3px 5px; text-align: left; vertical-align: top; }
+    table.grid th { font-weight: bold; text-align: center; }
     .pagenum { position: fixed; bottom: 8mm; left: 0; right: 0; text-align: ${numPos}; font-size: ${fmt.fontSize}pt; }
     .eskd { position: fixed; top: 0; left: 0; z-index: -1; }
     @media screen { body { background: #f3f3f3; } .doc-page { background: #fff; width: ${w}mm; min-height: ${h}mm; margin: 8mm auto; padding: ${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm; box-shadow: 0 1px 12px rgba(0,0,0,.18); box-sizing: border-box; position: relative; } }
@@ -145,15 +148,33 @@ function renderToc(doc: NirDocument): string {
   return `<h1>СОДЕРЖАНИЕ</h1>${rows}`;
 }
 
-function renderSection(s: NirSection, first: boolean): string {
+/** Таблица рабочего графика (плана) практики — 4 колонки, как в шаблоне. */
+function renderScheduleTable(doc: NirDocument): string {
+  const rows = (doc.scheduleRows || [])
+    .map(
+      (r) =>
+        `<tr><td>${esc(r.stage)}</td><td>${esc(r.work)}</td><td>${esc(r.term)}</td><td>${esc(r.note)}</td></tr>`,
+    )
+    .join("");
+  return `<table class="grid">
+    <thead><tr><th>Этапы практики</th><th>Наименование работ студента</th><th>Срок</th><th>Примечание</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function renderSection(s: NirSection, first: boolean, doc: NirDocument): string {
   const cls = first ? ' class="first"' : "";
   if (s.kind === "references") {
     const items = (s.body || "").split(/\n+/).map((l) => l.trim()).filter(Boolean);
     const list = items.map((l, i) => `<p class="flush">${i + 1}. ${esc(l)}</p>`).join("\n");
     return `<h1${cls}>${esc(s.heading)}</h1>${list}`;
   }
-  // Служебные листы (задание, график) — строки без абзацного отступа.
-  if (s.kind === "schedule" || s.kind === "task") {
+  // Рабочий график — заголовок + таблица 4 колонки.
+  if (s.kind === "schedule") {
+    return `<h1${cls}>${esc(s.heading)}</h1>${renderScheduleTable(doc)}`;
+  }
+  // Индивидуальное задание — строки без абзацного отступа.
+  if (s.kind === "task") {
     const lines = (s.body || "").split(/\n+/).map((l) => l.trim()).filter(Boolean);
     const body = lines.map((l) => `<p class="flush">${esc(l)}</p>`).join("\n");
     return `<h1${cls}>${esc(s.heading)}</h1>${body}`;
@@ -170,7 +191,7 @@ function renderBody(doc: NirDocument): string {
   // 1. Служебные листы практики (идут сразу после титула, до содержания).
   for (const s of enabled) {
     if (SERVICE_KINDS.has(s.kind)) {
-      parts.push(renderSection(s, !firstUsed));
+      parts.push(renderSection(s, !firstUsed, doc));
       firstUsed = true;
     }
   }
@@ -186,7 +207,7 @@ function renderBody(doc: NirDocument): string {
   // 4. Остальные разделы.
   for (const s of enabled) {
     if (s.kind === "abstract" || SERVICE_KINDS.has(s.kind)) continue;
-    parts.push(renderSection(s, false));
+    parts.push(renderSection(s, false, doc));
   }
   return parts.join("\n");
 }
@@ -246,6 +267,9 @@ export function exportToWord(doc: NirDocument) {
     .tp-worktype { font-size: ${fmt.headingSize}pt; font-weight: bold; }
     h1 { font-size: ${fmt.headingSize}pt; font-weight: bold; text-align: center; text-transform: ${fmt.headingUppercase ? "uppercase" : "none"}; page-break-before: always; mso-break-type: page-break; }
     .toc-row { display: block; }
+    table.grid { border-collapse: collapse; width: 100%; font-size: ${Math.max(10, fmt.fontSize - 2)}pt; }
+    table.grid th, table.grid td { border: 1px solid #000; padding: 3px 5px; text-align: left; vertical-align: top; }
+    table.grid th { font-weight: bold; text-align: center; }
   `;
   const html = `<!DOCTYPE html>
 <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8">

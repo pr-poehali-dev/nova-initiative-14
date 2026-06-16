@@ -16,6 +16,7 @@ import {
   type NirDocument,
   type NirSection,
   type NirTitleMeta,
+  type ScheduleRow,
   makeChapter,
 } from "@/lib/nir";
 import { type DocFormat } from "@/lib/docFormat";
@@ -42,6 +43,8 @@ export default function NirEditor({ doc, onChange }: Props) {
 
   const setSection = (id: string, patch: Partial<NirSection>) =>
     onChange({ ...doc, sections: doc.sections.map((s) => (s.id === id ? { ...s, ...patch } : s)) });
+
+  const setSchedule = (rows: ScheduleRow[]) => onChange({ ...doc, scheduleRows: rows });
 
   const addChapter = () => {
     const ch = makeChapter(`${doc.sections.filter((s) => s.kind === "chapter").length + 1} Новая глава`);
@@ -167,7 +170,11 @@ export default function NirEditor({ doc, onChange }: Props) {
                   />
                 }
               >
-                <SectionForm section={s} onChange={(patch) => setSection(s.id, patch)} />
+                {s.kind === "schedule" ? (
+                  <ScheduleForm rows={doc.scheduleRows} onChange={setSchedule} hint={s.hint} />
+                ) : (
+                  <SectionForm section={s} onChange={(patch) => setSection(s.id, patch)} />
+                )}
               </AccordionRow>
             </div>
           ))}
@@ -250,6 +257,36 @@ function SectionControls({
           <Icon name="Trash2" size={14} />
         </button>
       )}
+    </div>
+  );
+}
+
+function ScheduleForm({ rows, onChange, hint }: { rows: ScheduleRow[]; onChange: (rows: ScheduleRow[]) => void; hint?: string }) {
+  const upd = (id: string, patch: Partial<ScheduleRow>) => onChange(rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  const add = () => onChange([...rows, { id: `sch_${Date.now().toString(36)}`, stage: "", work: "", term: "", note: "" }]);
+  const rm = (id: string) => onChange(rows.filter((r) => r.id !== id));
+  return (
+    <div className="space-y-2">
+      {hint && (
+        <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] bg-[var(--drawing-paper)] border-l-2 border-[var(--drawing-accent)] px-2 py-1.5 leading-snug">
+          <Icon name="Info" size={11} className="inline mr-1 -mt-0.5" />{hint}
+        </p>
+      )}
+      <div className="hidden sm:grid grid-cols-[110px_1fr_120px_90px_24px] gap-2 font-gost text-[9px] uppercase tracking-wider text-[var(--drawing-line-thin)]">
+        <span>Этап практики</span><span>Наименование работ студента</span><span>Срок</span><span>Примечание</span><span />
+      </div>
+      {rows.map((r) => (
+        <div key={r.id} className="grid grid-cols-2 sm:grid-cols-[110px_1fr_120px_90px_24px] gap-2 items-start">
+          <input value={r.stage} onChange={(e) => upd(r.id, { stage: e.target.value })} placeholder="Этап" className="drawing-input text-sm" style={{ fontStyle: "normal" }} />
+          <textarea value={r.work} onChange={(e) => upd(r.id, { work: e.target.value })} placeholder="Наименование работ" rows={2} className="drawing-input text-sm resize-y" style={{ fontStyle: "normal" }} />
+          <input value={r.term} onChange={(e) => upd(r.id, { term: e.target.value })} placeholder="Срок" className="drawing-input text-sm" style={{ fontStyle: "normal" }} />
+          <input value={r.note} onChange={(e) => upd(r.id, { note: e.target.value })} placeholder="Прим." className="drawing-input text-sm" style={{ fontStyle: "normal" }} />
+          <button onClick={() => rm(r.id)} className="p-1 text-[var(--drawing-line-thin)] hover:text-red-600" aria-label="Удалить"><Icon name="Trash2" size={14} /></button>
+        </div>
+      ))}
+      <button onClick={add} className="btn-drawing text-xs inline-flex items-center gap-1">
+        <Icon name="Plus" size={14} />Добавить этап
+      </button>
     </div>
   );
 }
