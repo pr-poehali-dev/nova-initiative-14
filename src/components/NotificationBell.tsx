@@ -5,9 +5,10 @@
  * уведомлениями (обновления, исправления, ответы на тикеты). Клик по
  * уведомлению отмечает его прочитанным и ведёт по ссылке.
  *
- * Экономный поллинг счётчика: раз в 60 сек, но только в активной вкладке
- * (фоновые/свёрнутые не опрашиваем). Возврат фокуса обновляет счётчик
- * не чаще раза в 30 сек.
+ * БЕЗ поллинга (тикет #63): счётчик непрочитанных запрашивается ОДИН раз —
+ * при заходе пользователя на сайт (монтирование / появление сессии). Никаких
+ * фоновых интервалов и опросов по фокусу — это впустую тратило вычисления.
+ * Новые уведомления пользователь увидит при следующем заходе.
  */
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
@@ -21,8 +22,6 @@ import {
   type AppNotification,
   type NotificationType,
 } from "@/lib/notifications";
-
-const POLL_MS = 60_000;
 
 const TYPE_ICON: Record<NotificationType, string> = {
   ticket_reply: "MessageSquare",
@@ -41,42 +40,18 @@ export default function NotificationBell() {
   const [loading, setLoading] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  // Время последнего запроса — чтобы тротлить опрос при возврате фокуса
-  // и не дёргать бэкенд чаще, чем нужно.
-  const lastFetchRef = useRef(0);
-
   const refreshCount = useCallback(async () => {
-    lastFetchRef.current = Date.now();
     const res = await getUnreadCount();
     if (res.ok && res.data) setUnread(res.data.unread);
   }, []);
 
-  // Экономный поллинг счётчика, пока пользователь авторизован.
-  // 1) Не опрашиваем фоновые/свёрнутые вкладки (document.hidden) — там
-  //    счётчик всё равно никто не видит, а вызовы бэкенда тратятся впустую.
-  // 2) Возврат фокуса обновляет счётчик, но не чаще раза в FOCUS_THROTTLE_MS,
-  //    чтобы частые переключения вкладок не создавали шквал запросов.
+  // Запрашиваем счётчик непрочитанных РОВНО ОДИН РАЗ — когда пользователь
+  // зашёл (появилась сессия). Без интервалов и опроса по фокусу: постоянный
+  // поллинг впустую расходовал вычислительный ресурс (тикет #63). Свежие
+  // уведомления подтянутся при следующем заходе или при открытии панели.
   useEffect(() => {
     if (!user) return;
-    const FOCUS_THROTTLE_MS = 30_000;
-
-    const maybeRefresh = (throttle: boolean) => {
-      if (document.hidden) return;
-      if (throttle && Date.now() - lastFetchRef.current < FOCUS_THROTTLE_MS) return;
-      refreshCount();
-    };
-
-    maybeRefresh(false);
-    const id = window.setInterval(() => maybeRefresh(false), POLL_MS);
-    const onFocus = () => maybeRefresh(true);
-    const onVisible = () => maybeRefresh(true);
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onVisible);
-    return () => {
-      window.clearInterval(id);
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onVisible);
-    };
+    refreshCount();
   }, [user, refreshCount]);
 
   // Закрытие по клику вне и по Escape.
