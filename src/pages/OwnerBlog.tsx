@@ -152,6 +152,25 @@ const OwnerBlog = () => {
 
   const touch = () => setDirty(true);
 
+  const onCopyForDzen = async () => {
+    // Чистый текст для вставки на площадку: заголовок, лид, тело, теги.
+    const tagLine = tags
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean)
+      .map((t) => `#${t}`)
+      .join(" ");
+    const parts = [title.trim(), subtitle.trim(), "", content.trim()];
+    if (tagLine) parts.push("", tagLine);
+    const text = parts.filter((p, i) => p !== "" || i > 0).join("\n").trim();
+    try {
+      await navigator.clipboard.writeText(text);
+      setMsg("Скопировано — вставляйте в Дзен (Ctrl+V)");
+    } catch {
+      setMsg("Не удалось скопировать. Скопируйте текст вручную.");
+    }
+  };
+
   if (loading) {
     return (
       <div className="max-w-[1000px] mx-auto px-4 pt-24 pb-12 text-center font-gost text-[var(--drawing-line-thin)]">
@@ -288,6 +307,9 @@ const OwnerBlog = () => {
                     {stats.words.toLocaleString("ru-RU")} слов · ~{stats.readMin} мин чтения
                   </span>
                   <div className="flex-1" />
+                  <button onClick={onCopyForDzen} className="btn-drawing text-xs inline-flex items-center gap-1">
+                    <Icon name="Copy" size={14} />Скопировать для Дзена
+                  </button>
                   <button onClick={onSave} disabled={busy} className={`btn-drawing btn-drawing-accent text-xs inline-flex items-center gap-1 ${busy ? "opacity-50 pointer-events-none" : ""}`}>
                     <Icon name="Save" size={14} />Сохранить
                   </button>
