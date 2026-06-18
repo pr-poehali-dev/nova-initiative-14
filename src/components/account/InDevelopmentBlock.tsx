@@ -41,6 +41,14 @@ const SERVICES: DevService[] = [
     state: "ready",
   },
   {
+    to: "/owner/blog",
+    icon: "PenSquare",
+    title: "Статьи для блогов",
+    description:
+      "Закрытое хранилище статей для Яндекс Дзен и других площадок: список, редактор с разметкой, метаданные (обложка, теги, статус) и превью «как в Дзене». Доступ только владельцу.",
+    state: "ready",
+  },
+  {
     to: "/owner/business-plans",
     icon: "Briefcase",
     title: "Бизнес-планы",

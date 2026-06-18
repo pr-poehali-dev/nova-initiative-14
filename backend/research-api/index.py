@@ -600,6 +600,127 @@ def action_preset_delete(conn, owner_id: int, body: dict) -> dict:
     return _json_response(200, {'ok': True})
 
 
+# ============ СТАТЬИ ДЛЯ БЛОГОВ (маркетинг) ============
+
+BLOG_STATUSES = {'draft', 'ready', 'published', 'archived'}
+
+
+def action_blog_list(conn, owner_id: int) -> dict:
+    """Список статей владельца (мета без полного текста)."""
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute(
+            "SELECT id, title, subtitle, cover_emoji, platform, tags, status, "
+            "  LENGTH(content) AS chars, created_at, updated_at "
+            "FROM owner_blog_articles WHERE owner_id = %s ORDER BY updated_at DESC LIMIT 300",
+            (owner_id,),
+        )
+        rows = cur.fetchall()
+    articles = [{
+        'id': int(r['id']),
+        'title': r['title'],
+        'subtitle': r['subtitle'],
+        'cover_emoji': r['cover_emoji'],
+        'platform': r['platform'],
+        'tags': r['tags'],
+        'status': r['status'],
+        'chars': int(r['chars'] or 0),
+        'created_at': r['created_at'].isoformat() if r['created_at'] else None,
+        'updated_at': r['updated_at'].isoformat() if r['updated_at'] else None,
+    } for r in rows]
+    return _json_response(200, {'articles': articles})
+
+
+def action_blog_get(conn, owner_id: int, params: dict) -> dict:
+    """Одна статья с полным текстом."""
+    art_id = params.get('id')
+    if not art_id:
+        return _json_response(400, {'error': 'missing_id'})
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute(
+            "SELECT * FROM owner_blog_articles WHERE id = %s AND owner_id = %s",
+            (int(art_id), owner_id),
+        )
+        row = cur.fetchone()
+    if not row:
+        return _json_response(404, {'error': 'not_found'})
+    r = dict(row)
+    return _json_response(200, {'article': {
+        'id': int(r['id']),
+        'title': r['title'],
+        'subtitle': r['subtitle'],
+        'cover_emoji': r['cover_emoji'],
+        'platform': r['platform'],
+        'tags': r['tags'],
+        'status': r['status'],
+        'content': r.get('content', ''),
+        'created_at': r['created_at'].isoformat() if r.get('created_at') else None,
+        'updated_at': r['updated_at'].isoformat() if r.get('updated_at') else None,
+    }})
+
+
+def action_blog_create(conn, owner_id: int, body: dict) -> dict:
+    """Создаёт новую статью (можно сразу с контентом)."""
+    title = (body.get('title') or 'Новая статья').strip()[:300]
+    subtitle = (body.get('subtitle') or '').strip()[:400]
+    cover_emoji = (body.get('cover_emoji') or '📝').strip()[:16]
+    platform = (body.get('platform') or 'dzen').strip()[:40]
+    tags = (body.get('tags') or '').strip()[:400]
+    content = body.get('content') or ''
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO owner_blog_articles "
+            "(owner_id, title, subtitle, cover_emoji, platform, tags, content) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
+            (owner_id, title, subtitle, cover_emoji, platform, tags, content),
+        )
+        art_id = int(cur.fetchone()[0])
+    conn.commit()
+    return _json_response(200, {'ok': True, 'id': art_id})
+
+
+def action_blog_save(conn, owner_id: int, body: dict) -> dict:
+    """Сохраняет статью."""
+    art_id = body.get('id')
+    if not art_id:
+        return _json_response(400, {'error': 'missing_id'})
+    title = (body.get('title') or 'Без названия').strip()[:300]
+    subtitle = (body.get('subtitle') or '').strip()[:400]
+    cover_emoji = (body.get('cover_emoji') or '📝').strip()[:16]
+    platform = (body.get('platform') or 'dzen').strip()[:40]
+    tags = (body.get('tags') or '').strip()[:400]
+    status = (body.get('status') or 'draft').strip()
+    if status not in BLOG_STATUSES:
+        status = 'draft'
+    content = body.get('content') or ''
+    with conn.cursor() as cur:
+        cur.execute(
+            "UPDATE owner_blog_articles SET title = %s, subtitle = %s, cover_emoji = %s, "
+            "platform = %s, tags = %s, status = %s, content = %s, updated_at = now() "
+            "WHERE id = %s AND owner_id = %s",
+            (title, subtitle, cover_emoji, platform, tags, status, content, int(art_id), owner_id),
+        )
+        if cur.rowcount == 0:
+            return _json_response(404, {'error': 'not_found'})
+    conn.commit()
+    return _json_response(200, {'ok': True})
+
+
+def action_blog_delete(conn, owner_id: int, body: dict) -> dict:
+    """Удаляет статью."""
+    art_id = body.get('id')
+    if not art_id:
+        return _json_response(400, {'error': 'missing_id'})
+    with conn.cursor() as cur:
+        cur.execute(
+            "DELETE FROM owner_blog_articles WHERE id = %s AND owner_id = %s",
+            (int(art_id), owner_id),
+        )
+        if cur.rowcount == 0:
+            return _json_response(404, {'error': 'not_found'})
+    conn.commit()
+    return _json_response(200, {'ok': True})
+
+
 def handler(event: dict, context) -> dict:
     """Маршрутизатор research-api по ?action= и httpMethod."""
     method = event.get('httpMethod', 'GET')
@@ -669,6 +790,17 @@ def handler(event: dict, context) -> dict:
             return action_preset_save(conn, owner_id, body)
         if action == 'preset-delete' and method == 'POST':
             return action_preset_delete(conn, owner_id, body)
+
+        if action == 'blog-list' and method == 'GET':
+            return action_blog_list(conn, owner_id)
+        if action == 'blog-get' and method == 'GET':
+            return action_blog_get(conn, owner_id, params)
+        if action == 'blog-create' and method == 'POST':
+            return action_blog_create(conn, owner_id, body)
+        if action == 'blog-save' and method == 'POST':
+            return action_blog_save(conn, owner_id, body)
+        if action == 'blog-delete' and method == 'POST':
+            return action_blog_delete(conn, owner_id, body)
 
         return _json_response(404, {'error': 'unknown_action'})
     except Exception as e:
