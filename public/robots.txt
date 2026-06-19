@@ -8,6 +8,8 @@ Disallow: /forgot-password
 Disallow: /reset-password
 Disallow: /oauth/
 Allow: /cae/raschet-balki-onlayn
+Allow: /cae/raschet-ramy-onlayn
+Allow: /cae/raschet-fermy-onlayn
 Disallow: /cae/projects
 Disallow: /admin/
 Disallow: /owner/

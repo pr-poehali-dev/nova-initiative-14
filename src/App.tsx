@@ -34,6 +34,8 @@ import ResetPassword from "./pages/ResetPassword";
 import OAuthCallback from "./pages/OAuthCallback";
 import CaeLanding from "./pages/CaeLanding";
 import CaeBeamCalc from "./pages/CaeBeamCalc";
+import CaeFrameCalc from "./pages/CaeFrameCalc";
+import CaeTrussCalc from "./pages/CaeTrussCalc";
 import CaeProjects from "./pages/CaeProjects";
 import CaeNewProject from "./pages/CaeNewProject";
 import CaeEditor from "./pages/CaeEditor";
@@ -170,6 +172,8 @@ const App = () => (
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/cae" element={<CaeLanding />} />
                 <Route path="/cae/raschet-balki-onlayn" element={<CaeBeamCalc />} />
+                <Route path="/cae/raschet-ramy-onlayn" element={<CaeFrameCalc />} />
+                <Route path="/cae/raschet-fermy-onlayn" element={<CaeTrussCalc />} />
                 <Route path="/cae/projects" element={<CaeProjects />} />
                 <Route path="/cae/projects/new" element={<CaeNewProject />} />
                 <Route path="/cae/projects/:id" element={<CaeEditor />} />

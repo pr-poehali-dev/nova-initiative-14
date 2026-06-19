@@ -216,9 +216,17 @@ const CaeLanding = () => {
           <p className="text-sm text-[var(--drawing-line-thin)] mt-5">
             Популярные расчёты:{" "}
             <Link to="/cae/raschet-balki-onlayn" className="text-[var(--drawing-accent)] underline">
-              расчёт балки онлайн
+              балки
             </Link>{" "}
-            · эпюры N, Q, M · расчёт рамы и фермы
+            ·{" "}
+            <Link to="/cae/raschet-ramy-onlayn" className="text-[var(--drawing-accent)] underline">
+              рамы
+            </Link>{" "}
+            ·{" "}
+            <Link to="/cae/raschet-fermy-onlayn" className="text-[var(--drawing-accent)] underline">
+              фермы
+            </Link>{" "}
+            онлайн — эпюры N, Q, M
           </p>
         </section>
 
