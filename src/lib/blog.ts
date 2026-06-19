@@ -90,7 +90,7 @@ export function saveBlogArticle(input: {
   status: BlogStatus;
   content: string;
 }) {
-  return call<{ ok: boolean }>("blog-save", "POST", input);
+  return call<{ ok: boolean; reindexed?: boolean }>("blog-save", "POST", input);
 }
 
 export function deleteBlogArticle(id: number) {

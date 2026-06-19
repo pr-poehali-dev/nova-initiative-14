@@ -130,7 +130,7 @@ const OwnerBlog = () => {
     });
     setBusy(false);
     if (r.ok) {
-      setMsg("Сохранено");
+      setMsg(r.data?.reindexed ? "Сохранено · Яндекс уведомлён о публикации" : "Сохранено");
       setDirty(false);
       reloadList();
     } else {
@@ -292,6 +292,12 @@ const OwnerBlog = () => {
                     className="drawing-input flex-1 min-w-[160px] text-sm"
                   />
                 </div>
+                {status === "published" && (
+                  <p className="font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-accent)] inline-flex items-center gap-1">
+                    <Icon name="Send" size={11} />
+                    При сохранении с этим статусом Яндекс получит запрос на переобход главной и /blog
+                  </p>
+                )}
 
                 {/* Тулбар */}
                 <div className="flex flex-wrap items-center gap-2">

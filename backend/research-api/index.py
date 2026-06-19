@@ -13,9 +13,37 @@ import hmac
 import json
 import os
 import time
+import urllib.request
+import urllib.error
 
 import psycopg2
 import psycopg2.extras
+
+# IndexNow: уведомление Яндекса о переобходе ключевых страниц сайта.
+INDEXNOW_HOST = 'xn----gtbhgbqhkfi.xn--p1ai'
+INDEXNOW_SITE = f'https://{INDEXNOW_HOST}'
+INDEXNOW_KEY = 'a7f3c9e1b54d4e8fa2c6079b3d8e5f10'
+
+
+def _ping_indexnow(paths: list) -> None:
+    """Шлёт список путей в IndexNow (Яндекс). Ошибки не критичны — глушим."""
+    urls = [INDEXNOW_SITE + p for p in paths]
+    payload = json.dumps({
+        'host': INDEXNOW_HOST,
+        'key': INDEXNOW_KEY,
+        'keyLocation': f'{INDEXNOW_SITE}/{INDEXNOW_KEY}.txt',
+        'urlList': urls,
+    }).encode('utf-8')
+    req = urllib.request.Request(
+        'https://yandex.com/indexnow',
+        data=payload,
+        headers={'Content-Type': 'application/json; charset=utf-8'},
+        method='POST',
+    )
+    try:
+        urllib.request.urlopen(req, timeout=10).read()
+    except (urllib.error.URLError, urllib.error.HTTPError, OSError) as e:
+        print(f'[indexnow] ping failed: {e!r}')
 
 
 JWT_SECRET = os.environ['SSO_JWT_SECRET']
@@ -693,16 +721,30 @@ def action_blog_save(conn, owner_id: int, body: dict) -> dict:
         status = 'draft'
     content = body.get('content') or ''
     with conn.cursor() as cur:
+        # Прежний статус — чтобы переобход слать только при переходе в «published».
+        cur.execute(
+            "SELECT status FROM owner_blog_articles WHERE id = %s AND owner_id = %s",
+            (int(art_id), owner_id),
+        )
+        prev = cur.fetchone()
+        if prev is None:
+            return _json_response(404, {'error': 'not_found'})
+        prev_status = prev[0]
         cur.execute(
             "UPDATE owner_blog_articles SET title = %s, subtitle = %s, cover_emoji = %s, "
             "platform = %s, tags = %s, status = %s, content = %s, updated_at = now() "
             "WHERE id = %s AND owner_id = %s",
             (title, subtitle, cover_emoji, platform, tags, status, content, int(art_id), owner_id),
         )
-        if cur.rowcount == 0:
-            return _json_response(404, {'error': 'not_found'})
     conn.commit()
-    return _json_response(200, {'ok': True})
+
+    reindexed = False
+    # Статья впервые опубликована — уведомляем Яндекс об обновлении сайта.
+    if status == 'published' and prev_status != 'published':
+        _ping_indexnow(['/', '/blog'])
+        reindexed = True
+
+    return _json_response(200, {'ok': True, 'reindexed': reindexed})
 
 
 def action_blog_delete(conn, owner_id: int, body: dict) -> dict:
