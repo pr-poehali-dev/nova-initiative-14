@@ -253,6 +253,32 @@ export function faqLd(items: Array<{ q: string; a: string }>): Json {
 }
 
 /**
+ * TechArticle — техническая статья (методика расчёта). Сильный сигнал для
+ * ИИ-поиска: показывает, что на странице есть фактическая инженерная методика
+ * (допущения, формулы, нормы ГОСТ), которую можно цитировать с атрибуцией.
+ */
+export function techArticleLd(opts: {
+  headline: string;
+  description: string;
+  url: string;
+  about?: string[];
+}): Json {
+  return {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    headline: opts.headline,
+    description: opts.description,
+    url: opts.url,
+    inLanguage: "ru-RU",
+    author: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
+    publisher: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
+    ...(opts.about && opts.about.length
+      ? { about: opts.about.map((a) => ({ "@type": "Thing", name: a })) }
+      : {}),
+  };
+}
+
+/**
  * HowTo — пошаговая инструкция. Помогает ИИ-поиску отвечать на запросы
  * «как рассчитать балку онлайн».
  */
