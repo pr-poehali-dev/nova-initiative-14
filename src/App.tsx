@@ -56,7 +56,7 @@ import AdminQr from "./pages/AdminQr";
 import PrintFlyer from "./pages/PrintFlyer";
 import UrfuQrCae from "./pages/UrfuQrCae";
 import UrfuQrDiplom from "./pages/UrfuQrDiplom";
-import NotFound from "./pages/NotFound";
+import NotFoundPage from "./pages/NotFoundPage";
 import { useVisitorTracking, getVisitorData } from "./hooks/useVisitorTracking";
 import { hasEverAuthenticated } from "@/lib/auth";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -197,7 +197,7 @@ const App = () => (
                 <Route path="/admin/print" element={<PrintFlyer />} />
                 <Route path="/urfu_qr_cae" element={<UrfuQrCae />} />
                 <Route path="/urfu_qr_diplom" element={<UrfuQrDiplom />} />
-                <Route path="*" element={<NotFound />} />
+                <Route path="*" element={<NotFoundPage />} />
               </Routes>
             </div>
             <Footer />

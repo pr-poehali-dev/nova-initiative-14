@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { Helmet } from "@/lib/helmet-shim";
 import { fetchArticle, fetchPageViews, formatRuDate, type Article } from "@/lib/articles";
 import { SITE_URL, SITE_NAME, SITE_OG_IMAGE, breadcrumbsLd } from "@/lib/seo";
-import NotFound from "@/pages/NotFound";
+import NotFoundPage from "@/pages/NotFoundPage";
 import ReadingProgress from "@/components/blog/ReadingProgress";
 import ArticleToc from "@/components/blog/ArticleToc";
 import RelatedSections from "@/components/RelatedSections";
@@ -44,7 +44,7 @@ const BlogArticle = () => {
     };
   }, [slug]);
 
-  if (notFound && !loading) return <NotFound />;
+  if (notFound && !loading) return <NotFoundPage />;
   if (loading || !article) {
     return (
       <div className="max-w-[800px] mx-auto px-4 py-20 text-center font-gost text-[var(--drawing-line-thin)]">
