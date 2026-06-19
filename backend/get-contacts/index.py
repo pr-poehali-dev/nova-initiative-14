@@ -5,8 +5,10 @@ import psycopg2
 import psycopg2.extras
 
 SITE_URL = "https://xn----gtbhgbqhkfi.xn--p1ai"
-# Ключ IndexNow: совпадает с именем файла-подтверждения в /public.
-INDEXNOW_KEY = "a7f3c9e1b2d84e6f9a05c7d3e8b1f4a2"
+# Ключ IndexNow: ДОЛЖЕН совпадать с именем файла-подтверждения в /public
+# (a7f3c9e1b54d4e8fa2c6079b3d8e5f10.txt) и с ключом функции indexnow. Иначе
+# Яндекс отклонит переобход — keyLocation укажет на несуществующий файл.
+INDEXNOW_KEY = "a7f3c9e1b54d4e8fa2c6079b3d8e5f10"
 
 
 def _cors(extra=None):
