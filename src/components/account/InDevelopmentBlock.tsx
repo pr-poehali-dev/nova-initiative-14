@@ -41,6 +41,14 @@ const SERVICES: DevService[] = [
     state: "ready",
   },
   {
+    to: "/owner/seo-reindex",
+    icon: "Send",
+    title: "Переобход в Яндексе",
+    description:
+      "Уведомляет Яндекс о страницах сайта по протоколу IndexNow и ускоряет переиндексацию. Запуск в один клик после публикации — набор ключевых страниц или свой список адресов.",
+    state: "ready",
+  },
+  {
     to: "/owner/blog",
     icon: "PenSquare",
     title: "Статьи для блогов",
