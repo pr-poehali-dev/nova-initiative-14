@@ -234,3 +234,44 @@ export function softwareLd(opts: {
       : {}),
   };
 }
+
+/**
+ * FAQPage — блок «вопрос-ответ». Один из самых сильных сигналов для
+ * ИИ-поиска (Google AI Overviews, Алиса): ответы попадают в выдачу дословно.
+ * @param items массив пар {q, a}.
+ */
+export function faqLd(items: Array<{ q: string; a: string }>): Json {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: items.map((it) => ({
+      "@type": "Question",
+      name: it.q,
+      acceptedAnswer: { "@type": "Answer", text: it.a },
+    })),
+  };
+}
+
+/**
+ * HowTo — пошаговая инструкция. Помогает ИИ-поиску отвечать на запросы
+ * «как рассчитать балку онлайн».
+ */
+export function howToLd(opts: {
+  name: string;
+  description: string;
+  steps: Array<{ name: string; text: string }>;
+}): Json {
+  return {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    name: opts.name,
+    description: opts.description,
+    inLanguage: "ru-RU",
+    step: opts.steps.map((s, i) => ({
+      "@type": "HowToStep",
+      position: i + 1,
+      name: s.name,
+      text: s.text,
+    })),
+  };
+}

@@ -213,6 +213,13 @@ const CaeLanding = () => {
               Записаться в ранний доступ
             </a>
           </div>
+          <p className="text-sm text-[var(--drawing-line-thin)] mt-5">
+            Популярные расчёты:{" "}
+            <Link to="/cae/raschet-balki-onlayn" className="text-[var(--drawing-accent)] underline">
+              расчёт балки онлайн
+            </Link>{" "}
+            · эпюры N, Q, M · расчёт рамы и фермы
+          </p>
         </section>
 
         {/* Waitlist form */}
