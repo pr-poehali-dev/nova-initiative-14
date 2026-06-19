@@ -98,12 +98,14 @@ export function useCaeActions(
     if (hit) {
       const r = addNodeOnElement(model, hit.element, hit.x, hit.y, hit.t);
       updateModel(r.model);
-      if (r.nodeIds) setSelectedNodeIds(r.nodeIds);
+      // Не оставляем только что поставленный узел выделенным — иначе он висит
+      // подсвеченным и мешает ставить следующие.
+      setSelectedNodeIds([]);
       return;
     }
     const r = addNodeAt(model, worldX, worldY);
     updateModel(r.model);
-    if (r.nodeIds) setSelectedNodeIds(r.nodeIds);
+    setSelectedNodeIds([]);
   };
 
   const deleteSelected = () => {

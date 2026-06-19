@@ -101,6 +101,16 @@ export default function LoadInputModal({
     setMz(String(m[2] ?? 0));
   }, [open, nodeLoad]);
 
+  // Закрытие по Esc — как у остальных диалогов редактора.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
   if (!open || !node) return null;
 
   const apply = () => {

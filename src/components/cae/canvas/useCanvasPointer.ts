@@ -11,6 +11,7 @@ import { useRef, useState, type PointerEvent } from "react";
 import type { EditorMode } from "@/components/cae/FrameCanvas";
 import type { ViewState } from "./useCanvasView";
 import { snap, useTouchGestures } from "./pointer-helpers";
+import { DRAG_THRESHOLD_PX } from "./interactions-shared";
 
 interface Params {
   svgRef: React.RefObject<SVGSVGElement>;
@@ -132,6 +133,19 @@ export function useCanvasPointer({
         return;
       }
 
+      // 1 палец на узле-кандидате — перетаскиваем узел, но только после
+      // заметного сдвига (порог). Пока сдвиг мал — это tap (выбор узла).
+      if (activeTouches.current.size === 1 && draggingNode && onMoveNode) {
+        const movedPx = draggingNode.movedPx + Math.abs(e.movementX) + Math.abs(e.movementY);
+        if (movedPx > DRAG_THRESHOLD_PX) {
+          const snappedX = snap(w.x, gridStep);
+          const snappedY = snap(w.y, gridStep);
+          onMoveNode(draggingNode.id, snappedX, snappedY);
+        }
+        setDraggingNode({ id: draggingNode.id, movedPx });
+        return;
+      }
+
       // 1 палец — pan канвы. Активируем только если палец заметно сдвинулся,
       // чтобы не мешать обычным тапам.
       if (activeTouches.current.size === 1 && !draggingNode) {
@@ -166,11 +180,15 @@ export function useCanvasPointer({
       return;
     }
     if (draggingNode && onMoveNode) {
-      const snappedX = snap(w.x, gridStep);
-      const snappedY = snap(w.y, gridStep);
-      onMoveNode(draggingNode.id, snappedX, snappedY);
-      // Считаем сколько проехали — чтобы отличить «случайный сдвиг» от настоящего drag
+      // Считаем сколько проехали — чтобы отличить клик от настоящего drag.
       const movedPx = draggingNode.movedPx + Math.abs(e.movementX) + Math.abs(e.movementY);
+      // Двигаем узел только после преодоления порога. Пока сдвиг мал —
+      // это клик (выбор), узел не сдвигаем.
+      if (movedPx > DRAG_THRESHOLD_PX) {
+        const snappedX = snap(w.x, gridStep);
+        const snappedY = snap(w.y, gridStep);
+        onMoveNode(draggingNode.id, snappedX, snappedY);
+      }
       setDraggingNode({ id: draggingNode.id, movedPx });
     }
   };
@@ -208,18 +226,31 @@ export function useCanvasPointer({
       return;
     }
     if (draggingNode) {
+      const wasRealDrag = draggingNode.movedPx > DRAG_THRESHOLD_PX;
+      const isTouch = e.pointerType === "touch";
       setDraggingNode(null);
       try {
         svgRef.current!.releasePointerCapture(e.pointerId);
       } catch {
         /* ignore */
       }
-      // Pointer был захвачен на SVG при pointerDown на узле — поэтому браузер
-      // отправит следующий click на SVG, а не на узел. Если не подавить, то
-      // handleSvgClick в режиме select сбросит только что сделанный выбор узла.
-      // Подавляем click ВСЕГДА: и при настоящем drag, и при «чистом» клике без
-      // смещения (выбор узла уже произошёл в handleNodePointerDown).
-      suppressNextClick.current = true;
+      if (wasRealDrag) {
+        // Это было настоящее перетаскивание: узел уже на новом месте.
+        // Снимаем выделение, чтобы узел не оставался подсвеченным «висящим».
+        onSelectNodes([]);
+        onSelectElements([]);
+        // Подавляем последующий click, иначе handleSvgClick/handleNodeClick
+        // переоткроют выбор или создадут узел.
+        suppressNextClick.current = true;
+      } else if (isTouch) {
+        // Чистый тап пальцем: capture не делали — click дойдёт до узла и
+        // handleNodeClick сам выделит его. Ничего не подавляем.
+      } else {
+        // Чистый клик мышью: указатель был захвачен, поэтому click уйдёт на
+        // SVG. Выбор узла уже сделан в pointerDown — подавляем click, чтобы
+        // handleSvgClick не сбросил его.
+        suppressNextClick.current = true;
+      }
       return;
     }
   };

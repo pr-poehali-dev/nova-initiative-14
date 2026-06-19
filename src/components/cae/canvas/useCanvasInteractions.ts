@@ -137,21 +137,34 @@ export function useCanvasInteractions({
    *  Также стартует таймер long-press для touch — через 500мс откроется
    *  контекстный popup со свойствами узла. */
   const handleNodePointerDown = (n: ModelNode, e: React.PointerEvent) => {
-    // Long-press для тача — работает в ЛЮБОМ режиме, чтобы пользователь мог
-    // открыть свойства узла даже находясь в режиме рисования.
-    if (e.pointerType === "touch" && onRequestContext) {
-      startLongPress("node", n.id, e.clientX, e.clientY);
+    // ── TOUCH ──
+    // НЕ останавливаем всплытие и НЕ захватываем указатель: событие должно
+    // дойти до обработчика SVG, который регистрирует палец в activeTouches.
+    // Иначе при касании вторым пальцем pinch-zoom «не видит» первый палец
+    // (тот, что попал на узел/балку) и камера дёргается в случайную сторону.
+    // Перетаскивание узла пальцем стартует позже — в onPointerMove, когда
+    // подтверждён ровно один активный палец и заметный сдвиг.
+    if (e.pointerType === "touch") {
+      // Long-press для контекстного меню — работает в любом режиме.
+      if (onRequestContext) startLongPress("node", n.id, e.clientX, e.clientY);
+      if (mode === "select" && !e.shiftKey && onMoveNode) {
+        // Помечаем «кандидата» на drag, но без movedPx-старта и без capture.
+        setDraggingNode({ id: n.id, movedPx: 0 });
+      }
+      return;
     }
 
+    // ── МЫШЬ ──
     if (mode !== "select" || e.shiftKey || e.button !== 0) return;
     if (!onMoveNode) return;
     e.stopPropagation();
     setDraggingNode({ id: n.id, movedPx: 0 });
-    // Выделяем узел при начале drag
-    if (!selectedNodeIds.includes(n.id)) {
-      onSelectNodes([n.id]);
-      onSelectElements([]);
-    }
+    // Мышь захватывает указатель — последующий click уйдёт на SVG, а не на узел,
+    // поэтому handleNodeClick не сработает. Выделяем узел уже здесь (это и есть
+    // реакция на «клик»). Если жест окажется перетаскиванием — выбор снимется
+    // в onPointerUp после преодоления порога.
+    onSelectNodes([n.id]);
+    onSelectElements([]);
     try {
       svgRef.current!.setPointerCapture(e.pointerId);
     } catch {
