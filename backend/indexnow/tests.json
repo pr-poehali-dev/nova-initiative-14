@@ -1,0 +1,36 @@
+{
+  "tests": [
+    {
+      "name": "CORS preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "GET not allowed",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 405,
+      "expectedBody": {"error": "method_not_allowed"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Default pages submitted to IndexNow",
+      "method": "POST",
+      "path": "/",
+      "body": {},
+      "expectedStatus": 200,
+      "expectedBody": {"sent_count": 8},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Custom urls submitted",
+      "method": "POST",
+      "path": "/",
+      "body": {"urls": ["/cae/raschet-balki-onlayn"]},
+      "expectedStatus": 200,
+      "expectedBody": {"sent_count": 1},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
