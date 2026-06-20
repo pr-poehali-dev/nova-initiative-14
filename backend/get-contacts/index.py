@@ -160,10 +160,15 @@ def _handle_ping(conn):
     заставляет роботов прийти на переобход почти сразу, а не ждать планового
     обхода. Вызывать после публикации/обновления статьи.
     """
-    urls = [
-        f"{SITE_URL}/",
-        f"{SITE_URL}/blog",
+    # Все публичные статические разделы (совпадают со sitemap).
+    static_paths = [
+        "/", "/blog",
+        "/cae", "/cae/raschet-balki-onlayn", "/cae/raschet-ramy-onlayn",
+        "/cae/raschet-fermy-onlayn", "/cae/changelog",
+        "/program", "/pricing", "/contacts", "/cases", "/experts",
+        "/reviews", "/faq", "/about", "/vacancies", "/privacy", "/offer",
     ]
+    urls = [f"{SITE_URL}{p}" for p in static_paths]
     with conn.cursor() as cur:
         cur.execute(
             "SELECT slug FROM engineering_articles WHERE is_published = TRUE"
