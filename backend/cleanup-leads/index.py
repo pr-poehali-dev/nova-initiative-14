@@ -95,6 +95,17 @@ def handler(event: dict, context) -> dict:
     params = event.get('queryStringParameters') or {}
     action = params.get('action', 'preview')
 
+    # Проверка одного лида по ID: показываем ВСЕ его поля, чтобы увидеть,
+    # в каком из них лежит referrer preview--*.poehali.dev.
+    if action == 'inspect':
+        lead_id = params.get('id')
+        res = _bitrix_call(webhook_url, 'crm.lead.get', {'id': lead_id})
+        return {
+            'statusCode': 200,
+            'headers': {'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json'},
+            'body': json.dumps({'ok': True, 'lead': res.get('result')}, ensure_ascii=False),
+        }
+
     # Диагностика: общее число лидов и пример первой страницы с полями,
     # чтобы понять, в каком поле лежит referrer (preview--*.poehali.dev).
     if action == 'debug':
