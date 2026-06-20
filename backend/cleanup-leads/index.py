@@ -19,21 +19,26 @@ def _bitrix_call(webhook_url: str, method: str, params: dict) -> dict:
 
 
 def _find_preview_leads(webhook_url: str) -> list:
-    """Находит ID лидов «Анонимный посетитель», в комментарии которых есть
-    poehali.dev. Битрикс не умеет искать подстроку в COMMENTS фильтром, поэтому
-    выбираем анонимные лиды постранично и фильтруем по тексту на нашей стороне."""
+    """Находит ID лидов, в тексте которых есть poehali.dev (заходы через превью
+    редактора, в т.ч. preview--*.poehali.dev). Битрикс не умеет искать подстроку
+    фильтром, поэтому перебираем все лиды постранично и фильтруем на своей стороне.
+    Заголовок НЕ фиксируем — превью-лиды могли создаваться с разными TITLE.
+    Реальные заявки с сайта не содержат poehali.dev в комментарии, поэтому
+    под фильтр попадают только превью-заходы."""
     ids = []
     start = 0
     while True:
         result = _bitrix_call(webhook_url, 'crm.lead.list', {
-            'filter': {'TITLE': 'Анонимный посетитель сайта'},
-            'select': ['ID', 'COMMENTS'],
+            'select': ['ID', 'COMMENTS', 'SOURCE_DESCRIPTION'],
             'start': start,
         })
         leads = result.get('result') or []
         for lead in leads:
-            comments = (lead.get('COMMENTS') or '').lower()
-            if 'poehali.dev' in comments:
+            blob = (
+                (lead.get('COMMENTS') or '') + ' ' +
+                (lead.get('SOURCE_DESCRIPTION') or '')
+            ).lower()
+            if 'poehali.dev' in blob:
                 ids.append(int(lead['ID']))
         nxt = result.get('next')
         if nxt is None:
@@ -89,6 +94,40 @@ def handler(event: dict, context) -> dict:
     webhook_url = os.environ['BITRIX24_WEBHOOK_URL'].rstrip('/')
     params = event.get('queryStringParameters') or {}
     action = params.get('action', 'preview')
+
+    # Диагностика: общее число лидов и пример первой страницы с полями,
+    # чтобы понять, в каком поле лежит referrer (preview--*.poehali.dev).
+    if action == 'debug':
+        all_leads = []
+        start = 0
+        while True:
+            page = _bitrix_call(webhook_url, 'crm.lead.list', {
+                'select': ['ID', 'TITLE', 'COMMENTS', 'SOURCE_DESCRIPTION'],
+                'start': start,
+            })
+            chunk = page.get('result') or []
+            all_leads.extend(chunk)
+            nxt = page.get('next')
+            if nxt is None:
+                break
+            start = nxt
+            time.sleep(0.1)
+        # Показываем полный текст COMMENTS у первых «Анонимных» лидов,
+        # чтобы увидеть, где реально лежит referrer preview--*.poehali.dev.
+        anon = [l for l in all_leads if (l.get('TITLE') or '').startswith('Анонимный')][:4]
+        return {
+            'statusCode': 200,
+            'headers': {'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json'},
+            'body': json.dumps({
+                'ok': True,
+                'total_fetched': len(all_leads),
+                'anon_samples': [{
+                    'id': l['ID'],
+                    'comments': l.get('COMMENTS'),
+                    'source_description': l.get('SOURCE_DESCRIPTION'),
+                } for l in anon],
+            }, ensure_ascii=False),
+        }
 
     ids = _find_preview_leads(webhook_url)
 
