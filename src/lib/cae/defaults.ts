@@ -25,6 +25,8 @@ export const DEFAULT_ANALYSIS_SETTINGS: AnalysisSettings = {
   check_deflection: true,
   check_strength: true,
   check_buckling: true,
+  self_weight: false,
+  gravity_direction: [0, -1, 0],
 };
 
 export const DEFAULT_MATERIAL: Material = {

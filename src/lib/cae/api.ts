@@ -82,7 +82,15 @@ export function saveProjectModel(
  * в analysis_options, который читает решатель на бэкенде.
  */
 function withAnalysisType(model: FrameModel): FrameModel {
-  const analysisType = model.analysis_settings?.analysis_type ?? "linear";
+  const settings = model.analysis_settings;
+  const analysisType = settings?.analysis_type ?? "linear";
+  // Учёт собственного веса балок/стержней: проброс в analysis_options,
+  // который читает решатель (q = ρ·A·g, Н/м, по направлению гравитации).
+  const selfWeight = {
+    enabled: settings?.self_weight ?? false,
+    g: 9.81,
+    direction: settings?.gravity_direction ?? ([0, -1, 0] as [number, number, number]),
+  };
   // Для 3D подставляем авто-ориентацию сечения (ref_vector), чтобы плоские
   // рамы считались по сильной оси, как в 2D.
   const oriented = withAutoRefVector(model);
@@ -91,6 +99,7 @@ function withAnalysisType(model: FrameModel): FrameModel {
     analysis_options: {
       ...oriented.analysis_options,
       analysis_type: analysisType,
+      self_weight: selfWeight,
     },
   };
 }

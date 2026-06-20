@@ -180,6 +180,83 @@ const EditorAnalysisSettingsDialog = ({ open, onClose, settings, onChange }: Pro
             )}
           </section>
 
+          {/* СОБСТВЕННЫЙ ВЕС */}
+          <section>
+            <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-2">
+              Учёт собственного веса
+            </p>
+            <button
+              onClick={() => update({ self_weight: !(settings.self_weight ?? false) })}
+              className={`w-full text-left border p-2.5 transition flex items-start gap-2.5 ${
+                settings.self_weight
+                  ? "border-[var(--drawing-accent)] bg-[var(--drawing-accent)]/5"
+                  : "border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)]"
+              }`}
+            >
+              <span
+                className={`mt-0.5 w-9 h-5 rounded-full shrink-0 relative transition ${
+                  settings.self_weight
+                    ? "bg-[var(--drawing-accent)]"
+                    : "bg-[var(--drawing-line-thin)]/40"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${
+                    settings.self_weight ? "left-[18px]" : "left-0.5"
+                  }`}
+                />
+              </span>
+              <span className="flex-1">
+                <span className="block font-gost-upright text-[13px] font-bold text-[var(--drawing-ink)]">
+                  Учитывать вес балок и стержней
+                </span>
+                <span className="block font-gost text-[11px] text-[var(--drawing-line-thin)] mt-1 leading-snug">
+                  Добавляет распределённую гравитационную нагрузку q&nbsp;=&nbsp;ρ·A·g (Н/м)
+                  на каждый элемент. Плотность ρ берётся из материала, площадь A&nbsp;— из сечения.
+                  По умолчанию выключено: результат совпадает с ручным сопроматным расчётом без веса.
+                </span>
+              </span>
+            </button>
+
+            {settings.self_weight && (
+              <div className="mt-2 p-3 border border-dashed border-[var(--drawing-line)] bg-[var(--drawing-paper)]/40">
+                <p className="font-gost text-[11px] text-[var(--drawing-ink)] mb-2">
+                  Направление силы тяжести (куда «падает» конструкция)
+                </p>
+                <div className="flex gap-2">
+                  {([
+                    { dir: [0, -1, 0] as [number, number, number], label: "Вниз по Y", hint: "Плоские 2D-рамы" },
+                    { dir: [0, 0, -1] as [number, number, number], label: "Вниз по Z", hint: "3D, вертикаль Z" },
+                  ]).map((opt) => {
+                    const cur = settings.gravity_direction ?? [0, -1, 0];
+                    const active = cur[0] === opt.dir[0] && cur[1] === opt.dir[1] && cur[2] === opt.dir[2];
+                    return (
+                      <button
+                        key={opt.label}
+                        onClick={() => update({ gravity_direction: opt.dir })}
+                        className={`flex-1 border p-2 text-left transition ${
+                          active
+                            ? "border-[var(--drawing-accent)] bg-[var(--drawing-accent)]/5"
+                            : "border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)]"
+                        }`}
+                      >
+                        <span className="block font-gost-upright text-[12px] font-bold text-[var(--drawing-ink)]">
+                          {opt.label}
+                        </span>
+                        <span className="block font-gost text-[10px] text-[var(--drawing-line-thin)] mt-0.5">
+                          {opt.hint}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] mt-2 italic">
+                  Ускорение свободного падения g&nbsp;=&nbsp;9.81&nbsp;м/с².
+                </p>
+              </div>
+            )}
+          </section>
+
           {/* ИНЖЕНЕРНАЯ ШКОЛА */}
           <section>
             <p className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-2">

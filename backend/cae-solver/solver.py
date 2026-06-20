@@ -73,6 +73,22 @@ class FrameSolver:
         self.analysis_type = opts.get('analysis_type', 'linear')
         self.pdelta_max_iter = int(opts.get('pdelta_max_iter', 20))
         self.pdelta_tol = float(opts.get('pdelta_tol', 1e-4))
+
+        # Учёт собственного веса балок и стержней (гравитационная нагрузка
+        # q = ρ·A·g, Н/м, в глобальном направлении силы тяжести). Настройка
+        # приходит в analysis_options.self_weight: { enabled, g, direction }.
+        # direction — единичный вектор силы тяжести в глобальных осях.
+        # По умолчанию g действует против оси Y (вниз): (0, -1, 0).
+        sw = opts.get('self_weight', {}) or {}
+        self.self_weight_enabled = bool(sw.get('enabled', False))
+        self.gravity_g = float(sw.get('g', 9.81))
+        gdir = sw.get('direction')
+        if not gdir or len(gdir) < 2:
+            gdir = [0.0, -1.0, 0.0]
+        if len(gdir) == 2:
+            gdir = [gdir[0], gdir[1], 0.0]
+        self.gravity_dir = (float(gdir[0]), float(gdir[1]), float(gdir[2]))
+
         self._parse()
 
     def _parse(self):
@@ -184,7 +200,7 @@ class FrameSolver:
             )
 
         k_global = T.T @ k_local @ T
-        return k_local, k_global, T, L
+        return k_local, k_global, T, L, R3
 
     def _solve_linear(self, K_csr, F, free_indices):
         """Решает K·u = F методом исключения закреплённых DOF. Возвращает u."""
@@ -306,7 +322,7 @@ class FrameSolver:
 
         # ===== Сборка K и f_eq от внутрипролётных нагрузок =====
         for el in self.elements:
-            k_local, k_global, T, L = self._build_element_stiffness(el)
+            k_local, k_global, T, L, R3 = self._build_element_stiffness(el)
             dofs = self._element_dof_indices(el)
             el_cache[el.id] = {'k_local': k_local, 'T': T, 'L': L, 'dofs': dofs}
 
@@ -319,6 +335,32 @@ class FrameSolver:
             hinge_a = bool(el.releases_a.get('rz'))
             hinge_b = bool(el.releases_b.get('rz'))
             f_eq_local = np.zeros(self.dof_per_node * 2)
+
+            # --- Собственный вес элемента (q = ρ·A·g, Н/м) ---
+            # Глобальный вектор погонной нагрузки от веса проецируем в локальные
+            # оси элемента (R3) и раскладываем на осевую/поперечные составляющие.
+            if self.self_weight_enabled:
+                mat = self.materials[el.material_id]
+                sec = self.sections[el.section_id]
+                w = mat.rho * sec.A * self.gravity_g  # Н/м, модуль погонного веса
+                q_global = np.array([
+                    w * self.gravity_dir[0],
+                    w * self.gravity_dir[1],
+                    w * self.gravity_dir[2],
+                ])
+                q_local = R3 @ q_global  # (q_x, q_y, q_z) в локальных осях
+                if self.dim == '3d':
+                    f_eq_local += fixed_end_forces_3d_uniform(q_local[1], q_local[2], L)
+                    # Осевая погонная нагрузка q_x → узловые силы q_x·L/2.
+                    f_eq_local[0] += q_local[0] * L / 2.0
+                    f_eq_local[6] += q_local[0] * L / 2.0
+                else:
+                    f_eq_local += fixed_end_forces_2d_uniform(
+                        q_local[1], L, hinge_a=hinge_a, hinge_b=hinge_b,
+                    )
+                    f_eq_local[0] += q_local[0] * L / 2.0
+                    f_eq_local[3] += q_local[0] * L / 2.0
+
             for ld in self.loads:
                 if ld.element_id != el.id:
                     continue

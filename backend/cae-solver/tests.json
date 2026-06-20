@@ -202,6 +202,34 @@
         ]
       },
       "expectedStatus": 200
+    },
+    {
+      "name": "Validate: учёт собственного веса (приём self_weight)",
+      "comment": "Балка без внешних нагрузок, только собственный вес q=ρ·A·g. Проверяем приём analysis_options.self_weight через validate (demo ограничен лимитом по IP).",
+      "method": "POST",
+      "path": "/?action=validate",
+      "body": {
+        "meta": { "dim": "2d" },
+        "analysis_options": { "self_weight": { "enabled": true, "g": 9.81, "direction": [0, -1, 0] } },
+        "materials": [
+          { "id": "steel", "E": 2.1e11, "G": 8.1e10, "nu": 0.3, "rho": 7850, "sigma_yield": 245e6 }
+        ],
+        "sections": [
+          { "id": "i20", "A": 26.8e-4, "I_z": 1840e-8, "W_z": 184e-6, "h": 0.2, "shear_area_y": 13.4e-4 }
+        ],
+        "nodes": [
+          { "id": "n1", "coords": [0, 0] },
+          { "id": "n2", "coords": [6.0, 0] }
+        ],
+        "elements": [
+          { "id": "e1", "node_start": "n1", "node_end": "n2", "material_id": "steel", "section_id": "i20" }
+        ],
+        "boundary_conditions": [
+          { "node_id": "n1", "constrained_dofs": ["ux", "uy", "rz"] }
+        ],
+        "loads": []
+      },
+      "expectedStatus": 200
     }
   ]
 }

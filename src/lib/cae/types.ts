@@ -179,6 +179,19 @@ export interface AnalysisSettings {
    * По умолчанию включено.
    */
   check_buckling?: boolean;
+  /**
+   * Учитывать собственный вес балок и стержней — гравитационную нагрузку
+   * q = ρ·A·g (Н/м), распределённую по каждому элементу. Плотность ρ берётся
+   * из материала, площадь A — из сечения. По умолчанию выключено, чтобы
+   * результат совпадал с ручным сопроматным расчётом без учёта веса.
+   */
+  self_weight?: boolean;
+  /**
+   * Направление силы тяжести в глобальных осях (единичный вектор).
+   * По умолчанию вниз — против оси Y: [0, -1, 0]. Для 3D, где вертикаль
+   * по Z, выберите [0, 0, -1].
+   */
+  gravity_direction?: [number, number, number];
 }
 
 export interface FrameModel {
@@ -189,7 +202,15 @@ export interface FrameModel {
   elements: ModelElement[];
   boundary_conditions: BoundaryCondition[];
   loads: ModelLoad[];
-  analysis_options?: { diagram_subdivisions?: number; analysis_type?: AnalysisType };
+  analysis_options?: {
+    diagram_subdivisions?: number;
+    analysis_type?: AnalysisType;
+    self_weight?: {
+      enabled: boolean;
+      g?: number;
+      direction?: [number, number, number];
+    };
+  };
   analysis_settings?: AnalysisSettings;
 }
 
