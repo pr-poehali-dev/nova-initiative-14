@@ -26,9 +26,11 @@ def _to_punycode_email(addr):
 
 def _send_lead_email(lead_id, name, contact, comments):
     """Отправляет уведомление о новой заявке через SMTP Яндекс 360. Не валит запрос при ошибке."""
-    smtp_user_raw = os.environ.get('YANDEX_SMTP_USER')
-    smtp_password = os.environ.get('YANDEX_SMTP_PASSWORD')
-    notify_to_raw = os.environ.get('LEAD_NOTIFY_EMAIL')
+    # Используем те же SMTP-доступы, что и SSO-письма (info@диплом-инж.рф).
+    # Имена YANDEX_SMTP_* оставлены как запасной вариант для совместимости.
+    smtp_user_raw = os.environ.get('SSO_SMTP_USER') or os.environ.get('YANDEX_SMTP_USER')
+    smtp_password = os.environ.get('SSO_SMTP_PASSWORD') or os.environ.get('YANDEX_SMTP_PASSWORD')
+    notify_to_raw = os.environ.get('LEAD_NOTIFY_EMAIL') or smtp_user_raw
 
     if not smtp_user_raw or not smtp_password or not notify_to_raw:
         print('[create-lead] SMTP secrets not configured, email skipped')
@@ -187,21 +189,37 @@ def handler(event: dict, context) -> dict:
         method='POST'
     )
 
+    lead_id = None
+    bitrix_ok = True
+    bitrix_error = None
     try:
         with urllib.request.urlopen(req) as resp:
             result = json.loads(resp.read().decode('utf-8'))
+        lead_id = result.get('result')
     except urllib.error.HTTPError as e:
-        error_body = e.read().decode('utf-8')
-        print(f'[create-lead] HTTP {e.code}: {error_body}')
+        bitrix_ok = False
+        bitrix_error = f'HTTP {e.code}'
+        try:
+            bitrix_error += f': {e.read().decode("utf-8")}'
+        except Exception:
+            pass
+        print(f'[create-lead] Bitrix error: {bitrix_error}')
+    except Exception as e:
+        bitrix_ok = False
+        bitrix_error = str(e)
+        print(f'[create-lead] Bitrix error: {bitrix_error}')
+
+    # Письмо отправляем ВСЕГДА, даже если Битрикс недоступен — чтобы заявка
+    # точно дошла до info@диплом-инж.рф и не потерялась.
+    email_sent = _send_lead_email(lead_id, name, contact, comments)
+
+    # Заявка считается принятой, если сработал хотя бы один канал (CRM или почта).
+    if not bitrix_ok and not email_sent:
         return {
             'statusCode': 502,
             'headers': {'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'ok': False, 'error': f'HTTP {e.code}', 'detail': error_body})
+            'body': json.dumps({'ok': False, 'error': bitrix_error or 'delivery_failed'})
         }
-
-    lead_id = result.get('result')
-
-    email_sent = _send_lead_email(lead_id, name, contact, comments)
 
     return {
         'statusCode': 200,

@@ -58,7 +58,6 @@ import UrfuQrCae from "./pages/UrfuQrCae";
 import UrfuQrDiplom from "./pages/UrfuQrDiplom";
 import NotFoundPage from "./pages/NotFoundPage";
 import { useVisitorTracking, getVisitorData } from "./hooks/useVisitorTracking";
-import { hasEverAuthenticated } from "@/lib/auth";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./hooks/use-theme";
 import func2url from "../backend/func2url.json";
@@ -104,9 +103,8 @@ function VisitorTracker() {
 
   useEffect(() => {
     const handleUnload = () => {
-      // Не учитываем заходы «своих»: текущих пользователей и тех,
-      // у кого на устройстве уже была регистрация/вход.
-      if (hasEverAuthenticated()) return;
+      // Учитываем ВСЕ заходы, включая «своих» (авторизованных и тех, у кого
+      // на устройстве уже была регистрация/вход) — по требованию владельца.
       const data = getVisitorData();
       if (!data.pages.length) return;
       const url = (func2url as Record<string, string>)["track-visit"];
