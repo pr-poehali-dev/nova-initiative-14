@@ -14,8 +14,15 @@ def _bitrix_call(webhook_url: str, method: str, params: dict) -> dict:
         headers={'Content-Type': 'application/json'},
         method='POST',
     )
-    with urllib.request.urlopen(req, timeout=25) as resp:
-        return json.loads(resp.read().decode('utf-8'))
+    try:
+        with urllib.request.urlopen(req, timeout=25) as resp:
+            return json.loads(resp.read().decode('utf-8'))
+    except urllib.error.HTTPError as e:
+        # Битрикс отвечает 400 с JSON-телом ошибки (например, лид не найден).
+        try:
+            return json.loads(e.read().decode('utf-8'))
+        except Exception:
+            return {'error': f'HTTP {e.code}'}
 
 
 def _find_preview_leads(webhook_url: str) -> list:
