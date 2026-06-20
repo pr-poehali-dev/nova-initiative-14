@@ -20,7 +20,8 @@ const NotFoundPage = () => (
     <Helmet>
       <title>Страница не найдена · 404 · Диплом-Инж.рф</title>
       <meta name="prerender-status-code" content="404" />
-      <meta name="robots" content="noindex, follow" />
+      <meta name="robots" content="noindex, nofollow" />
+      <meta name="yandex" content="noindex, nofollow" />
     </Helmet>
     <NotFound />
   </>
