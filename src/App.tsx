@@ -59,6 +59,7 @@ import UrfuQrDiplom from "./pages/UrfuQrDiplom";
 import NotFoundPage from "./pages/NotFoundPage";
 import { useVisitorTracking, getVisitorData } from "./hooks/useVisitorTracking";
 import { isPoehaliPreview } from "@/lib/attribution";
+import { hasEverAuthenticated } from "@/lib/auth";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./hooks/use-theme";
 import func2url from "../backend/func2url.json";
@@ -126,6 +127,9 @@ function VisitorTracker() {
         // Заход через превью редактора poehali.dev — статистику пишем,
         // но лид «Анонимный посетитель» в CRM не создаём.
         isPreview: isPoehaliPreview(),
+        // Авторизованный «свой» заход — статистику пишем, но лид/сделку в CRM
+        // не создаём (иначе мы сами плодим анонимные сделки в Битриксе).
+        isAuthenticated: hasEverAuthenticated(),
       };
       navigator.sendBeacon(url, JSON.stringify({ visitor }));
     };

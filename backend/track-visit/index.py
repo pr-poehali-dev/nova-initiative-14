@@ -144,9 +144,27 @@ def handler(event: dict, context) -> dict:
     referrer = (visitor.get('referrer') or '').lower()
     is_preview = bool(visitor.get('isPreview')) or 'poehali.dev' in referrer
 
+    # Авторизованные посетители («свои») не должны создавать анонимный лид/сделку.
+    # Статистику визита при этом пишем всегда (см. _save_visit выше).
+    is_authenticated = bool(visitor.get('isAuthenticated'))
+
+    # Внутренний переход по нашему же домену (диплом-инж.рф в punycode) —
+    # это навигация по сайту, а не новый посетитель: лид не создаём.
+    attr = visitor.get('attribution') or {}
+    source_type = (attr.get('sourceType') or '').lower()
+    is_internal = (
+        source_type == 'internal'
+        or 'xn----gtbhgbqhkfi' in referrer
+        or 'xn--p1ai' in referrer
+    )
+
     # Анонимный лид в CRM — только если посетитель НЕ отправлял форму
-    # (иначе по нему уже создан именной лид через create-lead) и это не превью.
-    if not visitor.get('formSubmitted') and not is_preview:
+    # (иначе по нему уже создан именной лид через create-lead), это не превью
+    # и посетитель не авторизован.
+    if (not visitor.get('formSubmitted')
+            and not is_preview
+            and not is_authenticated
+            and not is_internal):
         try:
             _push_bitrix_lead(visitor, source_ip)
         except Exception as e:
