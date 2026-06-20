@@ -62,6 +62,27 @@ const QR_FLYER_LABELS: Record<string, string> = {
   "/urfu_qr_diplom": "QR-флаер: Диплом",
 };
 
+/**
+ * Открыт ли сайт внутри превью редактора poehali.dev.
+ * Превью грузится в iframe на домене *.poehali.dev, поэтому проверяем:
+ *  - текущий хост содержит poehali.dev (предпросмотр проекта);
+ *  - страница встроена в iframe, а родитель/реферрер — poehali.dev.
+ * Такие заходы не должны создавать лид «Анонимный посетитель» в CRM.
+ */
+export function isPoehaliPreview(): boolean {
+  try {
+    const host = window.location.hostname.toLowerCase();
+    if (host.includes("poehali.dev")) return true;
+    const inIframe = window.self !== window.top;
+    const ref = (document.referrer || "").toLowerCase();
+    if (inIframe && ref.includes("poehali.dev")) return true;
+    if (ref.includes("poehali.dev")) return true;
+  } catch {
+    return true; // доступ к window.top заблокирован cross-origin → это iframe превью
+  }
+  return false;
+}
+
 function hostFromUrl(url: string): string {
   try {
     return new URL(url).hostname.toLowerCase();

@@ -139,9 +139,14 @@ def handler(event: dict, context) -> dict:
     except Exception as e:
         print(f'[track-visit] DB error: {e}')
 
+    # Заход через превью редактора poehali.dev не должен порождать лид в CRM.
+    # Проверяем явный флаг с фронта и подстраховываемся по referrer.
+    referrer = (visitor.get('referrer') or '').lower()
+    is_preview = bool(visitor.get('isPreview')) or 'poehali.dev' in referrer
+
     # Анонимный лид в CRM — только если посетитель НЕ отправлял форму
-    # (иначе по нему уже создан именной лид через create-lead).
-    if not visitor.get('formSubmitted'):
+    # (иначе по нему уже создан именной лид через create-lead) и это не превью.
+    if not visitor.get('formSubmitted') and not is_preview:
         try:
             _push_bitrix_lead(visitor, source_ip)
         except Exception as e:
