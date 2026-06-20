@@ -7,11 +7,11 @@
       "expectedStatus": 200
     },
     {
-      "name": "Preview найденных лидов",
+      "name": "Preview сделок (deal)",
       "method": "GET",
-      "path": "/?action=preview",
+      "path": "/?action=preview&entity=deal",
       "expectedStatus": 200,
-      "expectedBody": {"ok": true},
+      "expectedBody": {"ok": true, "entity": "deal"},
       "bodyMatcher": "partial"
     }
   ]
