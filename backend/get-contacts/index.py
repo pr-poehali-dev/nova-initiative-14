@@ -103,22 +103,25 @@ def _handle_sitemap(conn):
         latest_article = row[0].strftime("%Y-%m-%d") if row and row[0] else today
 
     # (path, changefreq, priority, lastmod)
+    # changefreq держим не реже weekly даже для редко меняющихся страниц —
+    # слишком редкий (monthly/yearly) сигнал может замедлять переобход роботом
+    # после запроса индексации. Реальную свежесть роботу показывает lastmod.
     static_pages = [
         ("/", "daily", "1.0", latest_article),
         ("/blog", "daily", "0.9", latest_article),
         ("/cae", "weekly", "0.9", today),
         ("/cae/changelog", "weekly", "0.6", today),
-        ("/program", "monthly", "0.9", today),
-        ("/pricing", "monthly", "0.9", today),
-        ("/contacts", "monthly", "0.9", today),
-        ("/cases", "monthly", "0.8", today),
-        ("/experts", "monthly", "0.8", today),
-        ("/reviews", "monthly", "0.8", today),
-        ("/faq", "monthly", "0.7", today),
-        ("/about", "monthly", "0.7", today),
-        ("/vacancies", "monthly", "0.6", today),
-        ("/privacy", "yearly", "0.3", today),
-        ("/offer", "yearly", "0.3", today),
+        ("/program", "weekly", "0.9", today),
+        ("/pricing", "weekly", "0.9", today),
+        ("/contacts", "weekly", "0.9", today),
+        ("/cases", "weekly", "0.8", today),
+        ("/experts", "weekly", "0.8", today),
+        ("/reviews", "weekly", "0.8", today),
+        ("/faq", "weekly", "0.7", today),
+        ("/about", "weekly", "0.7", today),
+        ("/vacancies", "weekly", "0.6", today),
+        ("/privacy", "monthly", "0.3", today),
+        ("/offer", "monthly", "0.3", today),
     ]
     parts = ['<?xml version="1.0" encoding="UTF-8"?>',
              '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
