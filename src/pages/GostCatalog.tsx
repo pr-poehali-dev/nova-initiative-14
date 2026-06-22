@@ -1,55 +1,76 @@
 /**
  * Каталог ГОСТов (/gost-catalog).
  *
- * Раскрывающиеся разделы по отраслям инженерии (ЕСКД, машиностроение,
- * строительство, сварка, документация ВКР) + смысловой поиск: находит документ
- * не только по номеру/названию, но и по бытовым формулировкам темы (теги).
+ * Трёхуровневая навигация листанием: Отрасль → Тематическая подгруппа → ГОСТы.
+ * Развернул «Машиностроение» — видишь подгруппы (балки, метрология, допуски,
+ * стандартизация…), раскрыл подгруппу — компактный список стандартов. Строка
+ * поиска работает как дополнительный фильтр по номеру/названию/смысловым тегам.
  * Реализовано по запросу из тикета поддержки #68 «Каталог ГОСТов».
  */
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import Seo from "@/components/Seo";
-import { GOST_SECTIONS, type GostItem } from "@/data/gostCatalog";
+import { GOST_DOMAINS, type GostItem } from "@/data/gostCatalog";
 import { breadcrumbsLd } from "@/lib/seo";
 
 const GostCatalog = () => {
   const [query, setQuery] = useState("");
-  const [openSections, setOpenSections] = useState<Set<string>>(
-    () => new Set([GOST_SECTIONS[0].marker]),
+  // По умолчанию открыта первая отрасль; подгруппы свёрнуты.
+  const [openDomains, setOpenDomains] = useState<Set<string>>(
+    () => new Set([GOST_DOMAINS[0].id]),
   );
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() => new Set());
 
   const q = query.trim().toLowerCase();
 
-  // Смысловой поиск: по номеру, названию и тегам (синонимам темы).
-  const matches = (item: GostItem) => {
-    if (!q) return true;
-    const haystack = [item.code, item.title, ...item.tags].join(" ").toLowerCase();
-    return q.split(/\s+/).every((word) => haystack.includes(word));
-  };
+  // Фильтруем структуру по поиску, отбрасывая пустые подгруппы и отрасли.
+  const filtered = useMemo(() => {
+    const matches = (item: GostItem) => {
+      if (!q) return true;
+      const haystack = [item.code, item.title, ...item.tags].join(" ").toLowerCase();
+      return q.split(/\s+/).every((word) => haystack.includes(word));
+    };
+    return GOST_DOMAINS.map((d) => ({
+      ...d,
+      groups: d.groups
+        .map((g) => ({ ...g, items: g.items.filter(matches) }))
+        .filter((g) => g.items.length > 0),
+    })).filter((d) => d.groups.length > 0);
+  }, [q]);
 
-  const filtered = useMemo(
+  const totalAll = useMemo(
     () =>
-      GOST_SECTIONS.map((s) => ({
-        ...s,
-        items: s.items.filter(matches),
-      })).filter((s) => s.items.length > 0),
-    [q],
+      GOST_DOMAINS.reduce(
+        (n, d) => n + d.groups.reduce((m, g) => m + g.items.length, 0),
+        0,
+      ),
+    [],
+  );
+  const totalFound = filtered.reduce(
+    (n, d) => n + d.groups.reduce((m, g) => m + g.items.length, 0),
+    0,
   );
 
-  const totalFound = filtered.reduce((n, s) => n + s.items.length, 0);
-
-  const toggle = (marker: string) => {
-    setOpenSections((prev) => {
+  const toggleDomain = (id: string) =>
+    setOpenDomains((prev) => {
       const next = new Set(prev);
-      if (next.has(marker)) next.delete(marker);
-      else next.add(marker);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
-  };
 
-  // Когда идёт поиск — разделы с результатами открыты автоматически.
-  const isOpen = (marker: string) => (q ? true : openSections.has(marker));
+  const toggleGroup = (id: string) =>
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  // При активном поиске всё раскрыто, чтобы сразу видеть найденное.
+  const domainOpen = (id: string) => (q ? true : openDomains.has(id));
+  const groupOpen = (id: string) => (q ? true : openGroups.has(id));
 
   const breadcrumbLd = breadcrumbsLd([["Каталог ГОСТов", "/gost-catalog"]]);
 
@@ -57,13 +78,13 @@ const GostCatalog = () => {
     <main className="min-h-screen grid-bg">
       <Seo jsonLd={breadcrumbLd} />
 
-      <section className="pt-28 pb-12 px-4 md:px-8 max-w-[1200px] mx-auto">
+      <section className="pt-28 pb-10 px-4 md:px-8 max-w-[1100px] mx-auto">
         <div className="drawing-frame p-6 md:p-10 relative">
           <div className="zone-marker top-2 left-3">Г1</div>
           <div className="zone-marker top-2 right-3">Зона ГОСТ</div>
 
           <div className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-line-thin)] mb-3">
-            Нормативные документы&nbsp;&middot; Диплом-Инж.рф
+            Нормативные документы&nbsp;&middot; {totalAll} стандартов
           </div>
           <div className="extension-line-h w-full mb-6" />
 
@@ -74,15 +95,16 @@ const GostCatalog = () => {
           </h1>
 
           <p className="font-gost text-sm md:text-base max-w-2xl text-[var(--drawing-line-thin)] leading-relaxed">
-            Стандарты сгруппированы по разделам инженерии. Не знаете номер ГОСТа,
-            но понимаете суть&nbsp;— просто опишите тему словами: «лестницы»,
-            «ограждения», «резьба», «шероховатость». Поиск найдёт нужный документ.
+            Стандарты разложены по отраслям и темам. Раскройте отрасль&nbsp;— и
+            листайте подгруппы: балки и&nbsp;профили, допуски, метрология,
+            стандартизация, сварка, лестницы и&nbsp;ограждения. Нужный документ
+            находится без поиска, прямо во&nbsp;время просмотра.
           </p>
         </div>
       </section>
 
-      {/* Смысловой поиск */}
-      <section className="px-4 md:px-8 max-w-[1200px] mx-auto mb-6">
+      {/* Поиск (дополнительный фильтр) */}
+      <section className="px-4 md:px-8 max-w-[1100px] mx-auto mb-6">
         <div className="relative">
           <Icon
             name="Search"
@@ -93,8 +115,8 @@ const GostCatalog = () => {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Опишите тему: лестницы и ограждения, двутавр, допуски, сварной шов…"
-            className="w-full border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] pl-12 pr-4 py-3 font-gost text-sm text-[var(--drawing-line)] focus:border-[var(--drawing-accent)] focus:outline-none"
+            placeholder="Фильтр по теме: лестницы, двутавр, допуски, шероховатость, сварной шов…"
+            className="w-full border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] pl-12 pr-10 py-2.5 font-gost text-sm text-[var(--drawing-line)] focus:border-[var(--drawing-accent)] focus:outline-none"
           />
           {query && (
             <button
@@ -108,95 +130,110 @@ const GostCatalog = () => {
         </div>
         {q && (
           <p className="font-gost text-[11px] text-[var(--drawing-line-thin)] mt-2">
-            Найдено документов: <strong>{totalFound}</strong>
+            Найдено: <strong>{totalFound}</strong>
           </p>
         )}
       </section>
 
-      {/* Разделы */}
-      <section className="px-4 md:px-8 max-w-[1200px] mx-auto space-y-5 pb-16">
+      {/* Отрасли → подгруппы → ГОСТы */}
+      <section className="px-4 md:px-8 max-w-[1100px] mx-auto space-y-3 pb-16">
         {filtered.length === 0 && (
           <div className="drawing-frame p-8 text-center">
             <Icon name="SearchX" size={28} className="mx-auto mb-3 text-[var(--drawing-line-thin)]" />
             <p className="font-gost text-sm text-[var(--drawing-line-thin)]">
-              По запросу «{query}» ничего не нашлось. Попробуйте другие слова —
-              например, «балка», «штамп», «спецификация».
+              По запросу «{query}» ничего не нашлось. Попробуйте «балка», «штамп»,
+              «резьба», «спецификация».
             </p>
           </div>
         )}
 
-        {filtered.map((section, si) => (
-          <div
-            key={section.marker}
-            className={`drawing-frame p-5 md:p-7 relative ${si % 2 === 1 ? "hatching" : ""}`}
-          >
-            <div className="zone-marker top-2 right-3">{section.marker}</div>
-
-            <button
-              className="w-full flex items-center justify-between gap-4 text-left group"
-              onClick={() => toggle(section.marker)}
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <span className="shrink-0 text-[var(--drawing-accent)]">
-                  <Icon name={section.icon} size={22} fallback="FileText" />
-                </span>
-                <span className="min-w-0">
-                  <span className="block section-callout font-gost-upright text-lg md:text-2xl font-bold tracking-tight group-hover:text-[var(--drawing-accent)] transition-colors">
-                    {section.title}
+        {filtered.map((domain) => {
+          const dOpen = domainOpen(domain.id);
+          const dCount = domain.groups.reduce((m, g) => m + g.items.length, 0);
+          return (
+            <div key={domain.id} className="drawing-frame relative overflow-hidden">
+              {/* Заголовок отрасли */}
+              <button
+                className="w-full flex items-center justify-between gap-3 px-4 md:px-6 py-4 text-left group"
+                onClick={() => toggleDomain(domain.id)}
+              >
+                <span className="flex items-center gap-3 min-w-0">
+                  <span className="shrink-0 text-[var(--drawing-accent)]">
+                    <Icon name={domain.icon} size={22} fallback="FileText" />
                   </span>
-                  <span className="block font-gost text-[11px] text-[var(--drawing-line-thin)] mt-0.5">
-                    {section.items.length} док.
+                  <span className="font-gost-upright text-base md:text-xl font-bold tracking-tight group-hover:text-[var(--drawing-accent)] transition-colors">
+                    {domain.title}
                   </span>
                 </span>
-              </div>
-              <span className="shrink-0 text-[var(--drawing-line-thin)]">
-                <Icon name={isOpen(section.marker) ? "ChevronUp" : "ChevronDown"} size={20} />
-              </span>
-            </button>
+                <span className="flex items-center gap-3 shrink-0">
+                  <span className="font-gost text-[10px] text-[var(--drawing-line-thin)] tabular-nums">
+                    {dCount}
+                  </span>
+                  <Icon
+                    name={dOpen ? "ChevronUp" : "ChevronDown"}
+                    size={20}
+                    className="text-[var(--drawing-line-thin)]"
+                  />
+                </span>
+              </button>
 
-            {isOpen(section.marker) && (
-              <>
-                <div className="extension-line-h w-full my-5" />
-                <p className="font-gost text-xs text-[var(--drawing-line-thin)] mb-5 leading-relaxed">
-                  {section.hint}
-                </p>
-                <div className="space-y-3">
-                  {section.items.map((item) => (
-                    <div
-                      key={item.code}
-                      className="border-[1.5px] border-[var(--drawing-line)] p-4 bg-[var(--drawing-bg)]"
-                    >
-                      <div className="flex items-baseline gap-3 flex-wrap">
-                        <span className="font-gost-upright text-sm font-bold text-[var(--drawing-accent)]">
-                          {item.code}
-                        </span>
-                        <span className="font-gost text-sm text-[var(--drawing-line)]">
-                          {item.title}
-                        </span>
+              {dOpen && (
+                <div className="border-t-[1.5px] border-[var(--drawing-line)] divide-y divide-[var(--drawing-line)]/30">
+                  {domain.groups.map((group) => {
+                    const gOpen = groupOpen(group.id);
+                    return (
+                      <div key={group.id}>
+                        {/* Заголовок подгруппы */}
+                        <button
+                          className="w-full flex items-center justify-between gap-3 px-4 md:px-6 py-2.5 text-left group bg-[var(--drawing-paper)]/40 hover:bg-[var(--drawing-paper)]"
+                          onClick={() => toggleGroup(group.id)}
+                        >
+                          <span className="flex items-center gap-2 min-w-0">
+                            <Icon
+                              name={gOpen ? "Minus" : "Plus"}
+                              size={13}
+                              className="shrink-0 text-[var(--drawing-accent)]"
+                            />
+                            <span className="font-gost text-[13px] md:text-sm font-bold text-[var(--drawing-line)] group-hover:text-[var(--drawing-accent)] transition-colors">
+                              {group.title}
+                            </span>
+                          </span>
+                          <span className="font-gost text-[10px] text-[var(--drawing-line-thin)] shrink-0 tabular-nums">
+                            {group.items.length}
+                          </span>
+                        </button>
+
+                        {/* Компактные строки ГОСТов */}
+                        {gOpen && (
+                          <ul className="pb-1">
+                            {group.items.map((item) => (
+                              <li
+                                key={item.code}
+                                className="flex items-baseline gap-2.5 px-4 md:px-8 py-1.5 hover:bg-[var(--drawing-paper)]/60"
+                              >
+                                <span className="font-gost-upright text-[12px] font-bold text-[var(--drawing-accent)] whitespace-nowrap shrink-0">
+                                  {item.code}
+                                </span>
+                                <span className="font-gost text-[12px] md:text-[13px] text-[var(--drawing-line-thin)] leading-snug">
+                                  {item.title}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                       </div>
-                      <div className="flex flex-wrap gap-1.5 mt-2">
-                        {item.tags.map((t) => (
-                          <button
-                            key={t}
-                            onClick={() => setQuery(t)}
-                            className="font-gost text-[10px] border border-[var(--drawing-line-thin)] px-2 py-0.5 text-[var(--drawing-line-thin)] hover:bg-[var(--drawing-line)] hover:text-[var(--drawing-bg)] transition-colors"
-                          >
-                            {t}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
-              </>
-            )}
-          </div>
-        ))}
+              )}
+            </div>
+          );
+        })}
       </section>
 
       {/* CTA */}
       <section className="pb-20 px-4 md:px-8">
-        <div className="max-w-[1200px] mx-auto">
+        <div className="max-w-[1100px] mx-auto">
           <div className="drawing-frame p-8 md:p-12 text-center">
             <h2 className="font-gost-upright text-2xl md:text-3xl font-bold tracking-tight mb-4 text-[var(--drawing-line)]">
               Не нашли нужный стандарт?
