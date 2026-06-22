@@ -17,6 +17,7 @@ import Pricing from "./pages/Pricing";
 import Cases from "./pages/Cases";
 import Experts from "./pages/Experts";
 import Faq from "./pages/Faq";
+import GostCatalog from "./pages/GostCatalog";
 import Contacts from "./pages/Contacts";
 import Privacy from "./pages/Privacy";
 import Offer from "./pages/Offer";
@@ -163,6 +164,7 @@ const App = () => (
                 <Route path="/cases" element={<Cases />} />
                 <Route path="/experts" element={<Experts />} />
                 <Route path="/faq" element={<Faq />} />
+                <Route path="/gost-catalog" element={<GostCatalog />} />
                 <Route path="/contacts" element={<Contacts />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/offer" element={<Offer />} />

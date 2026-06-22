@@ -11,6 +11,7 @@ const navLinks = [
   { label: "CAE", to: "/cae" },
   { label: "Кейсы", to: "/cases" },
   { label: "Блог", to: "/blog" },
+  { label: "ГОСТы", to: "/gost-catalog" },
   { label: "Наставники", to: "/experts" },
   { label: "О нас", to: "/about" },
   { label: "Отзывы", to: "/reviews" },

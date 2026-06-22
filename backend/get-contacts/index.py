@@ -111,6 +111,7 @@ def _handle_sitemap(conn):
         ("/blog", "daily", "0.9", latest_article),
         ("/cae", "weekly", "0.9", today),
         ("/cae/changelog", "weekly", "0.6", today),
+        ("/gost-catalog", "weekly", "0.8", today),
         ("/program", "weekly", "0.9", today),
         ("/pricing", "weekly", "0.9", today),
         ("/contacts", "weekly", "0.9", today),
