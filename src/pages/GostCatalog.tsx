@@ -11,8 +11,9 @@ import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import Seo from "@/components/Seo";
-import { GOST_DOMAINS, type GostItem } from "@/data/gostCatalog";
+import { GOST_DOMAINS, type GostItem, buildGostIndex } from "@/data/gostCatalog";
 import { breadcrumbsLd } from "@/lib/seo";
+import GostCard from "@/components/GostCard";
 
 const GostCatalog = () => {
   const [query, setQuery] = useState("");
@@ -21,6 +22,11 @@ const GostCatalog = () => {
     () => new Set([GOST_DOMAINS[0].id]),
   );
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => new Set());
+  const [selected, setSelected] = useState<GostItem | null>(null);
+
+  // Индекс по обозначению — для связанных ГОСТов в карточке.
+  const gostIndex = useMemo(() => buildGostIndex(), []);
+  const resolveGost = (code: string) => gostIndex.get(code);
 
   const q = query.trim().toLowerCase();
 
@@ -207,16 +213,23 @@ const GostCatalog = () => {
                         {gOpen && (
                           <ul className="pb-1">
                             {group.items.map((item) => (
-                              <li
-                                key={item.code}
-                                className="flex items-baseline gap-2.5 px-4 md:px-8 py-1.5 hover:bg-[var(--drawing-paper)]/60"
-                              >
-                                <span className="font-gost-upright text-[12px] font-bold text-[var(--drawing-accent)] whitespace-nowrap shrink-0">
-                                  {item.code}
-                                </span>
-                                <span className="font-gost text-[12px] md:text-[13px] text-[var(--drawing-line-thin)] leading-snug">
-                                  {item.title}
-                                </span>
+                              <li key={item.code}>
+                                <button
+                                  onClick={() => setSelected(item)}
+                                  className="w-full text-left flex items-baseline gap-2.5 px-4 md:px-8 py-1.5 hover:bg-[var(--drawing-paper)]/60 group"
+                                >
+                                  <span className="font-gost-upright text-[12px] font-bold text-[var(--drawing-accent)] whitespace-nowrap shrink-0">
+                                    {item.code}
+                                  </span>
+                                  <span className="font-gost text-[12px] md:text-[13px] text-[var(--drawing-line-thin)] group-hover:text-[var(--drawing-line)] leading-snug flex-1">
+                                    {item.title}
+                                  </span>
+                                  <Icon
+                                    name="ChevronRight"
+                                    size={14}
+                                    className="shrink-0 self-center text-transparent group-hover:text-[var(--drawing-accent)] transition-colors"
+                                  />
+                                </button>
                               </li>
                             ))}
                           </ul>
@@ -255,6 +268,13 @@ const GostCatalog = () => {
           </div>
         </div>
       </section>
+
+      <GostCard
+        item={selected}
+        resolve={resolveGost}
+        onSelect={setSelected}
+        onClose={() => setSelected(null)}
+      />
     </main>
   );
 };
