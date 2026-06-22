@@ -5,7 +5,7 @@
  * область применения, статус/год, подводные камни применения, связанные ГОСТы
  * (кликабельны — переключают карточку) и ссылку на официальный полный текст.
  */
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Icon from "@/components/ui/icon";
 import {
   type GostItem,
@@ -28,6 +28,8 @@ const STATUS_STYLE: Record<string, string> = {
 };
 
 const GostCard = ({ item, resolve, onSelect, onClose }: GostCardProps) => {
+  const [copied, setCopied] = useState(false);
+
   // Закрытие по Esc.
   useEffect(() => {
     if (!item) return;
@@ -35,6 +37,25 @@ const GostCard = ({ item, resolve, onSelect, onClose }: GostCardProps) => {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [item, onClose]);
+
+  // Сбрасываем индикатор «скопировано» при смене стандарта.
+  useEffect(() => setCopied(false), [item]);
+
+  const copyCode = async () => {
+    if (!item) return;
+    try {
+      await navigator.clipboard.writeText(item.code);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = item.code;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
 
   const open = !!item;
   const status = item?.status ?? "active";
@@ -74,9 +95,23 @@ const GostCard = ({ item, resolve, onSelect, onClose }: GostCardProps) => {
               </button>
             </div>
 
-            <h2 className="font-gost-upright text-2xl font-bold tracking-tight text-[var(--drawing-accent)] mb-1">
-              {item.code}
-            </h2>
+            <div className="flex items-center gap-2 mb-1">
+              <h2 className="font-gost-upright text-2xl font-bold tracking-tight text-[var(--drawing-accent)]">
+                {item.code}
+              </h2>
+              <button
+                onClick={copyCode}
+                className={`shrink-0 inline-flex items-center gap-1 border px-2 py-0.5 font-gost text-[10px] uppercase tracking-wider transition-colors ${
+                  copied
+                    ? "border-green-600/60 text-green-600"
+                    : "border-[var(--drawing-line-thin)] text-[var(--drawing-line-thin)] hover:border-[var(--drawing-accent)] hover:text-[var(--drawing-accent)]"
+                }`}
+                title="Скопировать обозначение"
+              >
+                <Icon name={copied ? "Check" : "Copy"} size={12} />
+                {copied ? "Скопировано" : "Копировать"}
+              </button>
+            </div>
             <p className="font-gost text-sm text-[var(--drawing-line)] leading-snug mb-4">
               {item.title}
             </p>

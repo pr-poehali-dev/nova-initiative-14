@@ -47,12 +47,16 @@ export interface GostDomain {
 }
 
 /**
- * Ссылка на официальный поиск стандарта по обозначению.
- * Не выдумываем прямые URL документов — ведём на поиск protect.gost.ru,
- * где пользователь видит официальную карточку и текст стандарта.
+ * Ссылка на полный текст стандарта по обозначению.
+ *
+ * Не выдумываем прямые URL документов (они завязаны на внутренний ID).
+ * Ведём на поиск каталога docs.cntd.ru — он корректно находит документ по
+ * полному обозначению (включая слово «ГОСТ») и показывает текст стандарта.
+ * Прежний protect.gost.ru/search.aspx часто отдавал «not found», т.к. ждал
+ * номер в особом формате.
  */
 export function officialUrl(code: string): string {
-  return `https://protect.gost.ru/search.aspx?search=${encodeURIComponent(code)}`;
+  return `https://docs.cntd.ru/search?q=${encodeURIComponent(code)}`;
 }
 
 const STATUS_LABEL: Record<NonNullable<GostItem["status"]>, string> = {
