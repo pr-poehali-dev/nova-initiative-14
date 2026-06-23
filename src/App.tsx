@@ -71,6 +71,10 @@ const FORM_SUBMITTED_KEY = "vt_form_submitted";
 
 export function markFormSubmitted() {
   sessionStorage.setItem(FORM_SUBMITTED_KEY, "1");
+  // Цель Яндекс.Метрики: отправлена заявка с формы.
+  if (typeof window !== "undefined" && typeof window.ym === "function") {
+    window.ym(110100539, "reachGoal", "form_submit");
+  }
 }
 
 function ScrollToTop() {
