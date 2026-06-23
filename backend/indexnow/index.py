@@ -19,6 +19,17 @@ SITE_URL = f'https://{SITE_HOST}'
 INDEXNOW_KEY = 'a7f3c9e1b54d4e8fa2c6079b3d8e5f10'
 INDEXNOW_ENDPOINT = 'https://yandex.com/indexnow'
 
+# Недавно изменённые страницы — обновляется вручную после правок, которые важно
+# быстро донести до поисковика (новые/исправленные title, description, контент).
+# Кнопка «Недавно изменённые» на /owner/seo-reindex выбирает именно их.
+RECENTLY_CHANGED = {
+    '/',
+    '/offer',
+    '/cae/changelog',
+    '/cae/demo',
+    '/blog/podbor-podshipnikov-kacheniya-na-resurs-vkr',
+}
+
 # Статические страницы сайта (совпадают со sitemap). (path, человекочитаемое имя)
 STATIC_PAGES = [
     ('/', 'Главная'),
@@ -26,6 +37,7 @@ STATIC_PAGES = [
     ('/cae/raschet-balki-onlayn', 'Расчёт балки'),
     ('/cae/raschet-ramy-onlayn', 'Расчёт рамы'),
     ('/cae/raschet-fermy-onlayn', 'Расчёт фермы'),
+    ('/cae/demo', 'CAE — демо-редактор'),
     ('/cae/changelog', 'CAE — журнал версий'),
     ('/program', 'Программа'),
     ('/pricing', 'Тарифы'),
@@ -163,6 +175,7 @@ def _handle_list():
     for p in pages:
         item = {'path': p['path'], 'title': p['title'], 'url': SITE_URL + p['path']}
         item['indexed'] = is_indexed(p['path']) if status_ok else None
+        item['recently_changed'] = p['path'] in RECENTLY_CHANGED
         items.append(item)
 
     return _resp(200, {

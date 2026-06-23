@@ -22,6 +22,7 @@ interface PageItem {
   title: string;
   url: string;
   indexed: boolean | null; // null — статус неизвестен (нет токена/ошибка)
+  recently_changed?: boolean; // страница недавно правилась — приоритет на переобход
 }
 
 interface ListResponse {
@@ -86,6 +87,8 @@ function SeoReindexInner() {
   const selectNone = () => setSelected(new Set());
   const selectNotIndexed = () =>
     setSelected(new Set(pages.filter((p) => p.indexed === false).map((p) => p.path)));
+  const selectRecentlyChanged = () =>
+    setSelected(new Set(pages.filter((p) => p.recently_changed).map((p) => p.path)));
 
   const submit = async () => {
     if (selected.size === 0) return;
@@ -108,6 +111,7 @@ function SeoReindexInner() {
   };
 
   const notIndexedCount = pages.filter((p) => p.indexed === false).length;
+  const recentlyChangedCount = pages.filter((p) => p.recently_changed).length;
 
   return (
     <>
@@ -150,6 +154,11 @@ function SeoReindexInner() {
 
         {/* Кнопки выбора */}
         <div className="flex flex-wrap items-center gap-2 mb-3">
+          {recentlyChangedCount > 0 && (
+            <button onClick={selectRecentlyChanged} className="btn-drawing btn-drawing-accent text-xs inline-flex items-center gap-1" title="Выбрать страницы с недавними правками">
+              <Icon name="Sparkles" size={12} />Недавно изменённые ({recentlyChangedCount})
+            </button>
+          )}
           <button onClick={selectAll} className="btn-drawing text-xs">Выбрать все</button>
           <button onClick={selectNone} className="btn-drawing text-xs">Снять все</button>
           {statusAvailable && (
@@ -178,7 +187,14 @@ function SeoReindexInner() {
                 >
                   <input type="checkbox" checked={checked} onChange={() => toggle(p.path)} />
                   <span className="flex-1 min-w-0">
-                    <span className="block text-sm font-medium truncate">{p.title}</span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="text-sm font-medium truncate">{p.title}</span>
+                      {p.recently_changed && (
+                        <span className="shrink-0 text-[9px] font-gost uppercase tracking-wider text-[var(--drawing-accent)] border border-[var(--drawing-accent)] px-1 inline-flex items-center gap-0.5">
+                          <Icon name="Sparkles" size={9} />изменена
+                        </span>
+                      )}
+                    </span>
                     <span className="block font-mono text-[11px] text-[var(--drawing-line-thin)] truncate">{p.path}</span>
                   </span>
                   {p.indexed === true && (
