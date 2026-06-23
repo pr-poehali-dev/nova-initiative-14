@@ -4,9 +4,15 @@
  */
 import OwnerGuard from "@/components/owner/OwnerGuard";
 import OwnerServiceSkeleton from "@/components/owner/OwnerServiceSkeleton";
+import Seo from "@/components/Seo";
 
 const OwnerVisitorResearch = () => (
   <OwnerGuard from="/owner/visitor-research">
+    <Seo
+      noIndex
+      title="Статистика посетителей · панель владельца · Диплом-Инж.рф"
+      description="Маркетинговое исследование поведения посетителей: переходы по приглашениям, путь по сайту и точки ухода."
+    />
     <OwnerServiceSkeleton
       path="/owner/visitor-research"
       icon="Radar"

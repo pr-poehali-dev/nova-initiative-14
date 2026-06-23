@@ -30,6 +30,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import CaeDemoBanner from "./cae-editor/CaeDemoBanner";
 import CaeDemoLimitNotice from "./cae-editor/CaeDemoLimitNotice";
 import CaeDemoEditorView from "./cae-editor/CaeDemoEditorView";
+import Seo from "@/components/Seo";
 
 const CaeDemoEditor = () => {
   const { user, loading: authLoadingCtx } = useAuth();
@@ -212,6 +213,11 @@ const CaeDemoEditor = () => {
   });
 
   return (
+    <>
+    <Seo
+      title="Демо-редактор CAE — расчёт балок, рам и ферм онлайн · Диплом-Инж.рф"
+      description="Попробуйте облачный CAE-сервис без регистрации: постройте схему, выполните конечно-элементный расчёт, получите эпюры N, Q, M и PDF-отчёт по ЕСКД."
+    />
     <CaeDemoEditorView
       layoutProps={{
         is3d,
@@ -454,6 +460,7 @@ const CaeDemoEditor = () => {
         },
       }}
     />
+    </>
   );
 };
 

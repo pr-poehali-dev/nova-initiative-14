@@ -4,9 +4,15 @@
  */
 import OwnerGuard from "@/components/owner/OwnerGuard";
 import OwnerServiceSkeleton from "@/components/owner/OwnerServiceSkeleton";
+import Seo from "@/components/Seo";
 
 const OwnerCaeNaming = () => (
   <OwnerGuard from="/owner/cae-naming">
+    <Seo
+      noIndex
+      title="Название и выделение CAE · панель владельца · Диплом-Инж.рф"
+      description="Проработка названия онлайн-приложения и плана выделения CAE в отдельный сервис: сроки, брендинг, влияние на SEO."
+    />
     <OwnerServiceSkeleton
       path="/owner/cae-naming"
       icon="Tag"
