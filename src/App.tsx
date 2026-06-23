@@ -81,6 +81,26 @@ function ScrollToTop() {
   return null;
 }
 
+const YM_COUNTER_ID = 110100539;
+
+declare global {
+  interface Window {
+    ym?: (id: number, action: string, url?: string, options?: unknown) => void;
+  }
+}
+
+// Отправляет в Яндекс.Метрику просмотр страницы при каждом переходе по SPA-роуту
+// (BrowserRouter использует History API без перезагрузки, поэтому хит шлём вручную).
+function MetrikaPageView() {
+  const { pathname, search } = useLocation();
+  useEffect(() => {
+    if (typeof window.ym === "function") {
+      window.ym(YM_COUNTER_ID, "hit", pathname + search);
+    }
+  }, [pathname, search]);
+  return null;
+}
+
 /**
  * При прямом запросе /oauth/callback хостинг отдаёт public/oauth/callback/index.html,
  * который перенаправляет на /?__oauth_cb=1&code=...&state=...
@@ -151,6 +171,7 @@ const App = () => (
         <BrowserRouter>
           <AuthProvider>
             <ScrollToTop />
+            <MetrikaPageView />
             <OAuthCallbackBootstrap />
             <VisitorTracker />
             <GlobalSeo />
