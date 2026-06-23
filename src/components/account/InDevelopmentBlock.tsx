@@ -49,6 +49,14 @@ const SERVICES: DevService[] = [
     state: "ready",
   },
   {
+    to: "/owner/partners",
+    icon: "Blocks",
+    title: "Партнёры виджета",
+    description:
+      "White-label калькулятор балки для сайтов партнёров (заводы металлоконструкций, продавцы проката, стройкомпании). Выдача API-ключей с привязкой к доменам, готовый код вставки, статистика расчётов и заявок. Заявки уходят на email партнёра.",
+    state: "ready",
+  },
+  {
     to: "/owner/blog",
     icon: "PenSquare",
     title: "Статьи для блогов",

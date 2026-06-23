@@ -1,0 +1,70 @@
+{
+  "tests": [
+    {
+      "name": "CORS preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Invalid key rejected on config",
+      "method": "GET",
+      "path": "/?action=config&key=wrong_key_123",
+      "expectedStatus": 403,
+      "expectedBody": {"error": "invalid_key"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Config with demo key returns profiles",
+      "method": "GET",
+      "path": "/?action=config&key=demo_pk_8f3a9c2e1b7d4056",
+      "expectedStatus": 200,
+      "expectedBody": {"ok": true},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Calc beam deflection with demo key",
+      "method": "POST",
+      "path": "/?action=calc&key=demo_pk_8f3a9c2e1b7d4056",
+      "body": {"span_m": 4, "load_type": "udl", "load_value": 5000, "profile_id": "I20", "support": "simply"},
+      "expectedStatus": 200,
+      "expectedBody": {"ok": true},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Calc rejects bad profile",
+      "method": "POST",
+      "path": "/?action=calc&key=demo_pk_8f3a9c2e1b7d4056",
+      "body": {"span_m": 4, "load_type": "udl", "load_value": 5000, "profile_id": "ZZZ", "support": "simply"},
+      "expectedStatus": 400,
+      "expectedBody": {"error": "bad_profile"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Lead requires name and phone",
+      "method": "POST",
+      "path": "/?action=lead&key=demo_pk_8f3a9c2e1b7d4056",
+      "body": {"name": "", "phone": ""},
+      "expectedStatus": 400,
+      "expectedBody": {"error": "bad_lead"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Owner list forbidden without token",
+      "method": "GET",
+      "path": "/?action=owner-list",
+      "expectedStatus": 403,
+      "expectedBody": {"error": "forbidden"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Owner create forbidden without token",
+      "method": "POST",
+      "path": "/?action=owner-create",
+      "body": {"company_name": "Test", "contact_email": "a@b.ru"},
+      "expectedStatus": 403,
+      "expectedBody": {"error": "forbidden"},
+      "bodyMatcher": "partial"
+    }
+  ]
+}

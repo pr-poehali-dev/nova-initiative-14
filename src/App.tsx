@@ -53,6 +53,8 @@ import OwnerCaeNaming from "./pages/OwnerCaeNaming";
 import OwnerEconomics from "./pages/OwnerEconomics";
 import OwnerBlog from "./pages/OwnerBlog";
 import OwnerSeoReindex from "./pages/OwnerSeoReindex";
+import OwnerPartners from "./pages/OwnerPartners";
+import WidgetBeam from "./pages/WidgetBeam";
 import AdminQr from "./pages/AdminQr";
 import PrintFlyer from "./pages/PrintFlyer";
 import UrfuQrCae from "./pages/UrfuQrCae";
@@ -165,24 +167,28 @@ function VisitorTracker() {
   return null;
 }
 
-const App = () => (
-  <HelmetProvider>
-    <ThemeProvider>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AuthProvider>
-            <ScrollToTop />
-            <MetrikaPageView />
-            <OAuthCallbackBootstrap />
-            <VisitorTracker />
-            <GlobalSeo />
-            <Navigation />
-            <AlphaTestStrip />
-            <div>
-              <Routes>
+// Голый layout для встраиваемых виджетов: без навигации, футера, трекеров.
+// Используется, когда страница открыта в iframe на стороннем сайте.
+function EmbedLayout() {
+  return (
+    <Routes>
+      <Route path="/widget/beam" element={<WidgetBeam />} />
+    </Routes>
+  );
+}
+
+function MainLayout() {
+  return (
+    <>
+      <ScrollToTop />
+      <MetrikaPageView />
+      <OAuthCallbackBootstrap />
+      <VisitorTracker />
+      <GlobalSeo />
+      <Navigation />
+      <AlphaTestStrip />
+      <div>
+        <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/program" element={<Program />} />
                 <Route path="/pricing" element={<Pricing />} />
@@ -226,16 +232,38 @@ const App = () => (
                 <Route path="/owner/economics" element={<OwnerEconomics />} />
                 <Route path="/owner/blog" element={<OwnerBlog />} />
                 <Route path="/owner/seo-reindex" element={<OwnerSeoReindex />} />
+                <Route path="/owner/partners" element={<OwnerPartners />} />
                 <Route path="/admin/qr" element={<AdminQr />} />
                 <Route path="/admin/print" element={<PrintFlyer />} />
                 <Route path="/urfu_qr_cae" element={<UrfuQrCae />} />
                 <Route path="/urfu_qr_diplom" element={<UrfuQrDiplom />} />
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
-            </div>
-            <Footer />
-            <CookieConsent />
-            <MobileStickyCta />
+      </div>
+      <Footer />
+      <CookieConsent />
+      <MobileStickyCta />
+    </>
+  );
+}
+
+// Выбирает layout: встраиваемый виджет (/widget/*) рендерится без обвязки сайта.
+function AppShell() {
+  const { pathname } = useLocation();
+  const isEmbed = pathname.startsWith("/widget/");
+  return isEmbed ? <EmbedLayout /> : <MainLayout />;
+}
+
+const App = () => (
+  <HelmetProvider>
+    <ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <AppShell />
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
