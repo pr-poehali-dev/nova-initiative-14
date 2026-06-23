@@ -27,6 +27,7 @@ RECENTLY_CHANGED = {
     '/offer',
     '/cae/changelog',
     '/cae/demo',
+    '/widget-balka',
     '/blog/podbor-podshipnikov-kacheniya-na-resurs-vkr',
 }
 
@@ -39,6 +40,7 @@ STATIC_PAGES = [
     ('/cae/raschet-fermy-onlayn', 'Расчёт фермы'),
     ('/cae/demo', 'CAE — демо-редактор'),
     ('/cae/changelog', 'CAE — журнал версий'),
+    ('/widget-balka', 'Виджет калькулятора балки'),
     ('/program', 'Программа'),
     ('/pricing', 'Тарифы'),
     ('/contacts', 'Контакты'),

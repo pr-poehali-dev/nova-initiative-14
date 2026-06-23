@@ -55,6 +55,7 @@ import OwnerBlog from "./pages/OwnerBlog";
 import OwnerSeoReindex from "./pages/OwnerSeoReindex";
 import OwnerPartners from "./pages/OwnerPartners";
 import WidgetBeam from "./pages/WidgetBeam";
+import WidgetLanding from "./pages/WidgetLanding";
 import AdminQr from "./pages/AdminQr";
 import PrintFlyer from "./pages/PrintFlyer";
 import UrfuQrCae from "./pages/UrfuQrCae";
@@ -219,6 +220,7 @@ function MainLayout() {
                 <Route path="/cae/projects/:id" element={<CaeEditor />} />
                 <Route path="/cae/demo" element={<CaeDemoEditor />} />
                 <Route path="/cae/changelog" element={<CaeChangelog />} />
+                <Route path="/widget-balka" element={<WidgetLanding />} />
                 <Route path="/roadmaps/:slug" element={<RoadmapView />} />
                 <Route path="/cae/roadmap" element={<Navigate to="/roadmaps/plm" replace />} />
                 <Route path="/oauth/callback" element={<OAuthCallback />} />
