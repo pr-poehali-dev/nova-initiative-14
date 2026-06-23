@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { Helmet } from "@/lib/helmet-shim";
+import Seo from "@/components/Seo";
 import Icon from "@/components/ui/icon";
-import { SITE_URL } from "@/lib/seo";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   listChangelog,
@@ -41,14 +40,7 @@ export default function CaeChangelog() {
 
   return (
     <>
-      <Helmet>
-        <title>Журнал версий CAE · обновления расчётного сервиса · Диплом-Инж.рф</title>
-        <meta
-          name="description"
-          content="История обновлений облачного CAE-сервиса Диплом-Инж.рф: новые функции расчёта рам, исправления решателя, улучшения интерфейса. Прозрачное развитие инженерного инструмента для ВКР и экспертизы."
-        />
-        <link rel="canonical" href={`${SITE_URL}/cae/changelog`} />
-      </Helmet>
+      <Seo />
 
       <div className="max-w-[820px] mx-auto px-4 pt-20 md:pt-24 pb-16">
         <p className="font-gost text-[11px] uppercase tracking-[0.3em] text-[var(--drawing-line-thin)] mb-2">
