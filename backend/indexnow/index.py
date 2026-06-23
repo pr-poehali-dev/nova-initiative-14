@@ -66,6 +66,15 @@ def _resp(status, body):
     return {'statusCode': status, 'headers': CORS, 'body': json.dumps(body, ensure_ascii=False)}
 
 
+def _norm_url(u: str) -> str:
+    """Нормализует URL для сравнения: без схемы, без хвостового слеша, в нижнем
+    регистре. Так совпадают форматы Яндекса и наши (punycode/слеши/регистр)."""
+    u = (u or '').strip().lower()
+    u = u.replace('https://', '').replace('http://', '')
+    u = u.rstrip('/')
+    return u
+
+
 def _to_abs(u: str) -> str:
     u = (u or '').strip()
     if not u:
@@ -104,6 +113,7 @@ def _yandex_api(path: str):
     """GET к Яндекс.Вебмастер API с OAuth-токеном. Возвращает dict или None."""
     token = os.environ.get('YANDEX_WEBMASTER_TOKEN')
     if not token:
+        print('[indexnow] YANDEX_WEBMASTER_TOKEN не задан')
         return None
     req = urllib.request.Request(
         f'https://api.webmaster.yandex.net{path}',
@@ -113,9 +123,26 @@ def _yandex_api(path: str):
     try:
         with urllib.request.urlopen(req, timeout=20) as r:
             return json.loads(r.read().decode('utf-8'))
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode('utf-8', errors='replace')[:300]
+        print(f'[indexnow] yandex api HTTP {e.code} {path}: {detail}')
+        return None
     except Exception as e:
         print(f'[indexnow] yandex api error {path}: {e}')
         return None
+
+
+def _pick_host_id(hosts: list):
+    """Выбирает host_id нашего домена с ПРИОРИТЕТОМ https-зеркала.
+    В Вебмастере домен есть и как http:...:80, и как https:...:443 — у http
+    страниц в поиске нет, поэтому всегда берём https."""
+    our = [h for h in hosts if SITE_HOST in h.get('host_id', '')]
+    if not our:
+        our = hosts
+    for h in our:
+        if h.get('host_id', '').startswith('https:'):
+            return h['host_id']
+    return our[0].get('host_id')
 
 
 def _indexed_urls() -> tuple:
@@ -128,16 +155,9 @@ def _indexed_urls() -> tuple:
 
     hosts = _yandex_api(f'/v4/user/{user_id}/hosts/')
     if not hosts or not hosts.get('hosts'):
+        print('[indexnow] список хостов пуст')
         return set(), False
-    # Ищем наш хост среди подтверждённых.
-    host_id = None
-    for h in hosts['hosts']:
-        hid = h.get('host_id', '')
-        if SITE_HOST in hid or 'диплом' in hid or 'p1ai' in hid:
-            host_id = hid
-            break
-    if not host_id:
-        host_id = hosts['hosts'][0].get('host_id')
+    host_id = _pick_host_id(hosts['hosts'])
     if not host_id:
         return set(), False
 
@@ -155,10 +175,13 @@ def _indexed_urls() -> tuple:
         for s in samples:
             u = s.get('url')
             if u:
-                indexed.add(u.rstrip('/') or u)
+                indexed.add(_norm_url(u))
         if len(samples) < 100:
             break
         offset += 100
+    print(f'[indexnow] получено проиндексированных URL: {len(indexed)}')
+    if indexed:
+        print(f'[indexnow] примеры: {list(indexed)[:3]}')
     return indexed, True
 
 
@@ -168,8 +191,7 @@ def _handle_list():
     indexed, status_ok = _indexed_urls()
 
     def is_indexed(path):
-        full = (SITE_URL + path).rstrip('/') or SITE_URL
-        return full in indexed or (SITE_URL + path) in indexed
+        return _norm_url(SITE_URL + path) in indexed
 
     items = []
     for p in pages:
