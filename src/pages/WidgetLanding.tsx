@@ -7,7 +7,6 @@
  *     ведёт его к подключению — живое демо «как на сайте клиента» и блок
  *     копирования кода с гейтом авторизации (WidgetEmbedCopy).
  */
-import { Link } from "react-router-dom";
 import { Helmet } from "@/lib/helmet-shim";
 import Icon from "@/components/ui/icon";
 import {
@@ -21,6 +20,7 @@ import {
 } from "@/lib/seo";
 import WidgetEmbedCopy from "@/components/widget/WidgetEmbedCopy";
 import WidgetLiveDemo from "@/components/widget/WidgetLiveDemo";
+import WidgetOrderForm from "@/components/widget/WidgetOrderForm";
 
 const BENEFITS = [
   {
@@ -216,10 +216,16 @@ export default function WidgetLanding() {
           </p>
           <div className="flex flex-wrap gap-3 mb-8">
             <a
-              href="#demo"
+              href="#zakaz"
               className="btn-drawing btn-drawing-accent text-sm inline-flex items-center gap-2"
             >
-              <Icon name="Play" size={16} /> Посмотреть живое демо
+              <Icon name="Send" size={16} /> Заказать подключение
+            </a>
+            <a
+              href="#demo"
+              className="btn-drawing text-sm inline-flex items-center gap-2"
+            >
+              <Icon name="Play" size={16} /> Живое демо
             </a>
             <a
               href="#podkluchit"
@@ -355,7 +361,7 @@ export default function WidgetLanding() {
                   ))}
                 </ul>
                 <a
-                  href="#podkluchit"
+                  href="#zakaz"
                   className={`text-sm text-center ${
                     p.accent ? "btn-drawing btn-drawing-accent" : "btn-drawing"
                   }`}
@@ -394,28 +400,29 @@ export default function WidgetLanding() {
           </div>
         </section>
 
-        {/* CTA */}
-        <section className="drawing-frame p-7 bg-[var(--drawing-bg)] text-center">
-          <h2 className="font-gost-upright text-xl md:text-2xl font-black uppercase tracking-wide mb-2">
-            Зацепите клиента, пока он на сайте
-          </h2>
-          <p className="font-gost text-sm text-[var(--drawing-line-thin)] mb-5 max-w-[620px] mx-auto">
-            Подключим виджет на ваш сайт и настроим заявки на вашу почту. Напишите
-            нам — поможем встроить калькулятор сегодня же.
-          </p>
-          <div className="flex flex-wrap gap-3 justify-center">
-            <Link
-              to="/contacts"
-              className="btn-drawing btn-drawing-accent text-sm inline-flex items-center gap-2"
-            >
-              <Icon name="MessageSquare" size={16} /> Связаться с нами
-            </Link>
-            <a
-              href="#podkluchit"
-              className="btn-drawing text-sm inline-flex items-center gap-2"
-            >
-              <Icon name="Code2" size={16} /> Скопировать код
-            </a>
+        {/* ЗАКАЗ ПОДКЛЮЧЕНИЯ */}
+        <section id="zakaz" className="scroll-mt-24">
+          <div className="grid md:grid-cols-2 gap-6 items-center">
+            <div>
+              <h2 className="font-gost-upright text-xl md:text-2xl font-black uppercase tracking-wide mb-3">
+                Зацепите клиента,<br />пока он на сайте
+              </h2>
+              <p className="font-gost text-sm text-[var(--drawing-line-thin)] mb-4 leading-snug">
+                Подключим виджет на ваш сайт и настроим заявки на вашу почту.
+                Оставьте заявку — поможем встроить калькулятор сегодня же.
+              </p>
+              <ul className="space-y-1.5">
+                {["Подключение за 5 минут", "Без программиста", "Первый расчёт уже сегодня"].map(
+                  (li) => (
+                    <li key={li} className="flex items-center gap-2 font-gost text-sm">
+                      <Icon name="Check" size={15} className="text-green-600 shrink-0" />
+                      {li}
+                    </li>
+                  ),
+                )}
+              </ul>
+            </div>
+            <WidgetOrderForm />
           </div>
         </section>
       </div>
