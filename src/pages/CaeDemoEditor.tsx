@@ -15,7 +15,7 @@
  * Разметка вынесена в ./cae-editor/CaeDemoEditorView (+ баннер/уведомление)
  * без изменения логики — здесь только хуки, состояние и сборка пропсов.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { type ContextTarget } from "@/components/cae/editor/ContextPropertiesPopup";
 import { useCaeDemoProject, DEMO_ELEMENT_LIMIT, getSolveCount } from "./cae-editor/useCaeDemoProject";
@@ -32,21 +32,36 @@ import CaeDemoLimitNotice from "./cae-editor/CaeDemoLimitNotice";
 import CaeDemoEditorView from "./cae-editor/CaeDemoEditorView";
 import Seo from "@/components/Seo";
 
-const CaeDemoEditor = () => {
+export interface CaeDemoEditorProps {
+  /** Лимиты под тариф (виджет партнёра). Если не заданы — стандартные demo. */
+  limits?: { solveLimit?: number; nodeLimit?: number; elementLimit?: number };
+  /** Встроенный режим (iframe-виджет): не редиректить авторизованных,
+   *  не показывать SEO. */
+  embedded?: boolean;
+  /** Доп. узел, который рендерится поверх редактора (партнёрская модалка
+   *  заявки при исчерпании лимита). */
+  overlaySlot?: ReactNode;
+  /** Колбэк при исчерпании лимита расчётов (вместо модалки регистрации). */
+  onLimitReached?: () => void;
+}
+
+const CaeDemoEditor = ({ limits, embedded, overlaySlot, onLimitReached }: CaeDemoEditorProps = {}) => {
   const { user, loading: authLoadingCtx } = useAuth();
   const nav = useNavigate();
 
   // Авторизованный пользователь не должен попадать на демо —
-  // перебрасываем в его реальный список проектов.
+  // перебрасываем в его реальный список проектов. В embedded-режиме (виджет
+  // на чужом сайте) редирект отключён — там нет нашей авторизации.
   useEffect(() => {
-    if (!authLoadingCtx && user) {
+    if (!embedded && !authLoadingCtx && user) {
       nav("/cae/projects", { replace: true });
     }
-  }, [user, authLoadingCtx, nav]);
+  }, [user, authLoadingCtx, nav, embedded]);
 
   const [limitModalOpen, setLimitModalOpen] = useState(false);
   const [contextTarget, setContextTarget] = useState<ContextTarget | null>(null);
-  const NODE_LIMIT_ALPHA = 10;
+  const NODE_LIMIT_ALPHA = limits?.nodeLimit ?? 10;
+  const elementLimitEff = limits?.elementLimit ?? DEMO_ELEMENT_LIMIT;
   const [nodeLimitOpen, setNodeLimitOpen] = useState(false);
   const {
     model,
@@ -70,7 +85,11 @@ const CaeDemoEditor = () => {
     solveBlocked,
     solveCount,
     solveLimit,
-  } = useCaeDemoProject();
+  } = useCaeDemoProject({
+    solveLimit: limits?.solveLimit,
+    nodeLimit: limits?.nodeLimit,
+    elementLimit: limits?.elementLimit,
+  });
 
   const {
     result,
@@ -88,24 +107,29 @@ const CaeDemoEditor = () => {
 
   // Обёртка onSolve: если лимит исчерпан — открываем модалку с регистрацией.
   // После успешного расчёта увеличиваем счётчик; если это был последний — тоже открываем модалку.
+  const reachLimit = () => {
+    if (onLimitReached) onLimitReached();
+    else setLimitModalOpen(true);
+  };
+
   const onSolve = async () => {
     if (solveBlocked) {
-      setLimitModalOpen(true);
+      reachLimit();
       return;
     }
     const r = await onSolveInternal();
     // Сервер сам считает лимит по IP (защита от обхода через инкогнито).
     // 429 — лимит исчерпан на сервере: добиваем локальный счётчик до лимита
-    // и показываем модалку регистрации.
+    // и показываем модалку регистрации / партнёрскую заявку.
     if (r.status === 429) {
       while (getSolveCount() < solveLimit) onSolveUsed();
-      setLimitModalOpen(true);
+      reachLimit();
       return;
     }
     onSolveUsed();
-    // Если только что использовали последний расчёт — приглашаем зарегистрироваться
+    // Если только что использовали последний расчёт — приглашаем дальше
     if (solveCount + 1 >= solveLimit) {
-      setLimitModalOpen(true);
+      reachLimit();
     }
   };
 
@@ -214,10 +238,13 @@ const CaeDemoEditor = () => {
 
   return (
     <>
-    <Seo
-      title="Демо-редактор CAE — расчёт балок, рам и ферм онлайн · Диплом-Инж.рф"
-      description="Попробуйте облачный CAE-сервис без регистрации: постройте схему, выполните конечно-элементный расчёт, получите эпюры N, Q, M и PDF-отчёт по ЕСКД."
-    />
+    {!embedded && (
+      <Seo
+        title="Демо-редактор CAE — расчёт балок, рам и ферм онлайн · Диплом-Инж.рф"
+        description="Попробуйте облачный CAE-сервис без регистрации: постройте схему, выполните конечно-элементный расчёт, получите эпюры N, Q, M и PDF-отчёт по ЕСКД."
+      />
+    )}
+    {overlaySlot}
     <CaeDemoEditorView
       layoutProps={{
         is3d,
@@ -299,7 +326,7 @@ const CaeDemoEditor = () => {
           setFontScale: viewSettings.setFontScale,
           onResetView: () => { viewSettings.resetView(); labelOffsets.resetAll(); },
           labelOffsets,
-          elementLimit: DEMO_ELEMENT_LIMIT,
+          elementLimit: elementLimitEff,
           issues,
           setShowDiagram,
           setDiagramScale,

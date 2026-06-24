@@ -28,7 +28,7 @@ interface Partner {
   plan: string;
   monthly_calc_limit: number;
   created_at: string | null;
-  calc_count: number;
+  open_count: number;
   lead_count: number;
 }
 
@@ -44,6 +44,7 @@ function PartnersInner() {
   const [company, setCompany] = useState("");
   const [email, setEmail] = useState("");
   const [domains, setDomains] = useState("");
+  const [plan, setPlan] = useState("basic");
   const [creating, setCreating] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -84,6 +85,7 @@ function PartnersInner() {
           company_name: company,
           contact_email: email,
           allowed_domains: domainList,
+          plan,
         }),
       });
       const data = await res.json();
@@ -91,6 +93,7 @@ function PartnersInner() {
         setCompany("");
         setEmail("");
         setDomains("");
+        setPlan("basic");
         await load();
       } else {
         setError(data.message || "Не удалось создать партнёра");
@@ -99,7 +102,7 @@ function PartnersInner() {
       setError("Ошибка создания");
     }
     setCreating(false);
-  }, [company, email, domains, load]);
+  }, [company, email, domains, plan, load]);
 
   const toggle = useCallback(
     async (p: Partner) => {
@@ -172,6 +175,15 @@ function PartnersInner() {
               value={domains}
               onChange={(e) => setDomains(e.target.value)}
             />
+            <select
+              className="border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] px-3 py-2 text-sm"
+              value={plan}
+              onChange={(e) => setPlan(e.target.value)}
+            >
+              <option value="basic">Старт (10 расчётов, 20 узлов)</option>
+              <option value="business">Бизнес (50 расчётов, 50 узлов)</option>
+              <option value="zavod">Завод (безлимит, 200 узлов)</option>
+            </select>
           </div>
           <button
             onClick={create}
@@ -219,7 +231,8 @@ function PartnersInner() {
                 </div>
 
                 <div className="flex flex-wrap gap-4 text-xs text-[var(--drawing-line-thin)] mb-3">
-                  <span>Расчётов: <strong className="text-[var(--drawing-ink)]">{p.calc_count}</strong></span>
+                  <span>Тариф: <strong className="text-[var(--drawing-ink)] uppercase">{p.plan}</strong></span>
+                  <span>Показов: <strong className="text-[var(--drawing-ink)]">{p.open_count}</strong></span>
                   <span>Заявок: <strong className="text-[var(--drawing-ink)]">{p.lead_count}</strong></span>
                   <span>
                     Домены:{" "}

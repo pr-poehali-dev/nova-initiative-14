@@ -65,7 +65,20 @@ function getInitialModel(): FrameModel {
   return tpl ? tpl.build() : emptyModel("2d");
 }
 
-export function useCaeDemoProject() {
+export interface DemoLimitOverrides {
+  /** Лимит пробных расчётов. По умолчанию DEMO_SOLVE_LIMIT (2). */
+  solveLimit?: number;
+  /** Лимит узлов. По умолчанию DEMO_NODE_LIMIT. */
+  nodeLimit?: number;
+  /** Лимит элементов. По умолчанию DEMO_ELEMENT_LIMIT. */
+  elementLimit?: number;
+}
+
+export function useCaeDemoProject(overrides: DemoLimitOverrides = {}) {
+  const solveLimit = overrides.solveLimit ?? DEMO_SOLVE_LIMIT;
+  const nodeLimit = overrides.nodeLimit ?? DEMO_NODE_LIMIT;
+  const elementLimit = overrides.elementLimit ?? DEMO_ELEMENT_LIMIT;
+
   const history = useCaeHistory(getInitialModel());
   const { model, pushModel, setModelDirect, resetHistory, undo, redo, canUndo, canRedo } = history;
 
@@ -76,11 +89,11 @@ export function useCaeDemoProject() {
   const [saving, setSaving] = useState(false);
   const [solveCount, setSolveCount] = useState(getSolveCount);
 
-  const solvesLeft = Math.max(0, DEMO_SOLVE_LIMIT - solveCount);
+  const solvesLeft = Math.max(0, solveLimit - solveCount);
   const solveBlocked = solvesLeft <= 0;
   const nodesUsed = model.nodes.length;
-  const nodesLeft = Math.max(0, DEMO_NODE_LIMIT - nodesUsed);
-  const nodesBlocked = nodesUsed >= DEMO_NODE_LIMIT;
+  const nodesLeft = Math.max(0, nodeLimit - nodesUsed);
+  const nodesBlocked = nodesUsed >= nodeLimit;
 
   // Автосохранение в localStorage при каждом изменении модели
   useEffect(() => {
@@ -154,9 +167,9 @@ export function useCaeDemoProject() {
     redo,
     canUndo,
     canRedo,
-    elementLimit: DEMO_ELEMENT_LIMIT,
-    nodeLimit: DEMO_NODE_LIMIT,
-    solveLimit: DEMO_SOLVE_LIMIT,
+    elementLimit,
+    nodeLimit,
+    solveLimit,
     solveCount,
     solvesLeft,
     solveBlocked,

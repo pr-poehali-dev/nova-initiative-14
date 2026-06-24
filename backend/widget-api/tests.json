@@ -15,29 +15,11 @@
       "bodyMatcher": "partial"
     },
     {
-      "name": "Config with demo key returns profiles",
+      "name": "Config with demo key returns limits",
       "method": "GET",
       "path": "/?action=config&key=demo_pk_8f3a9c2e1b7d4056",
       "expectedStatus": 200,
       "expectedBody": {"ok": true},
-      "bodyMatcher": "partial"
-    },
-    {
-      "name": "Calc beam deflection with demo key",
-      "method": "POST",
-      "path": "/?action=calc&key=demo_pk_8f3a9c2e1b7d4056",
-      "body": {"span_m": 4, "load_type": "udl", "load_value": 5000, "profile_id": "I20", "support": "simply"},
-      "expectedStatus": 200,
-      "expectedBody": {"ok": true},
-      "bodyMatcher": "partial"
-    },
-    {
-      "name": "Calc rejects bad profile",
-      "method": "POST",
-      "path": "/?action=calc&key=demo_pk_8f3a9c2e1b7d4056",
-      "body": {"span_m": 4, "load_type": "udl", "load_value": 5000, "profile_id": "ZZZ", "support": "simply"},
-      "expectedStatus": 400,
-      "expectedBody": {"error": "bad_profile"},
       "bodyMatcher": "partial"
     },
     {
