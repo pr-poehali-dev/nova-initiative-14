@@ -68,6 +68,15 @@ export default function WidgetBeam() {
 
   const openLead = useCallback(() => setLeadOpen(true), []);
 
+  // После каждого успешного расчёта учитываем его в месячном биллинге партнёра.
+  const registerCalc = useCallback(() => {
+    fetch(`${WIDGET_API}?action=register-calc&key=${encodeURIComponent(apiKey)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    }).catch(() => {});
+  }, [apiKey]);
+
   if (loading) {
     return (
       <div style={centerBox}>
@@ -95,7 +104,13 @@ export default function WidgetBeam() {
       </Helmet>
 
       {/* Настоящий CAE-редактор с лимитами тарифа партнёра */}
-      <CaeDemoEditor embedded limits={limits} onLimitReached={openLead} company={company} />
+      <CaeDemoEditor
+        embedded
+        limits={limits}
+        onLimitReached={openLead}
+        onSolveSuccess={registerCalc}
+        company={company}
+      />
 
       {/* Плавающая кнопка «Оформить заказ» */}
       <button style={orderBtn} onClick={openLead}>

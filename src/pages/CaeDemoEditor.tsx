@@ -46,9 +46,11 @@ export interface CaeDemoEditorProps {
   onLimitReached?: () => void;
   /** Название компании-партнёра (для панели виджета). */
   company?: string;
+  /** Колбэк после КАЖДОГО успешного расчёта (виджет учитывает его в биллинге). */
+  onSolveSuccess?: () => void;
 }
 
-const CaeDemoEditor = ({ limits, embedded, overlaySlot, onLimitReached, company }: CaeDemoEditorProps = {}) => {
+const CaeDemoEditor = ({ limits, embedded, overlaySlot, onLimitReached, company, onSolveSuccess }: CaeDemoEditorProps = {}) => {
   const { user, loading: authLoadingCtx } = useAuth();
   const nav = useNavigate();
 
@@ -131,6 +133,8 @@ const CaeDemoEditor = ({ limits, embedded, overlaySlot, onLimitReached, company 
       return;
     }
     onSolveUsed();
+    // Успешный расчёт — сообщаем виджету для учёта в месячном биллинге.
+    if (onSolveSuccess) onSolveSuccess();
     // Если только что использовали последний расчёт — приглашаем дальше
     if (solveCount + 1 >= solveLimit) {
       reachLimit();

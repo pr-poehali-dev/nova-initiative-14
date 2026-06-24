@@ -32,6 +32,23 @@
       "bodyMatcher": "partial"
     },
     {
+      "name": "Register calc with demo key",
+      "method": "POST",
+      "path": "/?action=register-calc&key=demo_pk_8f3a9c2e1b7d4056",
+      "body": {},
+      "expectedStatus": 200,
+      "expectedBody": {"ok": true},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Partner summary with demo key",
+      "method": "GET",
+      "path": "/?action=partner-summary&key=demo_pk_8f3a9c2e1b7d4056",
+      "expectedStatus": 200,
+      "expectedBody": {"ok": true},
+      "bodyMatcher": "partial"
+    },
+    {
       "name": "Owner list forbidden without token",
       "method": "GET",
       "path": "/?action=owner-list",
@@ -44,6 +61,15 @@
       "method": "POST",
       "path": "/?action=owner-create",
       "body": {"company_name": "Test", "contact_email": "a@b.ru"},
+      "expectedStatus": 403,
+      "expectedBody": {"error": "forbidden"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Owner pay forbidden without token",
+      "method": "POST",
+      "path": "/?action=owner-pay",
+      "body": {"partner_id": 1, "amount_rub": 1000},
       "expectedStatus": 403,
       "expectedBody": {"error": "forbidden"},
       "bodyMatcher": "partial"

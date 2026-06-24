@@ -24,6 +24,8 @@ from urllib.parse import urlparse
 
 import psycopg2
 
+import billing
+
 JWT_SECRET = os.environ.get('SSO_JWT_SECRET', '')
 
 CORS = {
@@ -86,7 +88,8 @@ def _load_partner(api_key: str):
     try:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id, company_name, contact_email, allowed_domains, is_active, plan "
+                "SELECT id, company_name, contact_email, allowed_domains, is_active, plan, "
+                "monthly_price_rub, monthly_calc_limit, billing_email "
                 "FROM widget_partners WHERE api_key = %s",
                 (api_key,),
             )
@@ -98,6 +101,8 @@ def _load_partner(api_key: str):
     return {
         'id': row[0], 'company_name': row[1], 'contact_email': row[2],
         'allowed_domains': row[3] or [], 'is_active': row[4], 'plan': row[5] or 'basic',
+        'monthly_price_rub': row[6], 'monthly_calc_limit': row[7],
+        'billing_email': row[8] or row[2],
     }
 
 
@@ -147,6 +152,66 @@ def _handle_config(event: dict):
     })
 
 
+def _handle_register_calc(event: dict):
+    """Учитывает один расчёт в месячном биллинге партнёра.
+    Вызывается виджетом после успешного расчёта. При исчерпании месячного
+    лимита автоматически начисляется доп-пакет (+50%) и шлётся уведомление."""
+    partner, err = _check_access(event)
+    if err:
+        return err
+    conn = _db()
+    try:
+        res = billing.register_calc(conn, partner)
+    except Exception as e:
+        print(f'[widget-api] register_calc error: {e!r}')
+        # Не ломаем виджет из-за биллинга — расчёт уже выполнен.
+        try:
+            conn.close()
+        except Exception:
+            pass
+        return _resp(200, {'ok': True, 'billing': None})
+    period = res['period']
+    limit = billing.effective_limit(period)
+
+    # Уведомления партнёру (порог 80% и исчерпание лимита).
+    try:
+        if res['reached_100']:
+            _notify_partner_limit(partner, period, limit, kind='limit_reached')
+        elif res['reached_80']:
+            _notify_partner_limit(partner, period, limit, kind='limit_near')
+    except Exception as e:
+        print(f'[widget-api] notify error: {e!r}')
+    finally:
+        conn.close()
+
+    return _resp(200, {
+        'ok': True,
+        'calc_used': period['calc_used'],
+        'calc_limit': limit,
+        'charged_extra': res['charged_extra'],
+    })
+
+
+def _handle_partner_summary(event: dict):
+    """Сводка биллинга для личного кабинета партнёра (доступ по ключу)."""
+    partner, err = _check_access(event)
+    if err:
+        return err
+    conn = _db()
+    try:
+        summary = billing.billing_summary(conn, partner)
+    finally:
+        conn.close()
+    return _resp(200, {
+        'ok': True,
+        'company_name': partner['company_name'],
+        'contact_email': partner['contact_email'],
+        'monthly_price_rub': partner['monthly_price_rub'],
+        'allowed_domains': partner['allowed_domains'],
+        'billing': summary,
+    })
+
+
 def _handle_lead(event: dict, body: dict):
     partner, err = _check_access(event)
     if err:
@@ -193,15 +258,32 @@ def _log_event(partner_id, event_type, domain, calc_input, calc_result, customer
         print(f'[widget-api] log error: {e!r}')
 
 
-def _send_partner_email(partner, domain, name, phone, email, comment,
-                        calc_input, calc_result) -> bool:
-    """Шлёт заявку на email партнёра через Яндекс 360 SMTP."""
+def _send_email(to_addr: str, subject: str, text: str, reply_to: str = None) -> bool:
+    """Базовая отправка письма через Яндекс 360 SMTP."""
     smtp_user = os.environ.get('SSO_SMTP_USER')
     smtp_pass = os.environ.get('SSO_SMTP_PASSWORD')
     if not smtp_user or not smtp_pass:
         print('[widget-api] SMTP не настроен')
         return False
+    msg = MIMEText(text, 'plain', 'utf-8')
+    msg['Subject'] = Header(subject, 'utf-8')
+    msg['From'] = smtp_user
+    msg['To'] = to_addr
+    if reply_to:
+        msg['Reply-To'] = reply_to
+    try:
+        with smtplib.SMTP_SSL('smtp.yandex.ru', 465, timeout=20) as server:
+            server.login(smtp_user, smtp_pass)
+            server.sendmail(smtp_user, [to_addr], msg.as_string())
+        return True
+    except Exception as e:
+        print(f'[widget-api] email error: {e!r}')
+        return False
 
+
+def _send_partner_email(partner, domain, name, phone, email, comment,
+                        calc_input, calc_result) -> bool:
+    """Шлёт заявку посетителя на email партнёра."""
     text = (
         f'Новая заявка с калькулятора на вашем сайте ({domain}).\n\n'
         f'Контакт:\n'
@@ -212,22 +294,38 @@ def _send_partner_email(partner, domain, name, phone, email, comment,
         f'Посетитель оставил заявку после расчёта в CAE-калькуляторе на вашем сайте.\n\n'
         f'— Виджет CAE, Диплом-Инж.рф'
     )
+    return _send_email(partner['contact_email'], f'Заявка с калькулятора ({domain})',
+                       text, reply_to=email or None)
 
-    msg = MIMEText(text, 'plain', 'utf-8')
-    msg['Subject'] = Header(f'Заявка с калькулятора ({domain})', 'utf-8')
-    msg['From'] = smtp_user
-    msg['To'] = partner['contact_email']
-    if email:
-        msg['Reply-To'] = email
 
-    try:
-        with smtplib.SMTP_SSL('smtp.yandex.ru', 465, timeout=20) as server:
-            server.login(smtp_user, smtp_pass)
-            server.sendmail(smtp_user, [partner['contact_email']], msg.as_string())
-        return True
-    except Exception as e:
-        print(f'[widget-api] email error: {e!r}')
-        return False
+def _notify_partner_limit(partner, period, limit, kind: str) -> bool:
+    """Уведомляет партнёра о приближении/исчерпании месячного лимита расчётов."""
+    to_addr = partner.get('billing_email') or partner['contact_email']
+    used = period['calc_used']
+    if kind == 'limit_near':
+        subject = 'Виджет CAE: израсходовано 80% месячного лимита расчётов'
+        text = (
+            f'Здравствуйте!\n\n'
+            f'На вашем виджете-калькуляторе израсходовано {used} из {limit} '
+            f'расчётов в этом месяце (более 80%).\n\n'
+            f'При исчерпании лимита подключится доп-пакет: +50% к лимиту и +50% '
+            f'к стоимости тарифа за этот месяц. Виджет продолжит работать без '
+            f'перерыва.\n\n'
+            f'Баланс и расчёты — в личном кабинете партнёра.\n\n'
+            f'— Диплом-Инж.рф'
+        )
+    else:
+        subject = 'Виджет CAE: месячный лимит расчётов исчерпан, подключён доп-пакет'
+        text = (
+            f'Здравствуйте!\n\n'
+            f'Месячный лимит расчётов на вашем виджете исчерпан ({used} из {limit}). '
+            f'Чтобы калькулятор продолжал работать, автоматически подключён '
+            f'доп-пакет: +50% к лимиту расчётов и +50% к стоимости тарифа за этот '
+            f'месяц.\n\n'
+            f'Подробности и баланс — в личном кабинете партнёра.\n\n'
+            f'— Диплом-Инж.рф'
+        )
+    return _send_email(to_addr, subject, text)
 
 
 # === Owner-доступ (управление партнёрами через кабинет владельца) ===
@@ -287,7 +385,9 @@ def _handle_owner_list(event: dict):
                 "SELECT p.id, p.api_key, p.company_name, p.contact_email, "
                 "p.allowed_domains, p.is_active, p.plan, p.monthly_calc_limit, p.created_at, "
                 "(SELECT count(*) FROM widget_leads l WHERE l.partner_id = p.id AND l.event_type='open'), "
-                "(SELECT count(*) FROM widget_leads l WHERE l.partner_id = p.id AND l.event_type='lead') "
+                "(SELECT count(*) FROM widget_leads l WHERE l.partner_id = p.id AND l.event_type='lead'), "
+                "p.monthly_price_rub, "
+                "(SELECT COALESCE(SUM(amount_due - amount_paid),0) FROM widget_billing_periods b WHERE b.partner_id = p.id) "
                 "FROM widget_partners p ORDER BY p.created_at DESC"
             )
             rows = cur.fetchall()
@@ -298,6 +398,7 @@ def _handle_owner_list(event: dict):
         'allowed_domains': r[4] or [], 'is_active': r[5], 'plan': r[6],
         'monthly_calc_limit': r[7], 'created_at': r[8].isoformat() if r[8] else None,
         'open_count': r[9], 'lead_count': r[10],
+        'monthly_price_rub': r[11], 'debt': int(r[12] or 0),
     } for r in rows]
     return _resp(200, {'ok': True, 'partners': partners})
 
@@ -314,14 +415,23 @@ def _handle_owner_create(event: dict, body: dict):
         domains = []
     domains = [str(d).strip().lower()[:255] for d in domains if str(d).strip()]
     plan = (body.get('plan') or 'basic').strip()[:32]
+    # Цена и месячный лимит по тарифу (синхронно с фронтом лендинга).
+    plan_billing = {
+        'basic':    {'price': 3900,  'limit': 1000},
+        'business': {'price': 8900,  'limit': 5000},
+        'zavod':    {'price': 19900, 'limit': 50000},
+        'demo':     {'price': 0,     'limit': 100000},
+    }.get(plan, {'price': 3900, 'limit': 1000})
     api_key = 'pk_' + secrets.token_hex(16)
     conn = _db()
     try:
         with conn.cursor() as cur:
             cur.execute(
                 "INSERT INTO widget_partners (api_key, company_name, contact_email, "
-                "allowed_domains, plan) VALUES (%s, %s, %s, %s, %s) RETURNING id",
-                (api_key, company, email, domains, plan),
+                "allowed_domains, plan, monthly_price_rub, monthly_calc_limit) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
+                (api_key, company, email, domains, plan,
+                 plan_billing['price'], plan_billing['limit']),
             )
             pid = cur.fetchone()[0]
         conn.commit()
@@ -351,6 +461,28 @@ def _handle_owner_toggle(event: dict, body: dict):
     return _resp(200, {'ok': True})
 
 
+def _handle_owner_pay(event: dict, body: dict):
+    """Владелец вручную фиксирует оплату партнёра. Гасит долг по периодам."""
+    owner_id = _owner_or_none(event)
+    if not owner_id:
+        return _resp(403, {'error': 'forbidden'})
+    try:
+        pid = int(body.get('partner_id'))
+        amount = int(body.get('amount_rub'))
+    except (TypeError, ValueError):
+        return _resp(400, {'error': 'bad_input', 'message': 'Укажите партнёра и сумму'})
+    if amount <= 0:
+        return _resp(400, {'error': 'bad_amount', 'message': 'Сумма должна быть > 0'})
+    note = (body.get('note') or '').strip()[:500]
+    conn = _db()
+    try:
+        billing.record_payment(conn, pid, amount, note, owner_id)
+        debt = billing.partner_debt(conn, pid)
+    finally:
+        conn.close()
+    return _resp(200, {'ok': True, 'debt': debt})
+
+
 def handler(event, context):
     method = event.get('httpMethod', 'GET')
     if method == 'OPTIONS':
@@ -361,6 +493,8 @@ def handler(event, context):
 
     if action == 'config' and method == 'GET':
         return _handle_config(event)
+    if action == 'partner-summary' and method == 'GET':
+        return _handle_partner_summary(event)
     if action == 'owner-list' and method == 'GET':
         return _handle_owner_list(event)
 
@@ -372,11 +506,15 @@ def handler(event, context):
     except (ValueError, TypeError):
         body = {}
 
+    if action == 'register-calc':
+        return _handle_register_calc(event)
     if action == 'lead':
         return _handle_lead(event, body)
     if action == 'owner-create':
         return _handle_owner_create(event, body)
     if action == 'owner-toggle':
         return _handle_owner_toggle(event, body)
+    if action == 'owner-pay':
+        return _handle_owner_pay(event, body)
 
     return _resp(400, {'error': 'unknown_action'})

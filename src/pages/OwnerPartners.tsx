@@ -30,6 +30,8 @@ interface Partner {
   created_at: string | null;
   open_count: number;
   lead_count: number;
+  monthly_price_rub: number;
+  debt: number;
 }
 
 function embedCode(apiKey: string): string {
@@ -110,6 +112,25 @@ function PartnersInner() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: p.id, is_active: !p.is_active }),
+      });
+      await load();
+    },
+    [load],
+  );
+
+  const pay = useCallback(
+    async (p: Partner) => {
+      const raw = window.prompt(
+        `Внести оплату для «${p.company_name}». Долг: ${p.debt} ₽.\nСумма оплаты, ₽:`,
+        String(p.debt || p.monthly_price_rub || 0),
+      );
+      if (raw == null) return;
+      const amount = parseInt(raw, 10);
+      if (!amount || amount <= 0) return;
+      await authorizedFetch(`${WIDGET_API}?action=owner-pay`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ partner_id: p.id, amount_rub: amount, note: "Оплата вручную" }),
       });
       await load();
     },
@@ -231,14 +252,26 @@ function PartnersInner() {
                 </div>
 
                 <div className="flex flex-wrap gap-4 text-xs text-[var(--drawing-line-thin)] mb-3">
-                  <span>Тариф: <strong className="text-[var(--drawing-ink)] uppercase">{p.plan}</strong></span>
+                  <span>Тариф: <strong className="text-[var(--drawing-ink)] uppercase">{p.plan}</strong> ({p.monthly_price_rub} ₽/мес)</span>
                   <span>Показов: <strong className="text-[var(--drawing-ink)]">{p.open_count}</strong></span>
                   <span>Заявок: <strong className="text-[var(--drawing-ink)]">{p.lead_count}</strong></span>
                   <span>
-                    Домены:{" "}
-                    <strong className="text-[var(--drawing-ink)]">
-                      {p.allowed_domains.length ? p.allowed_domains.join(", ") : "все (без ограничений)"}
+                    Долг:{" "}
+                    <strong className={p.debt > 0 ? "text-amber-600" : "text-green-700"}>
+                      {p.debt} ₽
                     </strong>
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <button
+                    onClick={() => pay(p)}
+                    className="btn-drawing btn-drawing-accent text-xs inline-flex items-center gap-1"
+                  >
+                    <Icon name="Wallet" size={12} /> Внести оплату
+                  </button>
+                  <span className="text-xs text-[var(--drawing-line-thin)]">
+                    Домены: {p.allowed_domains.length ? p.allowed_domains.join(", ") : "все (без ограничений)"}
                   </span>
                 </div>
 
