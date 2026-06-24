@@ -95,7 +95,7 @@ export default function WidgetBeam() {
       </Helmet>
 
       {/* Настоящий CAE-редактор с лимитами тарифа партнёра */}
-      <CaeDemoEditor embedded limits={limits} onLimitReached={openLead} />
+      <CaeDemoEditor embedded limits={limits} onLimitReached={openLead} company={company} />
 
       {/* Плавающая кнопка «Оформить заказ» */}
       <button style={orderBtn} onClick={openLead}>

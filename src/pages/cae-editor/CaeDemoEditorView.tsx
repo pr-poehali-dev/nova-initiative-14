@@ -19,6 +19,9 @@ interface Props {
   modalsProps: ComponentProps<typeof CaeEditorModals>;
   popupProps: ComponentProps<typeof CaeEditorContextPopup>;
   demoLimitModalProps: ComponentProps<typeof DemoLimitModal>;
+  /** Встроенный режим (виджет): без Helmet/SEO и без стандартной
+   *  модалки лимита (вместо неё — партнёрская заявка). */
+  embedded?: boolean;
 }
 
 const CaeDemoEditorView = ({
@@ -26,22 +29,25 @@ const CaeDemoEditorView = ({
   modalsProps,
   popupProps,
   demoLimitModalProps,
+  embedded,
 }: Props) => (
   <>
-    <Helmet>
-      <title>Демо CAE-редактора — расчёт рам и балок · Диплом-Инж.рф</title>
-      <meta
-        name="description"
-        content="Попробуйте облачный CAE-редактор без регистрации: нарисуйте плоскую раму, задайте нагрузки и опоры, запустите МКЭ-расчёт, получите эпюры N/Q/M прямо в браузере."
-      />
-      <link rel="canonical" href={`${SITE_URL}/cae/demo`} />
-    </Helmet>
+    {!embedded && (
+      <Helmet>
+        <title>Демо CAE-редактора — расчёт рам и балок · Диплом-Инж.рф</title>
+        <meta
+          name="description"
+          content="Попробуйте облачный CAE-редактор без регистрации: нарисуйте плоскую раму, задайте нагрузки и опоры, запустите МКЭ-расчёт, получите эпюры N/Q/M прямо в браузере."
+        />
+        <link rel="canonical" href={`${SITE_URL}/cae/demo`} />
+      </Helmet>
+    )}
 
     <CaeEditorLayout {...layoutProps} />
 
     <CaeEditorModals {...modalsProps} />
 
-    <DemoLimitModal {...demoLimitModalProps} />
+    {!embedded && <DemoLimitModal {...demoLimitModalProps} />}
 
     <CaeEditorContextPopup {...popupProps} />
   </>

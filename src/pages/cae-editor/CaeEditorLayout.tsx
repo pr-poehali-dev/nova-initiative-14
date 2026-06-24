@@ -33,6 +33,13 @@ interface Props {
   bannerSlot?: ReactNode;
   /** Доп. контент сразу под верхней панелью (демо-уведомление). Опционально. */
   topSlot?: ReactNode;
+  /** Встроенный режим (iframe-виджет на сайте партнёра): без верхней панели
+   *  редактора (Сохранить/Посчитать/JSON), без баннеров и без отступа под
+   *  навигацию сайта — только чистая канва. Опционально. */
+  embedded?: boolean;
+  /** Компактная панель виджета вместо верхней панели редактора (кнопка
+   *  «Посчитать» + действия партнёра). Используется при embedded. */
+  embeddedToolbar?: ReactNode;
 }
 
 const CaeEditorLayout = ({
@@ -50,13 +57,15 @@ const CaeEditorLayout = ({
   sidePanelsProps,
   bannerSlot,
   topSlot,
+  embedded,
+  embeddedToolbar,
 }: Props) => (
   <>
-  {bannerSlot}
-  <div className="pt-16 md:pt-16">
-    <EditorTopBar {...topBarProps} />
+  {!embedded && bannerSlot}
+  <div className={embedded ? "pt-0" : "pt-16 md:pt-16"}>
+    {embedded ? embeddedToolbar : <EditorTopBar {...topBarProps} />}
 
-    {topSlot}
+    {!embedded && topSlot}
 
     {draftFound && (
       <DraftRestoreBanner

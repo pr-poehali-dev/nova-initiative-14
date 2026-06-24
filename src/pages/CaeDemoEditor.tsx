@@ -30,6 +30,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import CaeDemoBanner from "./cae-editor/CaeDemoBanner";
 import CaeDemoLimitNotice from "./cae-editor/CaeDemoLimitNotice";
 import CaeDemoEditorView from "./cae-editor/CaeDemoEditorView";
+import WidgetEditorToolbar from "@/components/widget/WidgetEditorToolbar";
 import Seo from "@/components/Seo";
 
 export interface CaeDemoEditorProps {
@@ -43,9 +44,11 @@ export interface CaeDemoEditorProps {
   overlaySlot?: ReactNode;
   /** Колбэк при исчерпании лимита расчётов (вместо модалки регистрации). */
   onLimitReached?: () => void;
+  /** Название компании-партнёра (для панели виджета). */
+  company?: string;
 }
 
-const CaeDemoEditor = ({ limits, embedded, overlaySlot, onLimitReached }: CaeDemoEditorProps = {}) => {
+const CaeDemoEditor = ({ limits, embedded, overlaySlot, onLimitReached, company }: CaeDemoEditorProps = {}) => {
   const { user, loading: authLoadingCtx } = useAuth();
   const nav = useNavigate();
 
@@ -85,6 +88,7 @@ const CaeDemoEditor = ({ limits, embedded, overlaySlot, onLimitReached }: CaeDem
     solveBlocked,
     solveCount,
     solveLimit,
+    solvesLeft,
   } = useCaeDemoProject({
     solveLimit: limits?.solveLimit,
     nodeLimit: limits?.nodeLimit,
@@ -246,6 +250,7 @@ const CaeDemoEditor = ({ limits, embedded, overlaySlot, onLimitReached }: CaeDem
     )}
     {overlaySlot}
     <CaeDemoEditorView
+      embedded={embedded}
       layoutProps={{
         is3d,
         leftPanelOpen,
@@ -255,6 +260,17 @@ const CaeDemoEditor = ({ limits, embedded, overlaySlot, onLimitReached }: CaeDem
         draftFound: null,
         restoreDraft: () => {},
         discardDraft: () => {},
+        embedded,
+        embeddedToolbar: (
+          <WidgetEditorToolbar
+            onSolve={onSolve}
+            solving={solving}
+            blocked={blocked}
+            solvesLeft={solvesLeft}
+            solveLimit={solveLimit}
+            company={company}
+          />
+        ),
         bannerSlot: (
           <CaeDemoBanner
             solveBlocked={solveBlocked}
