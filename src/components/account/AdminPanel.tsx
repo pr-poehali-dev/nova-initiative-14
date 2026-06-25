@@ -130,6 +130,22 @@ function MarketingTab() {
         </div>
         <Icon name="ArrowRight" size={16} className="text-[var(--drawing-line-thin)] shrink-0 mt-1" />
       </Link>
+
+      <Link
+        to="/admin/widget-presentation"
+        className="flex items-start gap-3 border-[1.5px] border-[var(--drawing-line)] hover:border-[var(--drawing-accent)] p-4 transition-colors group"
+      >
+        <Icon name="Presentation" size={24} className="text-[var(--drawing-accent)] shrink-0 mt-0.5" />
+        <div className="min-w-0 flex-1">
+          <p className="font-gost-upright font-bold mb-0.5 group-hover:text-[var(--drawing-accent)] transition-colors">
+            Реклама CAE-виджета для партнёров
+          </p>
+          <p className="font-gost text-[11px] text-[var(--drawing-line-thin)] leading-snug">
+            Презентация (копия лендинга) и коммерческое предложение для компаний металлопроката. Выгрузка в PDF.
+          </p>
+        </div>
+        <Icon name="ArrowRight" size={16} className="text-[var(--drawing-line-thin)] shrink-0 mt-1" />
+      </Link>
     </div>
   );
 }

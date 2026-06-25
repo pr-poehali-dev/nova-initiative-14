@@ -56,6 +56,7 @@ import OwnerSeoReindex from "./pages/OwnerSeoReindex";
 import OwnerPartners from "./pages/OwnerPartners";
 import WidgetBeam from "./pages/WidgetBeam";
 import WidgetLanding from "./pages/WidgetLanding";
+import WidgetPresentation from "./pages/WidgetPresentation";
 import PartnerCabinet from "./pages/PartnerCabinet";
 import AdminQr from "./pages/AdminQr";
 import PrintFlyer from "./pages/PrintFlyer";
@@ -239,6 +240,7 @@ function MainLayout() {
                 <Route path="/owner/partners" element={<OwnerPartners />} />
                 <Route path="/admin/qr" element={<AdminQr />} />
                 <Route path="/admin/print" element={<PrintFlyer />} />
+                <Route path="/admin/widget-presentation" element={<WidgetPresentation />} />
                 <Route path="/urfu_qr_cae" element={<UrfuQrCae />} />
                 <Route path="/urfu_qr_diplom" element={<UrfuQrDiplom />} />
                 <Route path="*" element={<NotFoundPage />} />
