@@ -271,6 +271,7 @@ function PartnersInner() {
 
                 <div className="flex flex-wrap gap-4 text-xs text-[var(--drawing-line-thin)] mb-3">
                   <span>Тариф: <strong className="text-[var(--drawing-ink)] uppercase">{p.plan}</strong> ({p.monthly_price_rub} ₽/мес)</span>
+                  <span>Лимит: <strong className="text-[var(--drawing-ink)]">{p.monthly_calc_limit.toLocaleString("ru-RU")}</strong> расч./мес</span>
                   <span>Показов: <strong className="text-[var(--drawing-ink)]">{p.open_count}</strong></span>
                   <span>Заявок: <strong className="text-[var(--drawing-ink)]">{p.lead_count}</strong></span>
                   <span>
@@ -332,8 +333,10 @@ function PartnersInner() {
 }
 
 /**
- * Настройка лимита расчётов НА ОДНОГО ПОСЕТИТЕЛЯ для партнёра.
- * Переключатель «ограничивать расчёты» + поле с числом. Выкл = безлимит.
+ * Настройка лимита расчётов В СУТКИ НА ОДНОГО ПОСЕТИТЕЛЯ для партнёра.
+ * Это НЕ месячный лимит тарифа (он суммарный по всем посетителям) — а защита
+ * от того, чтобы один посетитель не «съел» весь месячный лимит за день.
+ * Переключатель «ограничивать» + число расчётов в сутки. Выкл = без ограничения.
  */
 function VisitorLimitRow({
   partner,
@@ -366,7 +369,7 @@ function VisitorLimitRow({
     <div className="mt-3 border-t border-[var(--drawing-line)]/40 pt-3">
       <div className="flex flex-wrap items-center gap-3 text-xs">
         <span className="font-gost uppercase tracking-wider text-[var(--drawing-line-thin)]">
-          Расчёты на посетителя:
+          Расчётов в сутки на 1 посетителя:
         </span>
         <label className="inline-flex items-center gap-1.5 cursor-pointer">
           <input
@@ -384,10 +387,10 @@ function VisitorLimitRow({
               min={1}
               value={limit}
               onChange={(e) => setLimit(e.target.value)}
-              placeholder="по тарифу"
+              placeholder="напр. 5"
               className="w-24 border border-[var(--drawing-line)] bg-transparent px-2 py-1 text-xs"
             />
-            расч. (пусто = по тарифу)
+            расч./сутки
           </span>
         ) : (
           <span className="text-green-700 font-bold">без ограничений</span>

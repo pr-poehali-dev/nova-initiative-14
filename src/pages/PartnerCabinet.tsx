@@ -233,6 +233,12 @@ export default function PartnerCabinet() {
               доп-пакет: +50% к лимиту и +50% к стоимости тарифа за месяц.
             </p>
           )}
+          <p className="text-[11px] text-[var(--drawing-line-thin)] mt-3 flex items-start gap-1.5">
+            <Icon name="Info" size={13} className="shrink-0 mt-0.5 text-[var(--drawing-accent)]" />
+            Это общий месячный лимит по всем посетителям. Чтобы один посетитель
+            не израсходовал его за день, можно ограничить число расчётов в сутки
+            на одного посетителя — напишите менеджеру, и мы настроим.
+          </p>
         </div>
 
         {/* Начисления за месяц */}
