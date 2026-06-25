@@ -161,7 +161,11 @@ export default function WidgetPresentation() {
   return (
     <>
       <Helmet>
-        <title>Презентация виджета · Маркетинг · Диплом-Инж.рф</title>
+        <title>
+          {view === "offer"
+            ? `Коммерческое предложение ${offerNumber()} · Диплом-Инж.рф`
+            : "Презентация виджета · Маркетинг · Диплом-Инж.рф"}
+        </title>
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
 
@@ -213,11 +217,21 @@ export default function WidgetPresentation() {
         </div>
       </div>
 
-      <div className="print-root max-w-[900px] mx-auto px-4 py-8">
-        {view === "presentation" ? <Presentation /> : <Offer />}
+      <div id="wp-print-root" className="print-root max-w-[900px] mx-auto px-4 py-8">
+        {view === "presentation" ? <Presentation /> : <Offer offerNo={offerNumber()} />}
       </div>
     </>
   );
+}
+
+/**
+ * Номер КП на основе текущей даты: КП-ГГММДД (стабилен в течение дня).
+ * Для разных предложений в один день при необходимости отредактируйте вручную.
+ */
+function offerNumber(): string {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `КП-${String(d.getFullYear()).slice(2)}${p(d.getMonth() + 1)}${p(d.getDate())}`;
 }
 
 /* ─────────────────────────── ПРЕЗЕНТАЦИЯ ─────────────────────────── */
@@ -354,7 +368,7 @@ function Presentation() {
 
 /* ──────────────────── КОММЕРЧЕСКОЕ ПРЕДЛОЖЕНИЕ ──────────────────── */
 
-function Offer() {
+function Offer({ offerNo }: { offerNo: string }) {
   const today = new Date().toLocaleDateString("ru-RU", {
     day: "numeric",
     month: "long",
@@ -372,10 +386,13 @@ function Offer() {
               Инженерные онлайн-расчёты · CAE-сервис
             </p>
           </div>
-          <p className="text-xs text-[var(--drawing-line-thin)]">{today}</p>
+          <p className="text-xs text-[var(--drawing-line-thin)] text-right">
+            <span className="font-bold text-[var(--drawing-ink)]">{offerNo}</span>
+            <br />от {today}
+          </p>
         </div>
         <h1 className="font-gost-upright text-2xl font-black uppercase tracking-wide mt-5">
-          Коммерческое предложение
+          Коммерческое предложение {offerNo}
         </h1>
         <p className="text-[var(--drawing-line-thin)] mt-1">
           Виджет онлайн-калькулятора балки для сайта компании металлопроката
@@ -532,11 +549,29 @@ function SectionTitle({ icon, text }: { icon: string; text: string }) {
   );
 }
 
+/**
+ * Печатные стили. Чтобы в PDF не попадали навигация, cookie-баннер, тосты и
+ * внешние виджеты (Яндекс.Метрика и пр.), при печати скрываем ВСЮ страницу
+ * и показываем только документ #wp-print-root. Это надёжнее, чем перечислять
+ * селекторы сторонних элементов, которые мы не контролируем.
+ */
 const PRINT_CSS = `
 @media print {
-  .no-print { display: none !important; }
+  /* Скрываем всё */
+  body * { visibility: hidden !important; }
+  /* Показываем только документ и его содержимое */
+  #wp-print-root, #wp-print-root * { visibility: visible !important; }
+  /* Документ во всю ширину листа, в начало страницы */
+  #wp-print-root {
+    position: absolute !important;
+    left: 0; top: 0;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
   body { background: #fff !important; }
-  .print-root { max-width: none !important; padding: 0 !important; margin: 0 !important; }
+  .no-print { display: none !important; }
   .print-page { break-after: page; }
   .break-inside-avoid { break-inside: avoid; }
   a[href]:after { content: ""; }
