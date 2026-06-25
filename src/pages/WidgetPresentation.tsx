@@ -123,6 +123,21 @@ const FAQ = [
   },
 ];
 
+// Реквизиты для коммерческого предложения. ИНН и наименование — реальные;
+// банковские реквизиты заполните перед отправкой клиенту (пока плейсхолдеры).
+const REQUISITES = [
+  { label: "Наименование", value: "ИП Кокшаров Сергей Витальевич" },
+  { label: "ИНН", value: "662007143302" },
+  { label: "ОГРНИП", value: "—" },
+  { label: "Расчётный счёт", value: "—" },
+  { label: "Банк", value: "—" },
+  { label: "БИК", value: "—" },
+  { label: "Корр. счёт", value: "—" },
+  { label: "Юридический адрес", value: "г. Екатеринбург" },
+  { label: "Email", value: "info@диплом-инж.рф" },
+  { label: "Телефон", value: "+7 982 855-73-09" },
+];
+
 type View = "presentation" | "offer";
 
 export default function WidgetPresentation() {
@@ -481,6 +496,28 @@ function Offer() {
         <p className="text-[10px] text-[var(--drawing-line-thin)] mt-3">
           Предложение носит информационный характер и не является публичной офертой.
           Окончательные условия фиксируются в договоре.
+        </p>
+      </section>
+
+      <section className="break-inside-avoid">
+        <h2 className="font-gost-upright font-bold uppercase tracking-wide text-base mb-2">
+          6. Реквизиты
+        </h2>
+        <table className="w-full border-collapse text-xs">
+          <tbody>
+            {REQUISITES.map((r) => (
+              <tr key={r.label} className="align-top">
+                <td className="border-2 border-[var(--drawing-line)] p-2 font-gost-upright font-bold whitespace-nowrap w-[42%]">
+                  {r.label}
+                </td>
+                <td className="border-2 border-[var(--drawing-line)] p-2">{r.value}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="text-[10px] text-[var(--drawing-line-thin)] mt-2">
+          Для заключения договора и выставления счёта реквизиты предоставляются
+          по запросу.
         </p>
       </section>
     </article>
