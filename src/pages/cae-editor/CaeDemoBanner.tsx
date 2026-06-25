@@ -20,7 +20,11 @@ const CaeDemoBanner = ({ solveBlocked, solveCount, solveLimit, onReset }: Props)
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-gost uppercase tracking-wider">
         <span className="font-bold">Демо без регистрации</span>
         <span className={`inline-flex items-center gap-1 ${solveBlocked ? "bg-red-700" : "bg-white/15"} px-2 py-0.5`}>
-          Пробных расчётов: <span className="font-bold">{solveCount}/{solveLimit}</span>
+          {isFinite(solveLimit) ? (
+            <>Пробных расчётов: <span className="font-bold">{solveCount}/{solveLimit}</span></>
+          ) : (
+            <>Расчёты: <span className="font-bold">без ограничений</span></>
+          )}
         </span>
       </div>
       <div className="flex items-center gap-3">

@@ -32,6 +32,8 @@ interface Partner {
   lead_count: number;
   monthly_price_rub: number;
   debt: number;
+  visitor_solve_limit: number | null;
+  visitor_limit_enabled: boolean;
 }
 
 function embedCode(apiKey: string): string {
@@ -131,6 +133,22 @@ function PartnersInner() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ partner_id: p.id, amount_rub: amount, note: "Оплата вручную" }),
+      });
+      await load();
+    },
+    [load],
+  );
+
+  const saveVisitorLimit = useCallback(
+    async (p: Partner, enabled: boolean, limit: number | null) => {
+      await authorizedFetch(`${WIDGET_API}?action=owner-update`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: p.id,
+          visitor_limit_enabled: enabled,
+          visitor_solve_limit: limit,
+        }),
       });
       await load();
     },
@@ -302,12 +320,94 @@ function PartnersInner() {
                     {copied === `embed-${p.id}` ? "Ок" : "Код"}
                   </button>
                 </div>
+
+                <VisitorLimitRow partner={p} onSave={saveVisitorLimit} />
               </div>
             ))}
           </div>
         )}
       </div>
     </>
+  );
+}
+
+/**
+ * Настройка лимита расчётов НА ОДНОГО ПОСЕТИТЕЛЯ для партнёра.
+ * Переключатель «ограничивать расчёты» + поле с числом. Выкл = безлимит.
+ */
+function VisitorLimitRow({
+  partner,
+  onSave,
+}: {
+  partner: Partner;
+  onSave: (p: Partner, enabled: boolean, limit: number | null) => Promise<void>;
+}) {
+  const [enabled, setEnabled] = useState(partner.visitor_limit_enabled);
+  const [limit, setLimit] = useState<string>(
+    partner.visitor_solve_limit != null ? String(partner.visitor_solve_limit) : "",
+  );
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const dirty =
+    enabled !== partner.visitor_limit_enabled ||
+    (limit ? parseInt(limit, 10) : null) !== (partner.visitor_solve_limit ?? null);
+
+  const save = async () => {
+    setSaving(true);
+    const lim = limit ? Math.max(1, parseInt(limit, 10) || 0) : null;
+    await onSave(partner, enabled, enabled ? lim : null);
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
+  };
+
+  return (
+    <div className="mt-3 border-t border-[var(--drawing-line)]/40 pt-3">
+      <div className="flex flex-wrap items-center gap-3 text-xs">
+        <span className="font-gost uppercase tracking-wider text-[var(--drawing-line-thin)]">
+          Расчёты на посетителя:
+        </span>
+        <label className="inline-flex items-center gap-1.5 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={enabled}
+            onChange={(e) => setEnabled(e.target.checked)}
+          />
+          Ограничивать
+        </label>
+        {enabled ? (
+          <span className="inline-flex items-center gap-1.5">
+            не более
+            <input
+              type="number"
+              min={1}
+              value={limit}
+              onChange={(e) => setLimit(e.target.value)}
+              placeholder="по тарифу"
+              className="w-24 border border-[var(--drawing-line)] bg-transparent px-2 py-1 text-xs"
+            />
+            расч. (пусто = по тарифу)
+          </span>
+        ) : (
+          <span className="text-green-700 font-bold">без ограничений</span>
+        )}
+        {dirty && (
+          <button
+            onClick={save}
+            disabled={saving}
+            className="btn-drawing btn-drawing-accent text-xs inline-flex items-center gap-1"
+          >
+            <Icon name="Save" size={12} /> {saving ? "…" : "Сохранить"}
+          </button>
+        )}
+        {saved && !dirty && (
+          <span className="text-green-700 inline-flex items-center gap-1">
+            <Icon name="Check" size={12} /> Сохранено
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
 

@@ -56,7 +56,13 @@ export default function WidgetEditorToolbar({
 
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <span style={{ fontSize: 12, color: "#6b7280" }} className="hidden sm:inline">
-          Расчётов осталось: <strong style={{ color: "#1a1d21" }}>{solvesLeft}</strong> из {solveLimit}
+          {isFinite(solveLimit) ? (
+            <>
+              Расчётов осталось: <strong style={{ color: "#1a1d21" }}>{solvesLeft}</strong> из {solveLimit}
+            </>
+          ) : (
+            <>Расчёты: <strong style={{ color: "#1a1d21" }}>без ограничений</strong></>
+          )}
         </span>
         {onOpenBeams && (
           <button

@@ -75,7 +75,10 @@ export interface DemoLimitOverrides {
 }
 
 export function useCaeDemoProject(overrides: DemoLimitOverrides = {}) {
-  const solveLimit = overrides.solveLimit ?? DEMO_SOLVE_LIMIT;
+  // solveLimit === 0 — маркер «безлимит» (партнёр выключил ограничение
+  // на посетителя): расчёты не блокируются.
+  const rawSolveLimit = overrides.solveLimit ?? DEMO_SOLVE_LIMIT;
+  const solveLimit = rawSolveLimit === 0 ? Infinity : rawSolveLimit;
   const nodeLimit = overrides.nodeLimit ?? DEMO_NODE_LIMIT;
   const elementLimit = overrides.elementLimit ?? DEMO_ELEMENT_LIMIT;
 

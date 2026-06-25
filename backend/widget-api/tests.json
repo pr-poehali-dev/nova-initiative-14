@@ -73,6 +73,15 @@
       "expectedStatus": 403,
       "expectedBody": {"error": "forbidden"},
       "bodyMatcher": "partial"
+    },
+    {
+      "name": "Owner update forbidden without token",
+      "method": "POST",
+      "path": "/?action=owner-update",
+      "body": {"id": 1, "visitor_limit_enabled": false},
+      "expectedStatus": 403,
+      "expectedBody": {"error": "forbidden"},
+      "bodyMatcher": "partial"
     }
   ]
 }

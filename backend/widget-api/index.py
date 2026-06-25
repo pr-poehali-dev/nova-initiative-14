@@ -89,7 +89,8 @@ def _load_partner(api_key: str):
         with conn.cursor() as cur:
             cur.execute(
                 "SELECT id, company_name, contact_email, allowed_domains, is_active, plan, "
-                "monthly_price_rub, monthly_calc_limit, billing_email "
+                "monthly_price_rub, monthly_calc_limit, billing_email, "
+                "visitor_solve_limit, visitor_limit_enabled "
                 "FROM widget_partners WHERE api_key = %s",
                 (api_key,),
             )
@@ -103,6 +104,8 @@ def _load_partner(api_key: str):
         'allowed_domains': row[3] or [], 'is_active': row[4], 'plan': row[5] or 'basic',
         'monthly_price_rub': row[6], 'monthly_calc_limit': row[7],
         'billing_email': row[8] or row[2],
+        'visitor_solve_limit': row[9],
+        'visitor_limit_enabled': row[10] if row[10] is not None else True,
     }
 
 
@@ -138,6 +141,16 @@ def _handle_config(event: dict):
     if err:
         return err
     limits = PLAN_LIMITS.get(partner['plan'], DEFAULT_LIMITS)
+    # Эффективный лимит расчётов НА ОДНОГО ПОСЕТИТЕЛЯ:
+    #  - ограничение выключено партнёром  -> 0 (маркер «безлимит» для фронта);
+    #  - задан индивидуальный лимит        -> он;
+    #  - иначе                             -> лимит из тарифа.
+    if not partner.get('visitor_limit_enabled', True):
+        solve_limit = 0  # 0 = безлимит (фронт превращает в Infinity)
+    elif partner.get('visitor_solve_limit') is not None:
+        solve_limit = int(partner['visitor_solve_limit'])
+    else:
+        solve_limit = limits['solve_limit']
     # Логируем открытие виджета (для аналитики/биллинга по показам).
     _log_event(partner['id'], 'open', _origin_domain(event), None, None, None)
     return _resp(200, {
@@ -145,7 +158,7 @@ def _handle_config(event: dict):
         'company_name': partner['company_name'],
         'plan': partner['plan'],
         'limits': {
-            'solveLimit': limits['solve_limit'],
+            'solveLimit': solve_limit,
             'nodeLimit': limits['node_limit'],
             'elementLimit': limits['element_limit'],
         },
@@ -387,7 +400,8 @@ def _handle_owner_list(event: dict):
                 "(SELECT count(*) FROM widget_leads l WHERE l.partner_id = p.id AND l.event_type='open'), "
                 "(SELECT count(*) FROM widget_leads l WHERE l.partner_id = p.id AND l.event_type='lead'), "
                 "p.monthly_price_rub, "
-                "(SELECT COALESCE(SUM(amount_due - amount_paid),0) FROM widget_billing_periods b WHERE b.partner_id = p.id) "
+                "(SELECT COALESCE(SUM(amount_due - amount_paid),0) FROM widget_billing_periods b WHERE b.partner_id = p.id), "
+                "p.visitor_solve_limit, p.visitor_limit_enabled "
                 "FROM widget_partners p ORDER BY p.created_at DESC"
             )
             rows = cur.fetchall()
@@ -399,6 +413,8 @@ def _handle_owner_list(event: dict):
         'monthly_calc_limit': r[7], 'created_at': r[8].isoformat() if r[8] else None,
         'open_count': r[9], 'lead_count': r[10],
         'monthly_price_rub': r[11], 'debt': int(r[12] or 0),
+        'visitor_solve_limit': r[13],
+        'visitor_limit_enabled': r[14] if r[14] is not None else True,
     } for r in rows]
     return _resp(200, {'ok': True, 'partners': partners})
 
@@ -438,6 +454,43 @@ def _handle_owner_create(event: dict, body: dict):
     finally:
         conn.close()
     return _resp(200, {'ok': True, 'id': pid, 'api_key': api_key})
+
+
+def _handle_owner_update(event: dict, body: dict):
+    """Обновляет настройки виджета партнёра.
+    Сейчас — лимит расчётов на одного посетителя:
+      visitor_limit_enabled: bool — включено ли ограничение;
+      visitor_solve_limit: int|null — индивидуальный лимит (null = брать из тарифа).
+    """
+    if not _owner_or_none(event):
+        return _resp(403, {'error': 'forbidden'})
+    try:
+        pid = int(body.get('id'))
+    except (TypeError, ValueError):
+        return _resp(400, {'error': 'bad_input', 'message': 'Не указан партнёр'})
+
+    enabled = bool(body.get('visitor_limit_enabled', True))
+    raw_limit = body.get('visitor_solve_limit')
+    if raw_limit in (None, '', 0):
+        limit_val = None
+    else:
+        try:
+            limit_val = max(1, int(raw_limit))
+        except (TypeError, ValueError):
+            return _resp(400, {'error': 'bad_limit', 'message': 'Лимит должен быть числом'})
+
+    conn = _db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE widget_partners SET visitor_limit_enabled = %s, "
+                "visitor_solve_limit = %s, updated_at = now() WHERE id = %s",
+                (enabled, limit_val, pid),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+    return _resp(200, {'ok': True})
 
 
 def _handle_owner_toggle(event: dict, body: dict):
@@ -514,6 +567,8 @@ def handler(event, context):
         return _handle_owner_create(event, body)
     if action == 'owner-toggle':
         return _handle_owner_toggle(event, body)
+    if action == 'owner-update':
+        return _handle_owner_update(event, body)
     if action == 'owner-pay':
         return _handle_owner_pay(event, body)
 
