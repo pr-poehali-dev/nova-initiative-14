@@ -71,6 +71,9 @@ interface Props {
   setMobileChecksOpen?: (v: boolean) => void;
   mobileResultsOpen?: boolean;
   setMobileResultsOpen?: (v: boolean) => void;
+  /** Скрыть плавающую мобильную кнопку «Расчёт» (в виджете она наезжает на
+   *  кнопку «Оформить заказ» — там расчёт запускается с панели виджета). */
+  hideMobileSolve?: boolean;
 }
 
 const EditorSidePanels = ({
@@ -90,6 +93,7 @@ const EditorSidePanels = ({
   setMobileChecksOpen,
   mobileResultsOpen,
   setMobileResultsOpen,
+  hideMobileSolve,
 }: Props) => {
   const focusNode = (id: string) => {
     setSelectedNodeIds([id]);
@@ -139,7 +143,7 @@ const EditorSidePanels = ({
           под рабочую область и становилась некликабельной (тикеты #27, #33). */}
       {/* Пока открыта мобильная модалка — кнопку прячем, чтобы не висела
           поверх содержимого. */}
-      {!mobileChecksOpen && !mobileResultsOpen && createPortal(
+      {!hideMobileSolve && !mobileChecksOpen && !mobileResultsOpen && createPortal(
         <button
           onClick={onSolve}
           disabled={solving || blocked}
