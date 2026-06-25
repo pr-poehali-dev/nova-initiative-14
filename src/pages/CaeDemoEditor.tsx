@@ -51,9 +51,11 @@ export interface CaeDemoEditorProps {
   company?: string;
   /** Колбэк после КАЖДОГО успешного расчёта (виджет учитывает его в биллинге). */
   onSolveSuccess?: () => void;
+  /** Ключ партнёра — solver применит лимит расчётов по настройкам партнёра. */
+  widgetKey?: string;
 }
 
-const CaeDemoEditor = ({ limits, embedded, overlaySlot, onLimitReached, company, onSolveSuccess }: CaeDemoEditorProps = {}) => {
+const CaeDemoEditor = ({ limits, embedded, overlaySlot, onLimitReached, company, onSolveSuccess, widgetKey }: CaeDemoEditorProps = {}) => {
   const { user, loading: authLoadingCtx } = useAuth();
   const nav = useNavigate();
 
@@ -112,7 +114,7 @@ const CaeDemoEditor = ({ limits, embedded, overlaySlot, onLimitReached, company,
     onSolve: onSolveInternal,
     issues,
     blocked,
-  } = useCaeSolver(model, 0, versionId, { demo: true });
+  } = useCaeSolver(model, 0, versionId, { demo: true, widgetKey });
 
   // Обёртка onSolve: если лимит исчерпан — открываем модалку с регистрацией.
   // После успешного расчёта увеличиваем счётчик; если это был последний — тоже открываем модалку.

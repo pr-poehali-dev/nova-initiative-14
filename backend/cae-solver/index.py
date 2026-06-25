@@ -78,6 +78,75 @@ def _demo_check_and_count(ip: str) -> tuple[bool, int]:
         return True, 0
 
 
+# Лимиты расчётов на одного посетителя по тарифу партнёра (синхронно с
+# widget-api PLAN_LIMITS). Применяются как ПОТОЛОК на IP в demo-режиме виджета.
+WIDGET_PLAN_SOLVE_LIMIT = {
+    'demo': 5, 'basic': 10, 'business': 50, 'zavod': 999,
+}
+
+
+def _widget_solve_limit(widget_key: str):
+    """Возвращает эффективный лимит расчётов на посетителя для виджета партнёра.
+    None = безлимит (партнёр выключил ограничение). Если ключ неизвестен/ошибка
+    — None не возвращаем, отдаём дефолтный DEMO_SOLVE_LIMIT (безопасный fallback).
+    """
+    if not widget_key:
+        return DEMO_SOLVE_LIMIT
+    try:
+        conn = psycopg2.connect(os.environ['DATABASE_URL'])
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT plan, visitor_solve_limit, visitor_limit_enabled, is_active "
+                "FROM widget_partners WHERE api_key = %s",
+                (widget_key,),
+            )
+            row = cur.fetchone()
+        conn.close()
+    except Exception as e:
+        print(f'[cae-solver] widget limit error: {e!r}')
+        return DEMO_SOLVE_LIMIT
+    if not row or not row[3]:           # нет партнёра или подписка отключена
+        return DEMO_SOLVE_LIMIT
+    plan, vis_limit, vis_enabled = row[0] or 'basic', row[1], row[2]
+    if vis_enabled is False:            # ограничение выключено партнёром
+        return None                     # безлимит
+    if vis_limit is not None:           # индивидуальный лимит
+        return max(1, int(vis_limit))
+    return WIDGET_PLAN_SOLVE_LIMIT.get(plan, DEMO_SOLVE_LIMIT)
+
+
+def _demo_check_and_count_limit(ip: str, limit: int) -> tuple[bool, int]:
+    """Как _demo_check_and_count, но с произвольным лимитом партнёра."""
+    if not ip:
+        return True, 0
+    try:
+        conn = psycopg2.connect(os.environ['DATABASE_URL'])
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO cae_demo_usage (ip, solve_count, first_at) "
+                "VALUES (%s, 1, now()) "
+                "ON CONFLICT (ip) DO UPDATE SET "
+                "  solve_count = CASE "
+                "    WHEN cae_demo_usage.first_at < now() - interval '1 day' THEN 1 "
+                "    ELSE cae_demo_usage.solve_count + 1 END, "
+                "  first_at = CASE "
+                "    WHEN cae_demo_usage.first_at < now() - interval '1 day' THEN now() "
+                "    ELSE cae_demo_usage.first_at END, "
+                "  updated_at = now() "
+                "RETURNING solve_count",
+                (ip,),
+            )
+            used = cur.fetchone()[0]
+        conn.commit()
+        conn.close()
+        if used > limit:
+            return False, used - 1
+        return True, used
+    except Exception as e:
+        print(f'[cae-solver] demo limit error: {e!r}')
+        return True, 0
+
+
 def _json_response(status: int, body: dict) -> dict:
     return {'statusCode': status, 'headers': CORS, 'body': json.dumps(body, ensure_ascii=False)}
 
@@ -274,25 +343,39 @@ def handler(event: dict, context) -> dict:
         if not ok:
             return _json_response(400, {'error': 'validation_failed', 'message': msg})
         ip = _client_ip(event)
-        allowed, used = _demo_check_and_count(ip)
-        if not allowed:
-            return _json_response(429, {
-                'error': 'demo_limit_reached',
-                'message': (
+        # Если расчёт идёт из виджета партнёра (meta.widget_key), серверный
+        # IP-лимит зависит от настроек партнёра: безлимит (None) или его число.
+        # Без ключа — обычное демо (DEMO_SOLVE_LIMIT).
+        widget_key = (payload.get('meta') or {}).get('widget_key') or ''
+        eff_limit = _widget_solve_limit(widget_key) if widget_key else DEMO_SOLVE_LIMIT
+
+        if eff_limit is None:
+            # Безлимит партнёра — IP-проверку не делаем.
+            used = 0
+        else:
+            allowed, used = _demo_check_and_count_limit(ip, eff_limit)
+            if not allowed:
+                msg_txt = (
+                    f'Лимит расчётов исчерпан: {eff_limit} расчётов. '
+                    f'Оставьте заявку — менеджер свяжется с вами.'
+                ) if widget_key else (
                     f'Лимит демо-режима исчерпан: {DEMO_SOLVE_LIMIT} расчётов '
                     f'без регистрации. Создайте бесплатный аккаунт, чтобы '
                     f'считать без ограничений.'
-                ),
-                'limit': DEMO_SOLVE_LIMIT,
-                'used': used,
-            })
+                )
+                return _json_response(429, {
+                    'error': 'demo_limit_reached',
+                    'message': msg_txt,
+                    'limit': eff_limit,
+                    'used': used,
+                })
         try:
             t0 = time.time()
             response = run_solver(payload)
             response['duration_ms'] = int((time.time() - t0) * 1000)
             response['demo'] = True
             response['demo_used'] = used
-            response['demo_limit'] = DEMO_SOLVE_LIMIT
+            response['demo_limit'] = eff_limit if eff_limit is not None else 0
             return _json_response(200, response)
         except Exception as e:
             import traceback

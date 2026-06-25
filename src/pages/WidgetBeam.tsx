@@ -110,6 +110,7 @@ export default function WidgetBeam() {
         onLimitReached={openLead}
         onSolveSuccess={registerCalc}
         company={company}
+        widgetKey={apiKey}
       />
 
       {/* Плавающая кнопка «Оформить заказ» */}

@@ -117,9 +117,16 @@ export async function runSolver(
   return authCall<SolverResponse>(`${CAE_SOLVER}?action=solve`, "POST", payload);
 }
 
-/** Демо-расчёт без авторизации (action=demo). Не требует токена. */
+/** Демо-расчёт без авторизации (action=demo). Не требует токена.
+ *  widgetKey — ключ партнёра: solver применит лимит расчётов на посетителя
+ *  по настройкам партнёра (безлимит или его число), а не общий demo-лимит. */
 export async function runDemoSolver(
   model: FrameModel,
+  widgetKey?: string,
 ): Promise<ApiResult<SolverResponse>> {
-  return authCall<SolverResponse>(`${CAE_SOLVER}?action=demo`, "POST", withAnalysisType(model));
+  const m = withAnalysisType(model);
+  const payload = widgetKey
+    ? { ...m, meta: { ...m.meta, widget_key: widgetKey } }
+    : m;
+  return authCall<SolverResponse>(`${CAE_SOLVER}?action=demo`, "POST", payload);
 }

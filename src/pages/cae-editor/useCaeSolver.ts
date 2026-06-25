@@ -8,9 +8,10 @@ export function useCaeSolver(
   model: FrameModel,
   projectId: number,
   versionId: number | null,
-  options?: { demo?: boolean },
+  options?: { demo?: boolean; widgetKey?: string },
 ) {
   const isDemo = options?.demo === true;
+  const widgetKey = options?.widgetKey;
   const [result, setResult] = useState<SolverResponse | null>(null);
   const [solverError, setSolverError] = useState<string | null>(null);
   const [solving, setSolving] = useState(false);
@@ -37,7 +38,7 @@ export function useCaeSolver(
 
     setSolving(true);
     const r = isDemo
-      ? await runDemoSolver(model)
+      ? await runDemoSolver(model, widgetKey)
       : await runSolver(model, projectId, versionId ?? undefined);
     setSolving(false);
 
