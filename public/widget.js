@@ -49,14 +49,58 @@
   iframe.style.display = "block";
   iframe.setAttribute("loading", "lazy");
   iframe.setAttribute("title", "Калькулятор балки");
+  // Разрешаем полноэкранный режим внутри iframe.
+  iframe.setAttribute("allow", "fullscreen");
+  iframe.setAttribute("allowfullscreen", "true");
   mount.appendChild(iframe);
 
-  // Авто-подстройка высоты по сообщениям из iframe.
+  // Запоминаем исходные стили, чтобы вернуть их после выхода из fullscreen.
+  var savedStyle = {
+    position: iframe.style.position,
+    top: iframe.style.top,
+    left: iframe.style.left,
+    width: iframe.style.width,
+    height: iframe.style.height,
+    zIndex: iframe.style.zIndex,
+    minHeight: iframe.style.minHeight,
+  };
+  var isFs = false;
+
+  function enterFullscreen() {
+    if (isFs) return;
+    isFs = true;
+    iframe.style.position = "fixed";
+    iframe.style.top = "0";
+    iframe.style.left = "0";
+    iframe.style.width = "100vw";
+    iframe.style.height = "100vh";
+    iframe.style.minHeight = "0";
+    iframe.style.zIndex = "2147483647"; // поверх всего на странице партнёра
+    document.documentElement.style.overflow = "hidden";
+  }
+
+  function exitFullscreen() {
+    if (!isFs) return;
+    isFs = false;
+    iframe.style.position = savedStyle.position;
+    iframe.style.top = savedStyle.top;
+    iframe.style.left = savedStyle.left;
+    iframe.style.width = savedStyle.width || "100%";
+    iframe.style.height = savedStyle.height;
+    iframe.style.minHeight = savedStyle.minHeight || "560px";
+    iframe.style.zIndex = savedStyle.zIndex;
+    document.documentElement.style.overflow = "";
+  }
+
+  // Сообщения из iframe: авто-высота и запрос полноэкранного режима.
   window.addEventListener("message", function (e) {
     if (e.origin !== WIDGET_ORIGIN) return;
     var data = e.data || {};
-    if (data.type === "dipinzh-widget-height" && data.height) {
+    if (data.type === "dipinzh-widget-height" && data.height && !isFs) {
       iframe.style.height = data.height + 24 + "px";
+    } else if (data.type === "diploma-widget:fullscreen") {
+      if (data.value) enterFullscreen();
+      else exitFullscreen();
     }
   });
 })();

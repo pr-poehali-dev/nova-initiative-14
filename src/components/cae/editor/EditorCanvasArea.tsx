@@ -82,6 +82,10 @@ interface Props {
   onOpenResults?: () => void;
   /** Канва во всю высоту экрана (3D-режим, fullscreen-макет). */
   fullHeight?: boolean;
+  /** Встроенный режим (iframe-виджет): fullscreen разворачивает сам iframe
+   *  на странице партнёра через postMessage, а не локальный requestFullscreen
+   *  (который раскрыл бы только область внутри iframe). */
+  embedded?: boolean;
 }
 
 const EditorCanvasArea = ({
@@ -129,8 +133,13 @@ const EditorCanvasArea = ({
   onOpenChecks,
   onOpenResults,
   fullHeight,
+  embedded,
 }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  // Виджет работает внутри iframe на чужом сайте. Нативный requestFullscreen
+  // и CSS fixed раскрывают только область iframe. Поэтому в embedded-режиме
+  // просим родительскую страницу развернуть сам iframe (postMessage).
+  const inIframe = embedded && typeof window !== "undefined" && window.self !== window.top;
   // Полноэкранный режим через нативный Fullscreen API — канва раскрывается на
   // ВЕСЬ экран устройства (а не только окно браузера), как просили в тикете
   // #64. Esc и системный выход обрабатывает сам браузер. Если API недоступен
@@ -157,6 +166,9 @@ const EditorCanvasArea = ({
     if (!cssFallback) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        if (inIframe) {
+          window.parent.postMessage({ type: "diploma-widget:fullscreen", value: false }, "*");
+        }
         setCssFallback(false);
         setIsFullscreen(false);
         setTimeout(() => setFitRequestId((x) => x + 1), 50);
@@ -164,12 +176,16 @@ const EditorCanvasArea = ({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cssFallback, setFitRequestId]);
+  }, [cssFallback, setFitRequestId, inIframe]);
 
   const toggleFullscreen = async () => {
     const el = containerRef.current;
-    // Уже в полноэкранном — выходим (нативно или из CSS-фолбэка).
+    // Уже в полноэкранном — выходим.
     if (isFullscreen) {
+      if (inIframe) {
+        // Просим родителя свернуть iframe.
+        window.parent.postMessage({ type: "diploma-widget:fullscreen", value: false }, "*");
+      }
       if (document.fullscreenElement) {
         try { await document.exitFullscreen(); } catch { /* игнорируем */ }
       } else {
@@ -179,7 +195,16 @@ const EditorCanvasArea = ({
       }
       return;
     }
-    // Пробуем нативный полноэкранный режим (на весь экран устройства).
+    // Внутри iframe-виджета: просим родительскую страницу развернуть сам
+    // iframe на весь экран (внутри iframe канва займёт всё через CSS-флаг).
+    if (inIframe) {
+      window.parent.postMessage({ type: "diploma-widget:fullscreen", value: true }, "*");
+      setCssFallback(true);
+      setIsFullscreen(true);
+      setTimeout(() => setFitRequestId((x) => x + 1), 50);
+      return;
+    }
+    // Обычный режим: нативный полноэкранный (на весь экран устройства).
     if (el && el.requestFullscreen) {
       try {
         await el.requestFullscreen();

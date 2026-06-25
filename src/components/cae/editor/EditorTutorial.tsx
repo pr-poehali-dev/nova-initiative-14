@@ -92,6 +92,10 @@ function buildSteps(isMobile: boolean): TutorialStep[] {
 interface Props {
   open: boolean;
   onClose: () => void;
+  /** Режим простой центрированной модалки (без подсветки DOM-элементов).
+   *  Нужен во встроенном виджете: в узком iframe spotlight-туториал
+   *  позиционируется по координатам элементов и вылезает за рамки. */
+  modal?: boolean;
 }
 
 interface Rect {
@@ -165,7 +169,7 @@ function placeTooltip(rect: Rect, placement: TutorialStep["placement"]): { top: 
   return { top, left };
 }
 
-const EditorTutorial = ({ open, onClose }: Props) => {
+const EditorTutorial = ({ open, onClose, modal }: Props) => {
   const isMobile = useIsMobile();
   const STEPS = buildSteps(isMobile);
   const [step, setStep] = useState(0);
@@ -179,14 +183,15 @@ const EditorTutorial = ({ open, onClose }: Props) => {
 
   // При смене шага — прокручиваем подсвеченный элемент в видимую область.
   // Делаем это до старта polling-а, чтобы маска появилась сразу в правильном месте.
+  // В modal-режиме подсветки нет — пропускаем.
   useEffect(() => {
-    if (!open) return;
+    if (!open || modal) return;
     scrollTargetIntoView(STEPS[step].target);
-  }, [open, step]);
+  }, [open, step, modal]);
 
   // Отслеживаем позицию целевого элемента (на ресайз/скролл)
   useEffect(() => {
-    if (!open) return;
+    if (!open || modal) return;
     const update = () => {
       setRect(getTargetRect(STEPS[step].target));
       force((x) => x + 1);
@@ -200,7 +205,7 @@ const EditorTutorial = ({ open, onClose }: Props) => {
       window.removeEventListener("resize", update);
       window.removeEventListener("scroll", update, true);
     };
-  }, [open, step]);
+  }, [open, step, modal]);
 
   if (!open) return null;
 
@@ -225,6 +230,65 @@ const EditorTutorial = ({ open, onClose }: Props) => {
     localStorage.setItem(STORAGE_KEY, "1");
     onClose();
   };
+
+  // === Режим модалки (встроенный виджет) ===
+  // Простая центрированная карточка с шагами — без привязки к координатам
+  // DOM-элементов, поэтому ничего не вылезает за границы узкого iframe.
+  if (modal) {
+    return (
+      <div
+        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/55"
+        onClick={handleSkip}
+      >
+        <div
+          className="bg-[var(--drawing-bg)] border-2 border-[var(--drawing-line)] p-5 shadow-xl w-full max-w-[380px]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="font-gost text-[10px] uppercase tracking-[0.2em] text-[var(--drawing-accent)]">
+              {cur.title}
+            </span>
+            <button onClick={handleSkip} className="p-1 hover:bg-[var(--drawing-paper)]" title="Закрыть туториал">
+              <Icon name="X" size={14} />
+            </button>
+          </div>
+          <p className="text-[13px] font-gost text-[var(--drawing-ink)] leading-relaxed mb-4">
+            {cur.body}
+          </p>
+          <div className="flex items-center justify-between gap-2">
+            <button
+              onClick={handleSkip}
+              className="text-[11px] font-gost text-[var(--drawing-line-thin)] hover:text-[var(--drawing-accent)]"
+            >
+              Пропустить
+            </button>
+            <div className="flex gap-1">
+              <button
+                onClick={handlePrev}
+                disabled={step === 0}
+                className="btn-drawing text-[11px] disabled:opacity-30"
+              >
+                Назад
+              </button>
+              <button onClick={handleNext} className="btn-drawing btn-drawing-accent text-[11px]">
+                {isLast ? "Готово" : "Дальше"}
+              </button>
+            </div>
+          </div>
+          <div className="flex gap-1 mt-4">
+            {STEPS.map((_, i) => (
+              <div
+                key={i}
+                className={`flex-1 h-0.5 ${
+                  i <= step ? "bg-[var(--drawing-accent)]" : "bg-[var(--drawing-line-thin)]/40"
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Полупрозрачная маска с «вырезом» вокруг целевого элемента (4 прямоугольника)
   const holeRect = rect

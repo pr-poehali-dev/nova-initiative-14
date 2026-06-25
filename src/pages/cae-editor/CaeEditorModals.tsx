@@ -34,6 +34,8 @@ interface Props {
   onCloseHelp: () => void;
   tutorialOpen: boolean;
   onCloseTutorial: () => void;
+  /** Туториал в виде простой модалки (для встроенного виджета). */
+  tutorialModal?: boolean;
   welcomeProps: ComponentProps<typeof EditorWelcomeDialog>;
   analysisSettingsProps: ComponentProps<typeof EditorAnalysisSettingsDialog>;
   nodeLimitProps: ComponentProps<typeof NodeLimitModal>;
@@ -50,6 +52,7 @@ const CaeEditorModals = ({
   onCloseHelp,
   tutorialOpen,
   onCloseTutorial,
+  tutorialModal,
   welcomeProps,
   analysisSettingsProps,
   nodeLimitProps,
@@ -74,7 +77,7 @@ const CaeEditorModals = ({
     <SectionPicker {...sectionPickerProps} />
 
     <KeyboardHintsDialog open={helpOpen} onClose={onCloseHelp} />
-    <EditorTutorial open={tutorialOpen} onClose={onCloseTutorial} />
+    <EditorTutorial open={tutorialOpen} onClose={onCloseTutorial} modal={tutorialModal} />
     <EditorWelcomeDialog {...welcomeProps} />
     <EditorAnalysisSettingsDialog {...analysisSettingsProps} />
 
