@@ -143,6 +143,9 @@ export default function WidgetPresentation() {
   const { user, loading } = useAuth();
   const nav = useNavigate();
   const [view, setView] = useState<View>("presentation");
+  // Порядковый номер КП за сегодня (задаётся вручную).
+  const [offerSeq, setOfferSeq] = useState(1);
+  const offerNo = offerNumber(offerSeq);
 
   useEffect(() => {
     if (!loading && (!user || !user.is_admin)) {
@@ -163,7 +166,7 @@ export default function WidgetPresentation() {
       <Helmet>
         <title>
           {view === "offer"
-            ? `Коммерческое предложение ${offerNumber()} · Диплом-Инж.рф`
+            ? `Коммерческое предложение ${offerNo} · Диплом-Инж.рф`
             : "Презентация виджета · Маркетинг · Диплом-Инж.рф"}
         </title>
         <meta name="robots" content="noindex,nofollow" />
@@ -203,6 +206,18 @@ export default function WidgetPresentation() {
               Коммерческое предложение
             </button>
           </div>
+          {view === "offer" && (
+            <label className="flex items-center gap-1.5 text-xs text-[var(--drawing-line-thin)] ml-1">
+              КП № за день:
+              <input
+                type="number"
+                min={1}
+                value={offerSeq}
+                onChange={(e) => setOfferSeq(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                className="w-14 border-2 border-[var(--drawing-line)] bg-transparent px-2 py-1 text-xs text-[var(--drawing-ink)]"
+              />
+            </label>
+          )}
           <button
             onClick={() => window.print()}
             className="btn-drawing btn-drawing-accent text-xs inline-flex items-center gap-1.5 ml-auto"
@@ -218,19 +233,21 @@ export default function WidgetPresentation() {
       </div>
 
       <div id="wp-print-root" className="print-root max-w-[900px] mx-auto px-4 py-8">
-        {view === "presentation" ? <Presentation /> : <Offer offerNo={offerNumber()} />}
+        {view === "presentation" ? <Presentation /> : <Offer offerNo={offerNo} />}
       </div>
     </>
   );
 }
 
 /**
- * Номер КП по текущей дате: КП-ГГГГ-ММ-ДД (стабилен в течение дня).
+ * Номер КП в формате «КП-№{порядковый за день}/{ДД.ММ.ГГГГ}».
+ * Порядковый номер за день задаётся вручную (по умолчанию 1).
  */
-function offerNumber(): string {
+function offerNumber(seq: number): string {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, "0");
-  return `КП-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  const date = `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}`;
+  return `КП-№${seq}/${date}`;
 }
 
 /* ─────────────────────────── ПРЕЗЕНТАЦИЯ ─────────────────────────── */
