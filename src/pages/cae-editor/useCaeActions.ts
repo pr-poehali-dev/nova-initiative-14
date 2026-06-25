@@ -50,6 +50,7 @@ import {
 import {
   pickMaterialForElement as pickMaterialPure,
   pickSectionForElement as pickSectionPure,
+  pickSectionForAllElements as pickSectionForAllPure,
   setElementHinge as setElementHingePure,
 } from "./actions/elementActions";
 
@@ -258,6 +259,16 @@ export function useCaeActions(
     updateModel(pickSectionPure(model, selectedElementId, sec));
   };
 
+  /** Назначить сечение конкретному элементу по id (для модалки «Балки»). */
+  const setSectionForElement = (elementId: string, sec: Section) => {
+    updateModel(pickSectionPure(model, elementId, sec));
+  };
+
+  /** Назначить сечение сразу всем элементам («Применить ко всем»). */
+  const setSectionForAll = (sec: Section) => {
+    updateModel(pickSectionForAllPure(model, sec));
+  };
+
   const setDistributedLoad = (qy: number, qz?: number) => {
     if (!selectedElementId) return;
     updateModel(setDistributedLoadPure(model, selectedElementId, qy, qz));
@@ -303,6 +314,8 @@ export function useCaeActions(
     toggleCustomDof,
     pickMaterialForElement,
     pickSectionForElement,
+    setSectionForElement,
+    setSectionForAll,
     setDistributedLoad,
     addInSpanPoint,
     updateInSpanPoint,

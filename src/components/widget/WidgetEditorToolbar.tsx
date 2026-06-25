@@ -15,6 +15,8 @@ interface Props {
   solvesLeft: number;
   solveLimit: number;
   company?: string;
+  /** Открыть модалку подбора сечений «Балки». */
+  onOpenBeams?: () => void;
 }
 
 export default function WidgetEditorToolbar({
@@ -24,6 +26,7 @@ export default function WidgetEditorToolbar({
   solvesLeft,
   solveLimit,
   company,
+  onOpenBeams,
 }: Props) {
   return (
     <div
@@ -52,9 +55,29 @@ export default function WidgetEditorToolbar({
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{ fontSize: 12, color: "#6b7280" }}>
+        <span style={{ fontSize: 12, color: "#6b7280" }} className="hidden sm:inline">
           Расчётов осталось: <strong style={{ color: "#1a1d21" }}>{solvesLeft}</strong> из {solveLimit}
         </span>
+        {onOpenBeams && (
+          <button
+            onClick={onOpenBeams}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              background: "#fff",
+              color: "#2563eb",
+              border: "1px solid #c7d2fe",
+              borderRadius: 8,
+              padding: "9px 14px",
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            <Icon name="Construction" size={15} /> Балки
+          </button>
+        )}
         <button
           onClick={onSolve}
           disabled={solving || blocked}

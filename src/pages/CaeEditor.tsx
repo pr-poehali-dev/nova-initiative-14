@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Helmet } from "@/lib/helmet-shim";
 import { type ContextTarget } from "@/components/cae/editor/ContextPropertiesPopup";
-import { DEFAULT_ANALYSIS_SETTINGS, saveProjectModel, type FrameModel } from "@/lib/cae-model";
+import { DEFAULT_ANALYSIS_SETTINGS, saveProjectModel, type FrameModel, type SolverResponse } from "@/lib/cae-model";
 import { createProject } from "@/lib/cae";
+import Icon from "@/components/ui/icon";
+import BeamSectionsModal from "@/components/cae/BeamSectionsModal";
 import { useCaeProject } from "./cae-editor/useCaeProject";
 import { useCaeActions } from "./cae-editor/useCaeActions";
 import { useCaeSolver } from "./cae-editor/useCaeSolver";
@@ -140,6 +142,9 @@ const CaeEditor = () => {
   const [mobileChecksOpen, setMobileChecksOpen] = useState(false);
   const [mobileResultsOpen, setMobileResultsOpen] = useState(false);
 
+  // Модалка подбора сечений «Балки».
+  const [beamsOpen, setBeamsOpen] = useState(false);
+
   // Глобальные настройки отображения (размер стрелок и шрифта подписей).
   // Сохраняются в localStorage между сессиями.
   const viewSettings = useCaeViewSettings();
@@ -169,6 +174,8 @@ const CaeEditor = () => {
     toggleCustomDof,
     pickMaterialForElement,
     pickSectionForElement,
+    setSectionForElement,
+    setSectionForAll,
     setDistributedLoad,
     addInSpanPoint,
     updateInSpanPoint,
@@ -201,6 +208,17 @@ const CaeEditor = () => {
     onToggleHelp: () => setHelpOpen((v) => !v),
     onFit: () => setFitRequestId((x) => x + 1),
   });
+
+  // Авто-открытие «Балки» после расчёта, если есть балка с запасом < 1.
+  const autoBeamsRef = useRef<SolverResponse | null>(null);
+  useEffect(() => {
+    if (!result || autoBeamsRef.current === result) return;
+    autoBeamsRef.current = result;
+    const hasProblem = (result.elements || []).some(
+      (e) => typeof e.max_values?.safety_factor === "number" && e.max_values.safety_factor < 1,
+    );
+    if (hasProblem) setBeamsOpen(true);
+  }, [result]);
 
   if (authLoading || loadingModel) {
     return (
@@ -445,6 +463,24 @@ const CaeEditor = () => {
           setElementHinge,
           deleteSelected,
         }}
+      />
+
+      {/* Плавающая кнопка вызова модалки подбора сечений «Балки». */}
+      <button
+        onClick={() => setBeamsOpen(true)}
+        className="fixed bottom-4 left-4 z-30 btn-drawing text-xs inline-flex items-center gap-1.5 shadow-lg"
+        title="Подбор сечений балок"
+      >
+        <Icon name="Construction" size={14} /> Балки
+      </button>
+
+      <BeamSectionsModal
+        open={beamsOpen}
+        onClose={() => setBeamsOpen(false)}
+        model={model}
+        result={result}
+        onSetSection={setSectionForElement}
+        onApplyToAll={setSectionForAll}
       />
     </>
   );

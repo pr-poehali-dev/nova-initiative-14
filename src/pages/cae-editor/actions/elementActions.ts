@@ -33,6 +33,17 @@ export function pickSectionForElement(
   return { ...model, sections, elements };
 }
 
+/** Назначить сечение СРАЗУ ВСЕМ элементам модели («Применить ко всем»). */
+export function pickSectionForAllElements(
+  model: FrameModel,
+  sec: Section,
+): FrameModel {
+  const exists = model.sections.find((s) => s.id === sec.id);
+  const sections = exists ? model.sections : [...model.sections, sec];
+  const elements = model.elements.map((e) => ({ ...e, section_id: sec.id }));
+  return { ...model, sections, elements };
+}
+
 /**
  * Переключатель шарнира на одном из концов элемента.
  * Освобождает изгибающий момент Mz в указанном узле — нужно для ферм,

@@ -15,9 +15,10 @@
  * Разметка вынесена в ./cae-editor/CaeDemoEditorView (+ баннер/уведомление)
  * без изменения логики — здесь только хуки, состояние и сборка пропсов.
  */
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { type ContextTarget } from "@/components/cae/editor/ContextPropertiesPopup";
+import type { SolverResponse } from "@/lib/cae-model";
 import { useCaeDemoProject, DEMO_ELEMENT_LIMIT, getSolveCount } from "./cae-editor/useCaeDemoProject";
 import { useCaeActions } from "./cae-editor/useCaeActions";
 import { useCaeSolver } from "./cae-editor/useCaeSolver";
@@ -31,6 +32,8 @@ import CaeDemoBanner from "./cae-editor/CaeDemoBanner";
 import CaeDemoLimitNotice from "./cae-editor/CaeDemoLimitNotice";
 import CaeDemoEditorView from "./cae-editor/CaeDemoEditorView";
 import WidgetEditorToolbar from "@/components/widget/WidgetEditorToolbar";
+import BeamSectionsModal from "@/components/cae/BeamSectionsModal";
+import Icon from "@/components/ui/icon";
 import Seo from "@/components/Seo";
 
 export interface CaeDemoEditorProps {
@@ -189,6 +192,9 @@ const CaeDemoEditor = ({ limits, embedded, overlaySlot, onLimitReached, company,
   const [mobileChecksOpen, setMobileChecksOpen] = useState(false);
   const [mobileResultsOpen, setMobileResultsOpen] = useState(false);
 
+  // Модалка подбора сечений «Балки».
+  const [beamsOpen, setBeamsOpen] = useState(false);
+
   const {
     onCanvasClick,
     deleteSelected,
@@ -211,6 +217,8 @@ const CaeDemoEditor = ({ limits, embedded, overlaySlot, onLimitReached, company,
     toggleCustomDof,
     pickMaterialForElement,
     pickSectionForElement,
+    setSectionForElement,
+    setSectionForAll,
     setDistributedLoad,
     addInSpanPoint,
     updateInSpanPoint,
@@ -244,6 +252,18 @@ const CaeDemoEditor = ({ limits, embedded, overlaySlot, onLimitReached, company,
     onFit: () => setFitRequestId((x) => x + 1),
   });
 
+  // Авто-открытие модалки «Балки» после расчёта, если есть проблемы
+  // (балка с запасом прочности < 1) — предлагаем подобрать сечение.
+  const autoBeamsRef = useRef<SolverResponse | null>(null);
+  useEffect(() => {
+    if (!result || autoBeamsRef.current === result) return;
+    autoBeamsRef.current = result;
+    const hasProblem = (result.elements || []).some(
+      (e) => typeof e.max_values?.safety_factor === "number" && e.max_values.safety_factor < 1,
+    );
+    if (hasProblem) setBeamsOpen(true);
+  }, [result]);
+
   return (
     <>
     {!embedded && (
@@ -273,6 +293,7 @@ const CaeDemoEditor = ({ limits, embedded, overlaySlot, onLimitReached, company,
             solvesLeft={solvesLeft}
             solveLimit={solveLimit}
             company={company}
+            onOpenBeams={() => setBeamsOpen(true)}
           />
         ),
         bannerSlot: (
@@ -507,6 +528,26 @@ const CaeDemoEditor = ({ limits, embedded, overlaySlot, onLimitReached, company,
           deleteSelected,
         },
       }}
+    />
+
+    {/* Плавающая кнопка «Балки» в обычном демо (в виджете — в панели сверху). */}
+    {!embedded && (
+      <button
+        onClick={() => setBeamsOpen(true)}
+        className="fixed bottom-4 left-4 z-30 btn-drawing text-xs inline-flex items-center gap-1.5 shadow-lg"
+        title="Подбор сечений балок"
+      >
+        <Icon name="Construction" size={14} /> Балки
+      </button>
+    )}
+
+    <BeamSectionsModal
+      open={beamsOpen}
+      onClose={() => setBeamsOpen(false)}
+      model={model}
+      result={result}
+      onSetSection={setSectionForElement}
+      onApplyToAll={setSectionForAll}
     />
     </>
   );
