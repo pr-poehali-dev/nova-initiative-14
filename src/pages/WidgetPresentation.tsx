@@ -225,13 +225,12 @@ export default function WidgetPresentation() {
 }
 
 /**
- * Номер КП на основе текущей даты: КП-ГГММДД (стабилен в течение дня).
- * Для разных предложений в один день при необходимости отредактируйте вручную.
+ * Номер КП по текущей дате: КП-ГГГГ-ММ-ДД (стабилен в течение дня).
  */
 function offerNumber(): string {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, "0");
-  return `КП-${String(d.getFullYear()).slice(2)}${p(d.getMonth() + 1)}${p(d.getDate())}`;
+  return `КП-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
 /* ─────────────────────────── ПРЕЗЕНТАЦИЯ ─────────────────────────── */
@@ -375,7 +374,8 @@ function Offer({ offerNo }: { offerNo: string }) {
     year: "numeric",
   });
   return (
-    <article className="space-y-8 font-gost text-sm leading-relaxed">
+    <article className="space-y-8 font-gost text-sm leading-relaxed text-[var(--drawing-ink)]">
+      {/* Шапка */}
       <header className="border-b-2 border-[var(--drawing-line)] pb-5">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -386,59 +386,86 @@ function Offer({ offerNo }: { offerNo: string }) {
               Инженерные онлайн-расчёты · CAE-сервис
             </p>
           </div>
-          <p className="text-xs text-[var(--drawing-line-thin)] text-right">
-            <span className="font-bold text-[var(--drawing-ink)]">{offerNo}</span>
-            <br />от {today}
+          <p className="text-xs text-right">
+            <span className="font-bold">{offerNo}</span>
+            <br />
+            <span className="text-[var(--drawing-line-thin)]">от {today}</span>
           </p>
         </div>
-        <h1 className="font-gost-upright text-2xl font-black uppercase tracking-wide mt-5">
-          Коммерческое предложение {offerNo}
+        <h1 className="font-gost-upright text-2xl md:text-3xl font-black uppercase tracking-wide mt-5">
+          Коммерческое предложение
         </h1>
-        <p className="text-[var(--drawing-line-thin)] mt-1">
+        <p className="mt-1">
           Виджет онлайн-калькулятора балки для сайта компании металлопроката
           и металлоконструкций
         </p>
       </header>
 
+      {/* Крючок */}
+      <section className="break-inside-avoid border-2 border-[var(--drawing-accent)] bg-[var(--drawing-paper)] p-5">
+        <p className="font-gost-upright font-black text-lg leading-snug mb-2">
+          Превратите посетителей сайта в заявки на изготовление —
+          не нанимая программиста.
+        </p>
+        <p>
+          Большинство посетителей сайта завода уходят, так и не позвонив: им проще
+          посчитать балку самим. Дайте им сделать это прямо у вас — встроенный
+          калькулятор подберёт сечение, покажет прогиб и запас прочности, а контакт
+          клиента с параметрами расчёта придёт вам на почту. Вы перезваниваете уже
+          тёплому клиенту, который знает, что ему нужно.
+        </p>
+      </section>
+
+      {/* Цифры */}
+      <section className="break-inside-avoid grid grid-cols-3 gap-4 text-center">
+        {[
+          { big: "5 мин", small: "на установку — одна строка кода" },
+          { big: "0 ₽", small: "комиссии с заявок — фиксированная плата" },
+          { big: "ГОСТ", small: "настоящий FEM-расчёт, каталог профилей" },
+        ].map((m) => (
+          <div key={m.small} className="border-2 border-[var(--drawing-line)] p-3">
+            <p className="font-gost-upright font-black text-xl text-[var(--drawing-accent)]">
+              {m.big}
+            </p>
+            <p className="text-[11px] text-[var(--drawing-line-thin)] leading-snug mt-1">
+              {m.small}
+            </p>
+          </div>
+        ))}
+      </section>
+
+      {/* 1. О предложении */}
       <section className="break-inside-avoid">
-        <h2 className="font-gost-upright font-bold uppercase tracking-wide text-base mb-2">
-          1. О предложении
-        </h2>
+        <OfferTitle n={1} text="О предложении" />
         <p>
           Предлагаем встроить в ваш сайт онлайн-калькулятор расчёта балки. Посетитель
           задаёт пролёт, опоры и нагрузку, подбирает профиль из каталога ГОСТ, получает
           прогиб, напряжения и запас прочности — и тут же оставляет заявку на изготовление.
           Под капотом — настоящий конечно-элементный решатель, тот же, что в основном
-          CAE-сервисе Диплом-Инж.рф. Это превращает пассивного посетителя в тёплого
-          клиента с готовыми параметрами заказа.
+          CAE-сервисе Диплом-Инж.рф. Это не «калькулятор-картинка», а полноценный
+          инженерный инструмент, который вызывает доверие у клиента.
         </p>
       </section>
 
+      {/* 2. Выгоды — карточками, как в презентации */}
       <section className="break-inside-avoid">
-        <h2 className="font-gost-upright font-bold uppercase tracking-wide text-base mb-2">
-          2. Что вы получаете
-        </h2>
-        <ul className="space-y-1.5">
-          {[
-            "Рост заявок с сайта: клиент сам считает и оставляет контакт с параметрами расчёта.",
-            "Заявки на ваш email мгновенно — с пролётом, профилем, прогибом и запасом прочности.",
-            "Установка за 5 минут одной строкой кода: Tilda, WordPress, Битрикс, любой сайт.",
-            "Виджет изолирован и не ломает вёрстку; привязан к вашему домену по ключу.",
-            "Гибкий контроль нагрузки: можно ограничить число расчётов в сутки на одного посетителя.",
-            "Личный кабинет партнёра: месячный лимит расчётов, текущий расход, статистика и счета.",
-          ].map((li) => (
-            <li key={li} className="flex items-start gap-2">
-              <Icon name="Check" size={15} className="text-green-600 shrink-0 mt-0.5" />
-              {li}
-            </li>
+        <OfferTitle n={2} text="Почему это повышает продажи" />
+        <div className="grid sm:grid-cols-2 gap-3">
+          {BENEFITS.map((b) => (
+            <div key={b.title} className="border-2 border-[var(--drawing-line)] p-4 break-inside-avoid">
+              <div className="flex items-center gap-2 mb-1">
+                <Icon name={b.icon} size={18} fallback="Sparkles" className="text-[var(--drawing-accent)] shrink-0" />
+                <p className="font-gost-upright font-bold text-sm">{b.title}</p>
+              </div>
+              <p className="text-xs text-[var(--drawing-line-thin)] leading-snug">{b.text}</p>
+            </div>
           ))}
-        </ul>
+        </div>
       </section>
 
-      <section className="break-inside-avoid">
-        <h2 className="font-gost-upright font-bold uppercase tracking-wide text-base mb-2">
-          3. Тарифы
-        </h2>
+      {/* 3. Тарифы */}
+      <section className="print-page break-inside-avoid">
+        <OfferTitle n={3} text="Тарифы" />
         <table className="w-full border-collapse text-xs">
           <thead>
             <tr className="bg-[var(--drawing-paper)]">
@@ -449,9 +476,14 @@ function Offer({ offerNo }: { offerNo: string }) {
           </thead>
           <tbody>
             {PLANS.map((p) => (
-              <tr key={p.name} className="align-top">
+              <tr key={p.name} className={`align-top ${p.accent ? "bg-[var(--drawing-paper)]" : ""}`}>
                 <td className="border-2 border-[var(--drawing-line)] p-2 font-gost-upright font-bold whitespace-nowrap">
                   {p.name}
+                  {p.accent && (
+                    <span className="block text-[8px] uppercase tracking-wider text-[var(--drawing-accent)]">
+                      Популярный
+                    </span>
+                  )}
                 </td>
                 <td className="border-2 border-[var(--drawing-line)] p-2 font-bold text-[var(--drawing-accent)] whitespace-nowrap">
                   {p.price}
@@ -462,17 +494,16 @@ function Offer({ offerNo }: { offerNo: string }) {
           </tbody>
         </table>
         <p className="text-xs text-[var(--drawing-line-thin)] mt-2">
-          Оплата по постоплате для юридических лиц: счёт по безналу, новый месяц
-          активируется автоматически и не прерывает работу виджета. При исчерпании
-          месячного лимита подключается доп-пакет (+50% к лимиту и стоимости за месяц)
-          с заблаговременным уведомлением.
+          Тариф определяется числом расчётов в месяц. Оплата по постоплате для юридических
+          лиц: счёт по безналу, новый месяц активируется автоматически и не прерывает работу
+          виджета. При исчерпании месячного лимита подключается доп-пакет (+50% к лимиту
+          и стоимости за месяц) с заблаговременным уведомлением.
         </p>
       </section>
 
+      {/* 4. Как подключаем */}
       <section className="break-inside-avoid">
-        <h2 className="font-gost-upright font-bold uppercase tracking-wide text-base mb-2">
-          4. Как подключаем
-        </h2>
+        <OfferTitle n={4} text="Как подключаем" />
         <ol className="space-y-2">
           {STEPS.map((s, i) => (
             <li key={s.name} className="flex gap-3">
@@ -485,17 +516,29 @@ function Offer({ offerNo }: { offerNo: string }) {
             </li>
           ))}
         </ol>
+        <div className="mt-3 border-2 border-[var(--drawing-line)] bg-[var(--drawing-paper)] p-3 font-mono text-[11px] break-all">
+          {'<script src="https://диплом-инж.рф/widget.js" data-key="ВАШ_КЛЮЧ" async></script>'}
+        </div>
       </section>
 
+      {/* 5. Кому подходит */}
+      <section className="break-inside-avoid">
+        <OfferTitle n={5} text="Кому подходит" />
+        <p>
+          Заводам и цехам металлоконструкций, продавцам металлопроката, строительным
+          и проектным компаниям — всем, кто продаёт балки, фермы и каркасы и хочет, чтобы
+          клиент сам подобрал сечение прямо на сайте и оставил заявку.
+        </p>
+      </section>
+
+      {/* 6. Контакты — акцентный CTA */}
       <section className="break-inside-avoid border-2 border-[var(--drawing-accent)] bg-[var(--drawing-paper)] p-5">
-        <h2 className="font-gost-upright font-bold uppercase tracking-wide text-base mb-2">
-          5. Контакты
-        </h2>
+        <OfferTitle n={6} text="Контакты" />
         <p>
           Чтобы подключить виджет или получить демо под ваш сайт — свяжитесь с нами.
           Поможем встроить калькулятор и настроить заявки на вашу почту в день обращения.
         </p>
-        <ul className="mt-3 space-y-1">
+        <ul className="mt-3 space-y-1 font-bold">
           <li className="flex items-center gap-2">
             <Icon name="Globe" size={15} className="text-[var(--drawing-accent)]" />
             диплом-инж.рф/widget-balka
@@ -515,10 +558,9 @@ function Offer({ offerNo }: { offerNo: string }) {
         </p>
       </section>
 
+      {/* 7. Реквизиты */}
       <section className="break-inside-avoid">
-        <h2 className="font-gost-upright font-bold uppercase tracking-wide text-base mb-2">
-          6. Реквизиты
-        </h2>
+        <OfferTitle n={7} text="Реквизиты" />
         <table className="w-full border-collapse text-xs">
           <tbody>
             {REQUISITES.map((r) => (
@@ -531,12 +573,19 @@ function Offer({ offerNo }: { offerNo: string }) {
             ))}
           </tbody>
         </table>
-        <p className="text-[10px] text-[var(--drawing-line-thin)] mt-2">
-          Для заключения договора и выставления счёта реквизиты предоставляются
-          по запросу.
-        </p>
       </section>
     </article>
+  );
+}
+
+function OfferTitle({ n, text }: { n: number; text: string }) {
+  return (
+    <h2 className="font-gost-upright font-black uppercase tracking-wide text-base mb-3 flex items-center gap-2 border-b border-[var(--drawing-line)]/40 pb-1.5">
+      <span className="w-6 h-6 rounded-full bg-[var(--drawing-accent)] text-white text-xs flex items-center justify-center shrink-0">
+        {n}
+      </span>
+      {text}
+    </h2>
   );
 }
 
@@ -557,6 +606,8 @@ function SectionTitle({ icon, text }: { icon: string; text: string }) {
  */
 const PRINT_CSS = `
 @media print {
+  /* Печатаем фоновые заливки и акцентные цвета (иначе блёкло) */
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   /* Скрываем всё */
   body * { visibility: hidden !important; }
   /* Показываем только документ и его содержимое */
