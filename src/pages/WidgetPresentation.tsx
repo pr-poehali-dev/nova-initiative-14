@@ -137,6 +137,19 @@ const REQUISITES = [
   { label: "Телефон", value: "+7 982 855-73-09" },
 ];
 
+// Светлая фирменная палитра «чертежа» — принудительно для документа,
+// чтобы тёмная тема сайта не делала текст бледным/нечитаемым.
+const LIGHT_DOC_VARS: React.CSSProperties = {
+  ["--drawing-bg" as string]: "#faf8f0",
+  ["--drawing-line" as string]: "#1a1a2e",
+  ["--drawing-line-thin" as string]: "#3a3a5e",
+  ["--drawing-accent" as string]: "#c0392b",
+  ["--drawing-paper" as string]: "#f5f3e8",
+  ["--drawing-ink" as string]: "#1a1a2e",
+  background: "#ffffff",
+  color: "#1a1a2e",
+};
+
 type View = "presentation" | "offer";
 
 export default function WidgetPresentation() {
@@ -232,7 +245,14 @@ export default function WidgetPresentation() {
         </div>
       </div>
 
-      <div id="wp-print-root" className="print-root max-w-[900px] mx-auto px-4 py-8">
+      {/* Документ всегда в СВЕТЛОЙ фирменной палитре — независимо от темы
+          сайта. Локально переопределяем CSS-переменные «чертежа», чтобы и на
+          экране, и в PDF был тёмный текст на белом фоне. */}
+      <div
+        id="wp-print-root"
+        className="print-root max-w-[900px] mx-auto my-6 px-6 md:px-10 py-10 shadow-lg print:my-0 print:shadow-none"
+        style={LIGHT_DOC_VARS}
+      >
         {view === "presentation" ? <Presentation /> : <Offer offerNo={offerNo} />}
       </div>
     </>
