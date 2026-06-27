@@ -13,6 +13,7 @@ Allow: /cae/raschet-fermy-onlayn
 Disallow: /cae/projects
 Disallow: /admin/
 Disallow: /owner/
+Disallow: /sales/
 Disallow: /roadmaps/
 
 Sitemap: https://xn----gtbhgbqhkfi.xn--p1ai/sitemap.xml

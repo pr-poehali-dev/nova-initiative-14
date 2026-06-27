@@ -5,6 +5,7 @@ import useContacts from "@/hooks/useContacts";
 const footerLinks = [
   { label: "Программа", to: "/program" },
   { label: "CAE-сервис", to: "/cae" },
+  { label: "CAE-виджет для сайта", to: "/widget-balka" },
   { label: "Тарифы", to: "/pricing" },
   { label: "Кейсы", to: "/cases" },
   { label: "Блог", to: "/blog" },
@@ -123,6 +124,33 @@ const Footer = () => {
             )}
           </div>
         </div>
+
+        {/* Блок для партнёров — путь к лендингу CAE-виджета */}
+        <Link
+          to="/widget-balka"
+          className="group flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5 border-[1.5px] border-[var(--drawing-line)] hover:border-[var(--drawing-accent)] p-4 mb-8 transition-colors"
+        >
+          <Icon
+            name="Boxes"
+            size={26}
+            className="text-[var(--drawing-accent)] shrink-0"
+          />
+          <div className="flex-1 min-w-0">
+            <p className="font-gost text-[10px] uppercase tracking-widest text-[var(--drawing-line-thin)] mb-0.5">
+              Партнёрам
+            </p>
+            <p className="font-gost-upright font-bold text-sm group-hover:text-[var(--drawing-accent)] transition-colors">
+              CAE-виджет калькулятора балки для вашего сайта
+            </p>
+            <p className="font-gost text-xs text-[var(--drawing-line-thin)] leading-snug mt-0.5">
+              Встройте онлайн-расчёт балки одной строкой кода и&nbsp;получайте заявки с&nbsp;готовыми параметрами&nbsp;— тарифы, демо и&nbsp;инструкция на&nbsp;лендинге.
+            </p>
+          </div>
+          <span className="font-gost text-[11px] uppercase tracking-wider text-[var(--drawing-accent)] inline-flex items-center gap-1 shrink-0">
+            Смотреть лендинг
+            <Icon name="ArrowRight" size={14} />
+          </span>
+        </Link>
 
         <div className="extension-line-h w-full mb-6" />
 
