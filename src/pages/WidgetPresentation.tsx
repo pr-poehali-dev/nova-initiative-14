@@ -15,7 +15,7 @@ import { useNavigate } from "react-router-dom";
 import { Helmet } from "@/lib/helmet-shim";
 import Icon from "@/components/ui/icon";
 import { useAuth } from "@/contexts/AuthContext";
-import { useWidgetPlans, formatWidgetPrice, type WidgetPlan } from "@/lib/widget-tariffs";
+import { useWidgetPlans, formatWidgetPrice, formatCalcLimit, type WidgetPlan } from "@/lib/widget-tariffs";
 
 const BENEFITS = [
   {
@@ -325,9 +325,14 @@ function Presentation({ plans }: { plans: WidgetPlan[] }) {
                 </span>
               )}
               <p className="font-gost-upright font-black text-lg uppercase">{p.name}</p>
-              <p className="font-gost-upright text-2xl font-black text-[var(--drawing-accent)] my-2">
+              <p className="font-gost-upright text-2xl font-black text-[var(--drawing-accent)] mt-2">
                 {formatWidgetPrice(p.price_monthly)}
               </p>
+              <div className="flex items-center gap-1.5 font-gost text-xs text-[var(--drawing-line-thin)] mt-1 mb-1">
+                <Icon name="Calculator" size={13} className="text-[var(--drawing-accent)]" />
+                <span className="font-bold text-[var(--drawing-line)]">{formatCalcLimit(p.calc_limit)}</span>
+                расчётов/мес
+              </div>
               <ul className="space-y-1.5 mt-2">
                 {p.features.map((f) => (
                   <li key={f} className="flex items-start gap-2 font-gost text-xs">
@@ -472,6 +477,8 @@ function Offer({ offerNo, plans }: { offerNo: string; plans: WidgetPlan[] }) {
             <tr className="bg-[var(--drawing-paper)]">
               <th className="border-2 border-[var(--drawing-line)] p-2 text-left font-gost-upright">Тариф</th>
               <th className="border-2 border-[var(--drawing-line)] p-2 text-left font-gost-upright">Стоимость</th>
+              <th className="border-2 border-[var(--drawing-line)] p-2 text-left font-gost-upright">Расчётов/мес</th>
+              <th className="border-2 border-[var(--drawing-line)] p-2 text-left font-gost-upright">Сайтов</th>
               <th className="border-2 border-[var(--drawing-line)] p-2 text-left font-gost-upright">Что входит</th>
             </tr>
           </thead>
@@ -488,6 +495,12 @@ function Offer({ offerNo, plans }: { offerNo: string; plans: WidgetPlan[] }) {
                 </td>
                 <td className="border-2 border-[var(--drawing-line)] p-2 font-bold text-[var(--drawing-accent)] whitespace-nowrap">
                   {formatWidgetPrice(p.price_monthly)}
+                </td>
+                <td className="border-2 border-[var(--drawing-line)] p-2 font-bold whitespace-nowrap">
+                  {formatCalcLimit(p.calc_limit)}
+                </td>
+                <td className="border-2 border-[var(--drawing-line)] p-2 whitespace-nowrap">
+                  {p.max_sites < 0 ? "Безлимит" : p.max_sites}
                 </td>
                 <td className="border-2 border-[var(--drawing-line)] p-2">{p.features.join(" · ")}</td>
               </tr>

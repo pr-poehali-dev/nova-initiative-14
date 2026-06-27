@@ -74,6 +74,11 @@ export function formatWidgetPrice(rub: number): string {
   return rub.toLocaleString("ru-RU") + " ₽/мес";
 }
 
+/** Лимит расчётов в месяц: -1 → «Безлимит», иначе число с разделителями. */
+export function formatCalcLimit(limit: number): string {
+  return limit < 0 ? "Безлимит" : limit.toLocaleString("ru-RU");
+}
+
 /**
  * Хук тарифов виджета. Возвращает данные из БД, пока грузится — fallback,
  * чтобы лендинг и КП всегда показывали корректные цены без мигания.

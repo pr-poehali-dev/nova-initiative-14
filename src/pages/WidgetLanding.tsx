@@ -21,7 +21,7 @@ import {
 import WidgetEmbedCopy from "@/components/widget/WidgetEmbedCopy";
 import WidgetLiveDemo from "@/components/widget/WidgetLiveDemo";
 import WidgetOrderForm from "@/components/widget/WidgetOrderForm";
-import { useWidgetPlans, formatWidgetPrice } from "@/lib/widget-tariffs";
+import { useWidgetPlans, formatWidgetPrice, formatCalcLimit } from "@/lib/widget-tariffs";
 
 const BENEFITS = [
   {
@@ -328,9 +328,14 @@ export default function WidgetLanding() {
                   </span>
                 )}
                 <p className="font-gost-upright font-black text-lg uppercase">{p.name}</p>
-                <p className="font-gost-upright text-2xl font-black text-[var(--drawing-accent)] my-2">
+                <p className="font-gost-upright text-2xl font-black text-[var(--drawing-accent)] mt-2">
                   {formatWidgetPrice(p.price_monthly)}
                 </p>
+                <div className="flex items-center gap-1.5 font-gost text-xs text-[var(--drawing-line-thin)] mb-2 mt-1">
+                  <Icon name="Calculator" size={13} className="text-[var(--drawing-accent)]" />
+                  <span className="font-bold text-[var(--drawing-line)]">{formatCalcLimit(p.calc_limit)}</span>
+                  расчётов/мес
+                </div>
                 <ul className="space-y-1.5 mt-2 mb-5 flex-1">
                   {p.features.map((f) => (
                     <li key={f} className="flex items-start gap-2 font-gost text-xs">
@@ -342,7 +347,7 @@ export default function WidgetLanding() {
                 <a
                   href="#zakaz"
                   className={`text-sm text-center ${
-                    p.accent ? "btn-drawing btn-drawing-accent" : "btn-drawing"
+                    p.is_popular ? "btn-drawing btn-drawing-accent" : "btn-drawing"
                   }`}
                 >
                   Подключить
