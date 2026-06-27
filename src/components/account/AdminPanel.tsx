@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import { useAuth } from "@/contexts/AuthContext";
 import AdminUsersTab from "@/components/account/AdminUsersTab";
+import TariffsTab from "@/components/account/TariffsTab";
 import {
   adminListTickets,
   adminUpdateTicket,
@@ -25,7 +26,7 @@ import {
  * Кнопки плейсхолдеров видны, но помечены «в разработке» и неактивны.
  */
 export default function AdminPanel() {
-  const [tab, setTab] = useState<"tickets" | "marketing" | "users" | "content">("tickets");
+  const [tab, setTab] = useState<"tickets" | "marketing" | "users" | "tariffs" | "content">("tickets");
   return (
     <section className="mb-8 border-[2.5px] border-[var(--drawing-accent)] bg-[var(--drawing-bg)] relative">
       <div className="absolute -top-px -left-px w-3 h-3 border-t-[2.5px] border-l-[2.5px] border-[var(--drawing-accent)]" />
@@ -44,6 +45,7 @@ export default function AdminPanel() {
         <TabBtn active={tab === "tickets"} onClick={() => setTab("tickets")} label="Тикеты" />
         <TabBtn active={tab === "users"} onClick={() => setTab("users")} label="Пользователи" />
         <TabBtn active={tab === "marketing"} onClick={() => setTab("marketing")} label="Маркетинг" />
+        <TabBtn active={tab === "tariffs"} onClick={() => setTab("tariffs")} label="Тарифы" />
         <TabBtn active={tab === "content"} onClick={() => setTab("content")} label="Контент" wip />
       </div>
 
@@ -51,6 +53,7 @@ export default function AdminPanel() {
         {tab === "tickets" && <TicketsTab />}
         {tab === "users" && <AdminUsersTab />}
         {tab === "marketing" && <MarketingTab />}
+        {tab === "tariffs" && <TariffsTab />}
         {tab === "content" && <PlaceholderTab title="Управление контентом (статьи, кейсы)" />}
       </div>
     </section>

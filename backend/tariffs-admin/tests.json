@@ -1,0 +1,27 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS CORS preflight",
+      "method": "OPTIONS",
+      "path": "/?action=overview",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Overview without token -> 401",
+      "method": "GET",
+      "path": "/?action=overview",
+      "expectedStatus": 401,
+      "expectedBody": {"error": "unauthorized"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Save settings without token -> 401",
+      "method": "POST",
+      "path": "/?action=save-settings",
+      "body": {"monthly_infra_rub": 15000},
+      "expectedStatus": 401,
+      "expectedBody": {"error": "unauthorized"},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
