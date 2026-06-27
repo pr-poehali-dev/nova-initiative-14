@@ -5,6 +5,7 @@ import ProcessSection from "@/components/home/ProcessSection";
 import PricingMentorsSection from "@/components/home/PricingMentorsSection";
 import BlogTeaserSection from "@/components/home/BlogTeaserSection";
 import CaeTeaserSection from "@/components/home/CaeTeaserSection";
+import PartnersWidgetSection from "@/components/home/PartnersWidgetSection";
 import FaqCtaSection from "@/components/home/FaqCtaSection";
 import Seo from "@/components/Seo";
 import Reveal from "@/components/Reveal";
@@ -42,6 +43,9 @@ const Index = () => {
       </Reveal>
       <Reveal>
         <CaeTeaserSection />
+      </Reveal>
+      <Reveal>
+        <PartnersWidgetSection />
       </Reveal>
       <Reveal>
         <FaqCtaSection />

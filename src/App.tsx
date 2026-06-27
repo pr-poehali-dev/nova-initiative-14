@@ -131,6 +131,24 @@ function OAuthCallbackBootstrap() {
   return null;
 }
 
+/**
+ * Статические SEO-страницы (public/<route>/index.html) для живого посетителя
+ * делают редирект на /?__seo_to=<route>. Здесь поднимаем нужный SPA-роут.
+ * Робот же остаётся на статическом HTML и читает уникальные мета-теги.
+ */
+function SeoRedirectBootstrap() {
+  const loc = useLocation();
+  useEffect(() => {
+    if (loc.pathname !== "/") return;
+    const sp = new URLSearchParams(loc.search);
+    const to = sp.get("__seo_to");
+    if (!to || !to.startsWith("/")) return;
+    window.history.replaceState(null, "", to);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  }, [loc.pathname, loc.search]);
+  return null;
+}
+
 function VisitorTracker() {
   useVisitorTracking();
 
@@ -187,6 +205,7 @@ function MainLayout() {
       <ScrollToTop />
       <MetrikaPageView />
       <OAuthCallbackBootstrap />
+      <SeoRedirectBootstrap />
       <VisitorTracker />
       <GlobalSeo />
       <Navigation />
