@@ -616,6 +616,7 @@ export interface AdminUser {
   is_active: boolean;
   is_admin: boolean;
   is_owner: boolean;
+  is_sales: boolean;
   email_verified: boolean;
   total_points: number;
   created_at: string | null;
@@ -635,8 +636,12 @@ export async function adminListUsers(q = "") {
   };
 }
 
-/** Выдать/снять флаг роли (is_admin | is_owner). */
-export async function adminSetRole(userId: number, field: "is_admin" | "is_owner", value: boolean) {
+/** Выдать/снять роль (is_admin | is_owner | sales). */
+export async function adminSetRole(
+  userId: number,
+  field: "is_admin" | "is_owner" | "sales",
+  value: boolean,
+) {
   return authCall<{ ok: boolean }>("admin-set-role", { user_id: userId, field, value });
 }
 

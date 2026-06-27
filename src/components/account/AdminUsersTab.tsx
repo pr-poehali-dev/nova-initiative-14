@@ -46,10 +46,15 @@ export default function AdminUsersTab() {
   const patchUser = (id: number, patch: Partial<AdminUser>) =>
     setUsers((list) => list.map((u) => (u.id === id ? { ...u, ...patch } : u)));
 
-  const onToggleRole = async (u: AdminUser, field: "is_admin" | "is_owner") => {
+  const onToggleRole = async (
+    u: AdminUser,
+    field: "is_admin" | "is_owner" | "is_sales",
+  ) => {
     const value = !u[field];
+    // Роль продавца на бэке передаётся как 'sales', остальные — как имя колонки.
+    const apiField = field === "is_sales" ? "sales" : field;
     setBusyId(u.id);
-    const r = await adminSetRole(u.id, field, value);
+    const r = await adminSetRole(u.id, apiField, value);
     setBusyId(null);
     if (r.ok) patchUser(u.id, { [field]: value });
     else alert(r.message || "Не удалось изменить роль");
@@ -124,7 +129,7 @@ function UserRow({
   expanded: boolean;
   busy: boolean;
   onToggle: () => void;
-  onToggleRole: (u: AdminUser, field: "is_admin" | "is_owner") => void;
+  onToggleRole: (u: AdminUser, field: "is_admin" | "is_owner" | "is_sales") => void;
   onToggleActive: (u: AdminUser) => void;
   onPointsAwarded: (total: number) => void;
 }) {
@@ -175,6 +180,7 @@ function UserRow({
           </span>
           {user.is_admin && <Badge label="Админ" />}
           {user.is_owner && <Badge label="Владелец" />}
+          {user.is_sales && <Badge label="Продажи" />}
           {!user.is_active && <Badge label="Заблокирован" danger />}
           {!user.email_verified && <Badge label="Email не подтверждён" />}
         </div>
@@ -197,6 +203,13 @@ function UserRow({
               onClick={() => onToggleRole(user, "is_owner")}
               label={user.is_owner ? "Снять владельца" : "Сделать владельцем"}
               icon="Crown"
+            />
+            <ActionBtn
+              active={user.is_sales}
+              disabled={busy}
+              onClick={() => onToggleRole(user, "is_sales")}
+              label={user.is_sales ? "Снять продажника" : "Сделать продажником"}
+              icon="MessagesSquare"
             />
             <ActionBtn
               danger={user.is_active}

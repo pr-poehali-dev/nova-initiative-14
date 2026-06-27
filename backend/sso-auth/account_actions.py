@@ -155,7 +155,8 @@ def action_admin_users(conn, admin_id: int, params: dict) -> dict:
         sql = (
             "SELECT u.id, u.email, u.full_name, u.is_active, u.is_admin, u.is_owner, "
             "u.email_verified_at, u.created_at, u.last_login_at, "
-            "COALESCE(p.total_points, 0) AS total_points "
+            "COALESCE(p.total_points, 0) AS total_points, "
+            "EXISTS(SELECT 1 FROM sso_user_roles r WHERE r.user_id = u.id AND r.role = 'sales') AS is_sales "
             "FROM sso_users u "
             "LEFT JOIN user_points p ON p.user_id = u.id "
         )
@@ -175,6 +176,7 @@ def action_admin_users(conn, admin_id: int, params: dict) -> dict:
         'is_active': r['is_active'],
         'is_admin': bool(r['is_admin']),
         'is_owner': bool(r['is_owner']),
+        'is_sales': bool(r['is_sales']),
         'email_verified': bool(r['email_verified_at']),
         'total_points': r['total_points'],
         'created_at': r['created_at'].isoformat() if r['created_at'] else None,
@@ -184,19 +186,41 @@ def action_admin_users(conn, admin_id: int, params: dict) -> dict:
 
 
 def action_admin_set_role(conn, admin_id: int, body: dict) -> dict:
-    """Выдать/снять флаг роли (is_admin или is_owner) пользователю."""
+    """Выдать/снять роль пользователю.
+    field: is_admin | is_owner — булевы колонки sso_users.
+    field: sales — роль «Менеджер по продажам» в таблице sso_user_roles."""
     if not _is_admin(conn, admin_id):
         return json_response(403, {'error': 'forbidden'})
 
     target_id = body.get('user_id')
     field = (body.get('field') or '').strip()
     value = bool(body.get('value'))
-    if field not in ('is_admin', 'is_owner'):
-        return json_response(400, {'error': 'bad_field', 'message': 'field: is_admin | is_owner'})
+    if field not in ('is_admin', 'is_owner', 'sales'):
+        return json_response(400, {'error': 'bad_field', 'message': 'field: is_admin | is_owner | sales'})
     try:
         target_id = int(target_id)
     except (TypeError, ValueError):
         return json_response(400, {'error': 'bad_user_id'})
+
+    # Роль продавца хранится строкой в sso_user_roles, а не колонкой.
+    if field == 'sales':
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM sso_users WHERE id = %s", (target_id,))
+            if cur.fetchone() is None:
+                return json_response(404, {'error': 'user_not_found'})
+            if value:
+                cur.execute(
+                    "INSERT INTO sso_user_roles (user_id, role) VALUES (%s, 'sales') "
+                    "ON CONFLICT (user_id, role) DO NOTHING",
+                    (target_id,),
+                )
+            else:
+                cur.execute(
+                    "DELETE FROM sso_user_roles WHERE user_id = %s AND role = 'sales'",
+                    (target_id,),
+                )
+        conn.commit()
+        return json_response(200, {'ok': True})
 
     # Защита: нельзя снять с себя последний админ-флаг (чтобы не потерять доступ).
     if field == 'is_admin' and not value and target_id == admin_id:

@@ -59,6 +59,7 @@ import WidgetLanding from "./pages/WidgetLanding";
 import WidgetPresentation from "./pages/WidgetPresentation";
 import PartnerCabinet from "./pages/PartnerCabinet";
 import AdminQr from "./pages/AdminQr";
+import SalesScripts from "./pages/SalesScripts";
 import PrintFlyer from "./pages/PrintFlyer";
 import UrfuQrCae from "./pages/UrfuQrCae";
 import UrfuQrDiplom from "./pages/UrfuQrDiplom";
@@ -227,6 +228,7 @@ function MainLayout() {
                 <Route path="/roadmaps/:slug" element={<RoadmapView />} />
                 <Route path="/cae/roadmap" element={<Navigate to="/roadmaps/plm" replace />} />
                 <Route path="/oauth/callback" element={<OAuthCallback />} />
+                <Route path="/sales/scripts" element={<SalesScripts />} />
                 <Route path="/admin/generator" element={<AdGenerator />} />
                 <Route path="/admin/stats" element={<AdminStats />} />
                 <Route path="/admin/visitors" element={<OwnerVisitors />} />

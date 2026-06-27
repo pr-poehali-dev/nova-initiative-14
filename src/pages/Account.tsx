@@ -13,6 +13,8 @@ import SubscriptionBlock from "@/components/account/SubscriptionBlock";
 import RoadmapsBlock from "@/components/account/RoadmapsBlock";
 import InDevelopmentBlock from "@/components/account/InDevelopmentBlock";
 import AdminPanel from "@/components/account/AdminPanel";
+import SalesScriptsBlock from "@/components/account/SalesScriptsBlock";
+import { canSeeSalesScripts } from "@/lib/sales-scripts";
 import InviteFriendModal from "@/components/cae/InviteFriendModal";
 import SupportTicketModal from "@/components/SupportTicketModal";
 
@@ -68,10 +70,19 @@ const Account = () => {
               Владелец
             </span>
           )}
+          {!user.is_admin && !user.is_owner && user.roles?.includes("sales") && (
+            <span className="inline-flex items-center gap-1 bg-[var(--drawing-accent)] text-white px-2 py-0.5 font-gost text-[10px] uppercase tracking-wider">
+              <Icon name="MessagesSquare" size={11} />
+              Менеджер по продажам
+            </span>
+          )}
         </div>
 
         {/* Админ-панель — только для is_admin */}
         {user.is_admin && <AdminPanel />}
+
+        {/* Скрипты продаж — менеджер по продажам, администратор, владелец */}
+        {canSeeSalesScripts(user) && <SalesScriptsBlock />}
 
         {/* Дорожные карты — для администратора и владельца */}
         {(user.is_admin || user.is_owner) && <RoadmapsBlock />}
