@@ -9,6 +9,16 @@
         "tariffs": "array"
       },
       "bodyMatcher": "partial"
+    },
+    {
+      "name": "GET widget tariffs",
+      "method": "GET",
+      "path": "/?kind=widget",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "tariffs": "array"
+      },
+      "bodyMatcher": "partial"
     }
   ]
 }

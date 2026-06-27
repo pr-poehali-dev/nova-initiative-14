@@ -21,6 +21,7 @@ import {
 import WidgetEmbedCopy from "@/components/widget/WidgetEmbedCopy";
 import WidgetLiveDemo from "@/components/widget/WidgetLiveDemo";
 import WidgetOrderForm from "@/components/widget/WidgetOrderForm";
+import { useWidgetPlans, formatWidgetPrice } from "@/lib/widget-tariffs";
 
 const BENEFITS = [
   {
@@ -70,44 +71,6 @@ const STEPS = [
   },
 ];
 
-const PLANS = [
-  {
-    name: "Старт",
-    price: "3 900 ₽/мес",
-    features: [
-      "До 1 000 расчётов в месяц",
-      "1 сайт",
-      "Заявки на email",
-      "Настраиваемый лимит расчётов в сутки на посетителя",
-    ],
-    accent: false,
-  },
-  {
-    name: "Бизнес",
-    price: "8 900 ₽/мес",
-    features: [
-      "До 5 000 расчётов в месяц",
-      "До 3 сайтов",
-      "Приоритетная поддержка",
-      "Логотип компании в виджете",
-      "Настраиваемый лимит расчётов в сутки на посетителя",
-    ],
-    accent: true,
-  },
-  {
-    name: "Завод",
-    price: "19 900 ₽/мес",
-    features: [
-      "До 50 000 расчётов в месяц",
-      "Безлимит сайтов",
-      "Webhook в вашу CRM",
-      "Брендирование под вас",
-      "Настраиваемый лимит расчётов в сутки на посетителя",
-    ],
-    accent: false,
-  },
-];
-
 const FAQ = [
   {
     q: "Что такое виджет калькулятора балки для сайта?",
@@ -144,6 +107,7 @@ const FAQ = [
 ];
 
 export default function WidgetLanding() {
+  const plans = useWidgetPlans();
   return (
     <>
       <Helmet>
@@ -349,23 +313,23 @@ export default function WidgetLanding() {
             расчётов в сутки на одного посетителя.
           </p>
           <div className="grid md:grid-cols-3 gap-4">
-            {PLANS.map((p) => (
+            {plans.map((p) => (
               <div
-                key={p.name}
+                key={p.slug}
                 className={`border-2 p-5 flex flex-col ${
-                  p.accent
+                  p.is_popular
                     ? "border-[var(--drawing-accent)] bg-[var(--drawing-paper)]"
                     : "border-[var(--drawing-line)]"
                 }`}
               >
-                {p.accent && (
+                {p.is_popular && (
                   <span className="self-start font-gost text-[9px] uppercase tracking-wider bg-[var(--drawing-accent)] text-white px-2 py-0.5 mb-2">
                     Популярный
                   </span>
                 )}
                 <p className="font-gost-upright font-black text-lg uppercase">{p.name}</p>
                 <p className="font-gost-upright text-2xl font-black text-[var(--drawing-accent)] my-2">
-                  {p.price}
+                  {formatWidgetPrice(p.price_monthly)}
                 </p>
                 <ul className="space-y-1.5 mt-2 mb-5 flex-1">
                   {p.features.map((f) => (
