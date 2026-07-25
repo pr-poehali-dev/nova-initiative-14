@@ -424,6 +424,7 @@ const CaeEditor = () => {
           onClose: () => setSettingsOpen(false),
           settings: model.analysis_settings ?? DEFAULT_ANALYSIS_SETTINGS,
           onChange: (s) => updateModel({ ...model, analysis_settings: s }),
+          dim: model.meta?.dim ?? "2d",
         }}
         nodeLimitProps={{
           open: nodeLimitOpen,

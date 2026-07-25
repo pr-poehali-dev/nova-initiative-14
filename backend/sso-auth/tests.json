@@ -28,6 +28,15 @@
       "expectedStatus": 400
     },
     {
+      "name": "Регистрация с несуществующим кодом приглашения",
+      "method": "POST",
+      "path": "/?action=register",
+      "body": {"email": "refcode-test@example.com", "password": "verylongpassword123", "ref_code": "ZZNOSUCHCODE99"},
+      "expectedStatus": 400,
+      "expectedBody": {"error": "invalid_ref_code"},
+      "bodyMatcher": "partial"
+    },
+    {
       "name": "Логин без данных",
       "method": "POST",
       "path": "/?action=login",

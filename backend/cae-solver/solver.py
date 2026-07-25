@@ -87,7 +87,13 @@ class FrameSolver:
             gdir = [0.0, -1.0, 0.0]
         if len(gdir) == 2:
             gdir = [gdir[0], gdir[1], 0.0]
-        self.gravity_dir = (float(gdir[0]), float(gdir[1]), float(gdir[2]))
+        gdir = [float(gdir[0]), float(gdir[1]), float(gdir[2])]
+        # В плоской 2D-раме вертикаль — это ось Y. Если из старого проекта
+        # пришло направление вдоль Z (вне плоскости), вес не создавал бы
+        # поперечной нагрузки. Приводим гравитацию к «вниз по Y».
+        if self.dim == '2d' and abs(gdir[1]) < 1e-9:
+            gdir = [0.0, -1.0, 0.0]
+        self.gravity_dir = (gdir[0], gdir[1], gdir[2])
 
         self._parse()
 
@@ -336,6 +342,14 @@ class FrameSolver:
             hinge_b = bool(el.releases_b.get('rz'))
             f_eq_local = np.zeros(self.dof_per_node * 2)
 
+            # Погонная нагрузка от собственного веса в локальных осях
+            # (q_x, q_y, q_z). Сохраняется в кэш, чтобы постпроцессинг эпюр
+            # учитывал вес как распределённую нагрузку внутри пролёта —
+            # иначе концевые усилия содержат вклад веса (через f_eq_local),
+            # а эпюры внутри пролёта — нет, и на свободном конце консоли
+            # остаётся паразитный момент qL²/12.
+            sw_q_local = np.zeros(3)
+
             # --- Собственный вес элемента (q = ρ·A·g, Н/м) ---
             # Глобальный вектор погонной нагрузки от веса проецируем в локальные
             # оси элемента (R3) и раскладываем на осевую/поперечные составляющие.
@@ -349,6 +363,7 @@ class FrameSolver:
                     w * self.gravity_dir[2],
                 ])
                 q_local = R3 @ q_global  # (q_x, q_y, q_z) в локальных осях
+                sw_q_local = q_local
                 if self.dim == '3d':
                     f_eq_local += fixed_end_forces_3d_uniform(q_local[1], q_local[2], L)
                     # Осевая погонная нагрузка q_x → узловые силы q_x·L/2.
@@ -391,6 +406,8 @@ class FrameSolver:
                             ld.force[1], ld.force[0], a, L,
                             hinge_a=hinge_a, hinge_b=hinge_b,
                         )
+            # Погонная нагрузка от собственного веса — для учёта в эпюрах.
+            el_cache[el.id]['sw_q_local'] = sw_q_local
             if np.any(f_eq_local):
                 f_eq_global = T.T @ f_eq_local
                 for i, gi in enumerate(dofs):
@@ -506,6 +523,15 @@ class FrameSolver:
             L = cache['L']
             sec = self.sections[el.section_id]
             mat = self.materials[el.material_id]
+            # Погонная нагрузка от собственного веса в локальных осях. Учитываем
+            # её в эпюрах наравне с явными распределёнными нагрузками — иначе
+            # концевые усилия (в f_end через f_eq_local) содержат вклад веса,
+            # а интеграл усилий внутри пролёта — нет, и эпюра не сходится к нулю
+            # на свободном конце консоли (паразитный момент qL²/12).
+            sw_q = cache.get('sw_q_local')
+            sw_qx = float(sw_q[0]) if sw_q is not None else 0.0
+            sw_qy = float(sw_q[1]) if sw_q is not None else 0.0
+            sw_qz = float(sw_q[2]) if sw_q is not None else 0.0
 
             # Локальные узловые перемещения для эрмитовой интерполяции.
             if self.dim == '2d':
@@ -561,6 +587,14 @@ class FrameSolver:
                     # рассогласуется с поперечной силой Q_z.
                     Mya_at_x = -f_end[4] - f_end[2] * x   # dM_y/dx = −Q_z
                     Mza_at_x = -f_end[5] + f_end[1] * x   # dM_z/dx = +Q_y
+                    # Собственный вес — равномерная распределённая нагрузка
+                    # (те же формулы, что distributed_uniform).
+                    if sw_qy or sw_qz or sw_qx:
+                        Qya += sw_qy * x
+                        Qza += sw_qz * x
+                        Mza_at_x += sw_qy * x * x / 2
+                        Mya_at_x -= sw_qz * x * x / 2
+                        Na -= sw_qx * x
                     # Нагрузки внутри элемента: знаки согласованы со знаками
                     # начальных усилий (+ Qy_a·x → нагрузки тоже добавляются).
                     for ld in self.loads:
@@ -590,6 +624,11 @@ class FrameSolver:
                     Na = -f_end[0]
                     Qya = f_end[1]
                     Mza_at_x = -f_end[2] + f_end[1] * x
+                    # Собственный вес — равномерная распределённая нагрузка.
+                    if sw_qy or sw_qx:
+                        Qya += sw_qy * x
+                        Mza_at_x += sw_qy * x * x / 2
+                        Na -= sw_qx * x
                     for ld in self.loads:
                         if ld.element_id != el.id:
                             continue
@@ -614,6 +653,16 @@ class FrameSolver:
             EIz = mat.E * sec.I_z if sec.I_z > 0 else 0.0
             EIy = mat.E * sec.I_y if sec.I_y > 0 else 0.0
             loads_on_el = [ld for ld in self.loads if ld.element_id == el.id]
+            # Собственный вес входит в частное решение прогиба как равномерная
+            # распределённая нагрузка (иначе прогиб от веса недоучитывается —
+            # эрмитова часть отражает лишь узловые перемещения).
+            if sw_qy or sw_qz:
+                loads_on_el = loads_on_el + [Load(
+                    kind='distributed_uniform',
+                    element_id=el.id,
+                    load_start=(sw_qx, sw_qy, sw_qz),
+                    load_end=(sw_qx, sw_qy, sw_qz),
+                )]
 
             if self.dim == '2d':
                 v_p = [fixed_fixed_deflection_at(x, L, EIz, loads_on_el, '2d')[0] for x in xs]

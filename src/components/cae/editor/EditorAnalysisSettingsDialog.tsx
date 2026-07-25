@@ -22,6 +22,7 @@ interface Props {
   onClose: () => void;
   settings: AnalysisSettings;
   onChange: (s: AnalysisSettings) => void;
+  dim?: "2d" | "3d";
 }
 
 const THEORIES: { key: StrengthTheory; label: string; formula: string; description: string }[] = [
@@ -71,9 +72,11 @@ const ANALYSIS_TYPES: { key: AnalysisType; label: string; hint: string }[] = [
   },
 ];
 
-const EditorAnalysisSettingsDialog = ({ open, onClose, settings, onChange }: Props) => {
+const EditorAnalysisSettingsDialog = ({ open, onClose, settings, onChange, dim = "2d" }: Props) => {
   const [showCheatSheet, setShowCheatSheet] = useState(false);
   if (!open) return null;
+
+  const is2d = dim === "2d";
 
   const update = (patch: Partial<AnalysisSettings>) => {
     onChange({ ...settings, ...patch });
@@ -186,7 +189,17 @@ const EditorAnalysisSettingsDialog = ({ open, onClose, settings, onChange }: Pro
               Учёт собственного веса
             </p>
             <button
-              onClick={() => update({ self_weight: !(settings.self_weight ?? false) })}
+              onClick={() => {
+                const next = !(settings.self_weight ?? false);
+                // В 2D вертикаль — ось Y, поэтому вес всегда вниз по Y.
+                // Проставляем корректное направление сразу при включении,
+                // чтобы не полагаться на выбор пользователя.
+                update(
+                  next && is2d
+                    ? { self_weight: true, gravity_direction: [0, -1, 0] }
+                    : { self_weight: next },
+                );
+              }}
               className={`w-full text-left border p-2.5 transition flex items-start gap-2.5 ${
                 settings.self_weight
                   ? "border-[var(--drawing-accent)] bg-[var(--drawing-accent)]/5"
@@ -220,36 +233,47 @@ const EditorAnalysisSettingsDialog = ({ open, onClose, settings, onChange }: Pro
 
             {settings.self_weight && (
               <div className="mt-2 p-3 border border-dashed border-[var(--drawing-line)] bg-[var(--drawing-paper)]/40">
-                <p className="font-gost text-[11px] text-[var(--drawing-ink)] mb-2">
-                  Направление силы тяжести (куда «падает» конструкция)
-                </p>
-                <div className="flex gap-2">
-                  {([
-                    { dir: [0, -1, 0] as [number, number, number], label: "Вниз по Y", hint: "Плоские 2D-рамы" },
-                    { dir: [0, 0, -1] as [number, number, number], label: "Вниз по Z", hint: "3D, вертикаль Z" },
-                  ]).map((opt) => {
-                    const cur = settings.gravity_direction ?? [0, -1, 0];
-                    const active = cur[0] === opt.dir[0] && cur[1] === opt.dir[1] && cur[2] === opt.dir[2];
-                    return (
-                      <button
-                        key={opt.label}
-                        onClick={() => update({ gravity_direction: opt.dir })}
-                        className={`flex-1 border p-2 text-left transition ${
-                          active
-                            ? "border-[var(--drawing-accent)] bg-[var(--drawing-accent)]/5"
-                            : "border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)]"
-                        }`}
-                      >
-                        <span className="block font-gost-upright text-[12px] font-bold text-[var(--drawing-ink)]">
-                          {opt.label}
-                        </span>
-                        <span className="block font-gost text-[10px] text-[var(--drawing-line-thin)] mt-0.5">
-                          {opt.hint}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+                {is2d ? (
+                  // В плоской 2D-раме вертикаль — это ось Y, поэтому вес всегда
+                  // направлен вниз по Y. Выбор направления не нужен: убрали, чтобы
+                  // не заставлять пользователя гадать между Y и Z.
+                  <p className="font-gost text-[11px] text-[var(--drawing-ink)] leading-snug">
+                    Сила тяжести действует вниз (по&nbsp;оси&nbsp;Y плоской рамы).
+                  </p>
+                ) : (
+                  <>
+                    <p className="font-gost text-[11px] text-[var(--drawing-ink)] mb-2">
+                      Направление силы тяжести (куда «падает» конструкция)
+                    </p>
+                    <div className="flex gap-2">
+                      {([
+                        { dir: [0, -1, 0] as [number, number, number], label: "Вниз по Y", hint: "Вертикаль — ось Y" },
+                        { dir: [0, 0, -1] as [number, number, number], label: "Вниз по Z", hint: "Вертикаль — ось Z" },
+                      ]).map((opt) => {
+                        const cur = settings.gravity_direction ?? [0, 0, -1];
+                        const active = cur[0] === opt.dir[0] && cur[1] === opt.dir[1] && cur[2] === opt.dir[2];
+                        return (
+                          <button
+                            key={opt.label}
+                            onClick={() => update({ gravity_direction: opt.dir })}
+                            className={`flex-1 border p-2 text-left transition ${
+                              active
+                                ? "border-[var(--drawing-accent)] bg-[var(--drawing-accent)]/5"
+                                : "border-[var(--drawing-line)] hover:bg-[var(--drawing-paper)]"
+                            }`}
+                          >
+                            <span className="block font-gost-upright text-[12px] font-bold text-[var(--drawing-ink)]">
+                              {opt.label}
+                            </span>
+                            <span className="block font-gost text-[10px] text-[var(--drawing-line-thin)] mt-0.5">
+                              {opt.hint}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
                 <p className="font-gost text-[10px] text-[var(--drawing-line-thin)] mt-2 italic">
                   Ускорение свободного падения g&nbsp;=&nbsp;9.81&nbsp;м/с².
                 </p>

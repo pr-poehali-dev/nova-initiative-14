@@ -58,7 +58,9 @@ def action_register(conn, body: dict, ua: str, ip: str) -> dict:
     if len(password) > 200:
         return json_response(400, {'error': 'long_password', 'message': 'Пароль слишком длинный'})
 
-    # Определяем реферера по коду (если задан)
+    # Определяем реферера по коду (если задан). Если код указан, но не найден —
+    # это ошибка ввода (пользователь ошибся в символе). Возвращаем 400, чтобы
+    # человек исправил код, а не регистрировался молча без привязки к другу.
     referrer_id = None
     if ref_code:
         with conn.cursor() as cur:
@@ -69,6 +71,11 @@ def action_register(conn, body: dict, ua: str, ip: str) -> dict:
             r = cur.fetchone()
             if r:
                 referrer_id = int(r[0])
+            else:
+                return json_response(400, {
+                    'error': 'invalid_ref_code',
+                    'message': 'Код приглашения не найден. Проверьте код или уберите его, чтобы зарегистрироваться без приглашения.',
+                })
 
     with conn.cursor() as cur:
         cur.execute("SELECT id FROM sso_users WHERE email = %s", (email,))
