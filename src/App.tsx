@@ -54,6 +54,7 @@ import OwnerEconomics from "./pages/OwnerEconomics";
 import OwnerBlog from "./pages/OwnerBlog";
 import OwnerSeoReindex from "./pages/OwnerSeoReindex";
 import OwnerPartners from "./pages/OwnerPartners";
+import OwnerMusic from "./pages/OwnerMusic";
 import WidgetBeam from "./pages/WidgetBeam";
 import WidgetLanding from "./pages/WidgetLanding";
 import WidgetPresentation from "./pages/WidgetPresentation";
@@ -259,6 +260,7 @@ function MainLayout() {
                 <Route path="/owner/blog" element={<OwnerBlog />} />
                 <Route path="/owner/seo-reindex" element={<OwnerSeoReindex />} />
                 <Route path="/owner/partners" element={<OwnerPartners />} />
+                <Route path="/owner/music" element={<OwnerMusic />} />
                 <Route path="/admin/qr" element={<AdminQr />} />
                 <Route path="/admin/print" element={<PrintFlyer />} />
                 <Route path="/admin/widget-presentation" element={<WidgetPresentation />} />
