@@ -13,10 +13,12 @@
 import {
   type MusicSettings,
   type SourceId,
+  getPattern,
   getScale,
   getTimbre,
   midiToFreq,
 } from "./config";
+import { createNoiseBuffer, makeDriveCurve, triggerDrum } from "./drums";
 import { SensorHub, type SensorState, type Trigger } from "./sensors";
 
 /** Показатели, которые страница рисует в реальном времени. */
@@ -39,6 +41,12 @@ export interface EngineTelemetry {
   spectrum: Uint8Array;
   /** Осциллограмма выхода. */
   waveform: Uint8Array;
+  /** Текущий шаг ритмической сетки, 0..15 — для индикатора долей. */
+  step: number;
+  /** Доли, на которых бьёт бочка в текущем рисунке. */
+  kickSteps: number[];
+  /** Доли малого барабана. */
+  snareSteps: number[];
 }
 
 const MAX_VOICES = 24;
@@ -70,6 +78,22 @@ export class MusicEngine {
   private noiseSource: AudioBufferSourceNode | null = null;
   private noiseGain: GainNode | null = null;
   private noiseFilter: BiquadFilterNode | null = null;
+
+  // Ритм-секция.
+  /** Шина барабанов — идёт мимо главного фильтра, чтобы бит всегда был чётким. */
+  private drumBus: GainNode | null = null;
+  /** Шина баса — тоже мимо фильтра: низ не должен пропадать при закрытом срезе. */
+  private bassBus: GainNode | null = null;
+  /** Насыщение микса: даёт плотность и «мясо». */
+  private driveShaper: WaveShaperNode | null = null;
+  private drivePre: GainNode | null = null;
+  private drivePost: GainNode | null = null;
+  /** Буфер шума для ударных — создаётся один раз. */
+  private noiseBuffer: AudioBuffer | null = null;
+  /** Номер такта для автоматического усложнения рисунка. */
+  private barCount = 0;
+  /** Текущий шаг сетки для телеметрии. */
+  private currentStep = 0;
 
   private settings: MusicSettings;
   private hub: SensorHub;
@@ -103,6 +127,9 @@ export class MusicEngine {
       lastNotes: [],
       spectrum: new Uint8Array(64),
       waveform: new Uint8Array(128),
+      step: 0,
+      kickSteps: [],
+      snareSteps: [],
     };
   }
 
@@ -158,15 +185,48 @@ export class MusicEngine {
     const droneBus = ctx.createGain();
     droneBus.gain.value = 0.7;
 
-    // Граф: шины → фильтр → (эхо-петля) → лимитер → мастер → выход.
+    // Насыщение микса: pre-gain → мягкий клиппер → post-gain.
+    // Даёт плотность и энергию, характерные для «живого» звука в зале.
+    const drivePre = ctx.createGain();
+    drivePre.gain.value = 1;
+    const driveShaper = ctx.createWaveShaper();
+    driveShaper.curve = makeDriveCurve(this.settings.drive);
+    driveShaper.oversample = "2x";
+    const drivePost = ctx.createGain();
+    drivePost.gain.value = 1;
+
+    // Шина барабанов и баса идут МИМО главного фильтра: когда фильтр закрыт
+    // (темнота, тихая комната), бит и низ всё равно остаются читаемыми.
+    const drumBus = ctx.createGain();
+    drumBus.gain.value = this.settings.drumsEnabled ? this.settings.drumsLevel : 0;
+    const bassBus = ctx.createGain();
+    bassBus.gain.value = this.settings.bassEnabled ? this.settings.bassLevel : 0;
+
+    // Компрессор на бас — ровный, «упругий» низ без провалов.
+    const bassComp = ctx.createDynamicsCompressor();
+    bassComp.threshold.value = -20;
+    bassComp.knee.value = 10;
+    bassComp.ratio.value = 6;
+    bassComp.attack.value = 0.008;
+    bassComp.release.value = 0.12;
+
+    // Граф: мелодические шины → фильтр → эхо; ритм-секция → сразу в drive.
     noteBus.connect(filter);
     droneBus.connect(filter);
-    filter.connect(limiter);
+    filter.connect(drivePre);
     filter.connect(delay);
     delay.connect(delayFilter);
     delayFilter.connect(delayGain);
     delayGain.connect(delay); // обратная связь
-    delayGain.connect(limiter);
+    delayGain.connect(drivePre);
+
+    bassBus.connect(bassComp);
+    bassComp.connect(drivePre);
+    drumBus.connect(drivePre);
+
+    drivePre.connect(driveShaper);
+    driveShaper.connect(drivePost);
+    drivePost.connect(limiter);
     limiter.connect(master);
     master.connect(analyser);
     master.connect(ctx.destination);
@@ -180,12 +240,19 @@ export class MusicEngine {
     this.analyser = analyser;
     this.noteBus = noteBus;
     this.droneBus = droneBus;
+    this.drumBus = drumBus;
+    this.bassBus = bassBus;
+    this.drivePre = drivePre;
+    this.driveShaper = driveShaper;
+    this.drivePost = drivePost;
+    this.noiseBuffer = createNoiseBuffer(ctx);
 
     this.telemetry.spectrum = new Uint8Array(analyser.frequencyBinCount);
     this.telemetry.waveform = new Uint8Array(analyser.fftSize);
 
     this.buildDrone();
     this.buildNoise();
+    this.applyDrive();
 
     this.running = true;
     // Плавный вход, чтобы не щёлкало.
@@ -249,7 +316,24 @@ export class MusicEngine {
     if (prevDrone !== next.droneEnabled && this.droneBus) {
       this.droneBus.gain.setTargetAtTime(next.droneEnabled ? 0.7 : 0, t, 0.4);
     }
+    // Ритм-секция: уровни меняются плавно, чтобы бит не обрывался щелчком.
+    this.drumBus?.gain.setTargetAtTime(next.drumsEnabled ? next.drumsLevel : 0, t, 0.12);
+    this.bassBus?.gain.setTargetAtTime(next.bassEnabled ? next.bassLevel : 0, t, 0.12);
+    this.applyDrive();
     await this.hub.applySources(next.sources, ctx);
+  }
+
+  /** Пересчитывает кривую насыщения и компенсирует прирост громкости. */
+  private applyDrive() {
+    if (!this.driveShaper || !this.drivePre || !this.drivePost || !this.ctx) return;
+    const timbre = getTimbre(this.settings.timbreId);
+    // Общий драйв — настройка пользователя плюс характер тембра.
+    const amount = clamp(this.settings.drive * 0.7 + timbre.drive * 0.5, 0, 1);
+    this.driveShaper.curve = makeDriveCurve(amount);
+    const t = this.ctx.currentTime;
+    // Чем сильнее насыщение, тем тише вход и выход — иначе микс «раздувает».
+    this.drivePre.gain.setTargetAtTime(1 + amount * 0.8, t, 0.2);
+    this.drivePost.gain.setTargetAtTime(1 / (1 + amount * 1.1), t, 0.2);
   }
 
   /* ---------------- Построение графа ---------------- */
@@ -319,30 +403,44 @@ export class MusicEngine {
 
   /* ---------------- Сопоставление сенсоров и звука ---------------- */
 
-  /** Текущая тоника: базовая нота плюс сдвиг от времени суток. */
+  /**
+   * Текущая тоника: базовая нота плюс сдвиг от времени суток.
+   * Сдвиг ступенчатый (квинта/кварта), а не произвольный, чтобы бас и мелодия
+   * оставались в ладу и переход звучал как смена тональности, а не как расстройка.
+   */
   private currentRoot(s: SensorState): number {
     const authority = this.settings.sources.clock.enabled ? this.settings.clockAuthority : 0;
-    // Ночью (0–6 ч) опускаем на октаву, днём поднимаем до +5 полутонов.
+    if (authority <= 0.01) return clamp(this.settings.rootMidi, 21, 84);
+    // Ночью ниже, днём выше: -5 (кварта вниз) … +7 (квинта вверх).
     const dayCurve = Math.sin(((s.hourFloat - 6) / 24) * Math.PI * 2);
-    const shift = Math.round(dayCurve * 7 * authority);
-    // Минуты дают мягкий дрейф на кварту за час.
-    const minuteShift = Math.round((s.minute / 60) * 5 * authority);
-    return clamp(this.settings.rootMidi + shift + minuteShift, 21, 84);
+    const musicalSteps = [-5, -3, 0, 3, 5, 7];
+    const idx = Math.round(((dayCurve + 1) / 2) * (musicalSteps.length - 1));
+    const shift = Math.round(musicalSteps[idx] * authority);
+    return clamp(this.settings.rootMidi + shift, 21, 84);
   }
 
-  /** Фактический темп: базовый BPM с поправкой на время суток и активность. */
+  /**
+   * Фактический темп: базовый BPM с поправкой на время суток и активность.
+   * В грувовом режиме поправка мягче — танцевальный бит не должен «вязнуть»
+   * вечером и разгоняться до неразборчивого утром.
+   */
   private currentBpm(s: SensorState): number {
     const authority = this.settings.sources.clock.enabled ? this.settings.clockAuthority : 0;
+    const groove = this.settings.drumsEnabled || this.settings.bassEnabled;
     const dayCurve = Math.sin(((s.hourFloat - 6) / 24) * Math.PI * 2); // -1 ночь … +1 день
-    const clockFactor = 1 + dayCurve * 0.35 * authority;
-    const activityFactor = 1 + s.activity * 0.3;
-    return clamp(this.settings.bpm * clockFactor * activityFactor, 24, 180);
+    const clockFactor = 1 + dayCurve * (groove ? 0.12 : 0.35) * authority;
+    const activityFactor = 1 + s.activity * (groove ? 0.12 : 0.3);
+    const min = groove ? 60 : 24;
+    return clamp(this.settings.bpm * clockFactor * activityFactor, min, 180);
   }
 
   /** Частота среза фильтра: свет, микрофон, мышь. */
   private currentCutoff(s: SensorState): number {
     const src = this.settings.sources;
-    let base = 500 + this.settings.density * 800;
+    // В грувовом режиме (есть ритм-секция) держим фильтр заметно открытее:
+    // закрытый срез «съедает» атаку нот и превращает драйв в вату.
+    const groove = this.settings.drumsEnabled || this.settings.bassEnabled;
+    let base = (groove ? 1400 : 500) + this.settings.density * (groove ? 1800 : 800);
     if (src.light.enabled) {
       base *= 0.5 + s.lightNorm * 2.4 * src.light.intensity;
     }
@@ -377,28 +475,148 @@ export class MusicEngine {
     this.playNote(clamp(midi, 24, 100), t.velocity, t.pan, t.source);
   }
 
-  /** Автоматические ноты по сетке темпа — «дыхание» композиции. */
+  /**
+   * Секвенсор грува: планирует барабаны, бас и мелодические ноты по сетке
+   * шестнадцатых с опережением. Планирование идёт по часам AudioContext,
+   * поэтому ритм не плывёт даже при просадках кадров у браузера.
+   */
   private scheduleAuto(now: number, s: SensorState) {
     const ctx = this.ctx;
     if (!ctx) return;
     const bpm = this.currentBpm(s);
-    const step = 60 / bpm / 2;
-    while (this.nextStepAt < now + 0.15) {
-      const beat = this.stepIndex;
-      const scale = getScale(this.settings.scaleId);
+    // Шаг сетки — шестнадцатая нота.
+    const step = 60 / bpm / 4;
+    const pattern = getPattern(this.settings.patternId);
+    const timbre = getTimbre(this.settings.timbreId);
+    const scale = getScale(this.settings.scaleId);
+
+    while (this.nextStepAt < now + 0.2) {
+      const i = this.stepIndex % 16;
       const root = this.currentRoot(s);
-      // Плотность: сколько шагов сетки озвучивается.
-      const density = this.settings.density * (0.5 + s.activity * 0.8);
-      const gate = beat % 8 === 0 ? 0.55 : beat % 4 === 0 ? 0.35 : 0.18;
-      if (Math.random() < density * gate + (beat % 16 === 0 ? 0.25 : 0)) {
-        const degree = Math.floor(Math.random() * scale.steps.length * 2);
-        const midi = scaleNote(scale.steps, root + 12, degree);
-        const vel = 0.25 + Math.random() * 0.25;
-        this.playNote(clamp(midi, 24, 100), vel, (Math.random() - 0.5) * 1.5, "auto", this.nextStepAt);
+      // Свинг: нечётные шестнадцатые сдвигаются позже — грув начинает «качать».
+      const swingShift = i % 2 === 1 ? step * this.settings.swing * 0.5 : 0;
+      const at = this.nextStepAt + swingShift;
+
+      // Энергия зала: микрофон и активность делают удары сильнее.
+      const energy = 0.75 + s.activity * 0.35;
+
+      if (this.settings.drumsEnabled && this.noiseBuffer && this.drumBus) {
+        // Каждые 8 тактов рисунок слегка усложняется — музыка не «залипает».
+        const variation = this.settings.evolve ? (this.barCount % 8) / 8 : 0;
+
+        if (pattern.kick[i]) {
+          triggerDrum({
+            ctx, dest: this.drumBus, noiseBuffer: this.noiseBuffer,
+            voice: "kick", kit: timbre.drumKit, at,
+            velocity: clamp(0.95 * energy, 0, 1),
+          });
+        }
+        if (pattern.snare[i]) {
+          triggerDrum({
+            ctx, dest: this.drumBus, noiseBuffer: this.noiseBuffer,
+            voice: "snare", kit: timbre.drumKit, at,
+            velocity: clamp(0.8 * energy, 0, 1), pan: 0.12,
+          });
+        }
+        if (pattern.hat[i]) {
+          // Хэт чуть тише на слабых долях — так рисунок дышит.
+          const accent = i % 4 === 0 ? 1 : 0.62;
+          triggerDrum({
+            ctx, dest: this.drumBus, noiseBuffer: this.noiseBuffer,
+            voice: "hat", kit: timbre.drumKit, at,
+            velocity: clamp(0.5 * accent * energy, 0, 1),
+            pan: i % 2 === 0 ? -0.25 : 0.3,
+          });
+        }
+        // Призрачный малый в вариации — добавляет фанковую непредсказуемость.
+        if (variation > 0.5 && !pattern.snare[i] && i % 2 === 1 && Math.random() < 0.14) {
+          triggerDrum({
+            ctx, dest: this.drumBus, noiseBuffer: this.noiseBuffer,
+            voice: "snare", kit: timbre.drumKit, at,
+            velocity: 0.22 * energy, pan: -0.2,
+          });
+        }
       }
+
+      // Басовая линия по рисунку: ведёт гармонию и держит грув.
+      if (this.settings.bassEnabled && this.bassBus) {
+        const deg = pattern.bass[i];
+        if (deg !== null && deg !== undefined) {
+          const midi = scaleNote(scale.steps, root, deg);
+          this.playBass(clamp(midi, 24, 60), 0.9 * energy, at, step * timbre.bassLength * (1 + this.settings.swing * 0.3));
+        }
+      }
+
+      // Мелодические ноты: реже баса, на сильных долях и синкопах.
+      const density = this.settings.density * (0.45 + s.activity * 0.9);
+      const gate = i % 4 === 0 ? 0.5 : i % 2 === 0 ? 0.3 : 0.16;
+      if (Math.random() < density * gate) {
+        const degree = Math.floor(Math.random() * scale.steps.length) + (Math.random() < 0.3 ? scale.steps.length : 0);
+        const midi = scaleNote(scale.steps, root + 12, degree);
+        const vel = 0.3 + Math.random() * 0.3;
+        this.playNote(clamp(midi, 24, 100), vel, (Math.random() - 0.5) * 1.4, "auto", at);
+      }
+
+      this.currentStep = i;
       this.nextStepAt += step;
-      this.stepIndex = (this.stepIndex + 1) % 64;
+      this.stepIndex++;
+      if (this.stepIndex % 16 === 0) this.barCount++;
     }
+  }
+
+  /**
+   * Басовая нота: осциллятор + низкочастотный фильтр с быстрой огибающей.
+   * Именно бас даёт ощущение «драйва» и держит танцевальный пульс.
+   */
+  private playBass(midi: number, velocity: number, at: number, length: number) {
+    const ctx = this.ctx;
+    if (!ctx || !this.bassBus) return;
+    const timbre = getTimbre(this.settings.timbreId);
+    const freq = midiToFreq(midi);
+
+    const osc = ctx.createOscillator();
+    osc.type = timbre.bassWave;
+    osc.frequency.value = freq;
+
+    // Подоктава синусом — «вес» в нижней части спектра, слышно на любой акустике.
+    const sub = ctx.createOscillator();
+    sub.type = "sine";
+    sub.frequency.value = freq / 2;
+    const subGain = ctx.createGain();
+    subGain.gain.value = 0.55;
+
+    // Фильтр с огибающей: щелчок атаки, затем закрытие — классический «пружинистый» бас.
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.Q.value = 6;
+    const openTo = clamp(freq * 7 + 320, 260, 2600);
+    lp.frequency.setValueAtTime(openTo, at);
+    lp.frequency.exponentialRampToValueAtTime(clamp(freq * 2.2, 90, 900), at + Math.min(0.16, length * 0.7));
+
+    const g = ctx.createGain();
+    const dur = Math.max(0.09, length);
+    g.gain.setValueAtTime(0, at);
+    g.gain.linearRampToValueAtTime(clamp(velocity, 0, 1) * 0.5, at + 0.006);
+    g.gain.setTargetAtTime(0.0001, at + dur * 0.55, dur * 0.28);
+
+    osc.connect(lp);
+    sub.connect(subGain);
+    subGain.connect(lp);
+    lp.connect(g);
+    g.connect(this.bassBus);
+
+    osc.start(at);
+    sub.start(at);
+    const end = at + dur + 0.2;
+    osc.stop(end);
+    sub.stop(end);
+    osc.onended = () => {
+      osc.disconnect();
+      sub.disconnect();
+      subGain.disconnect();
+      lp.disconnect();
+      g.disconnect();
+    };
   }
 
   /** Короткая нота: осциллятор + огибающая, самоочищается после затухания. */
@@ -526,6 +744,7 @@ export class MusicEngine {
         const v = Math.abs((waveform[i] - 128) / 128);
         if (v > peak) peak = v;
       }
+      const pat = getPattern(this.settings.patternId);
       this.telemetry = {
         rootMidi: root,
         bpm,
@@ -536,6 +755,9 @@ export class MusicEngine {
         lastNotes: [...this.lastNotes],
         spectrum,
         waveform,
+        step: this.currentStep,
+        kickSteps: pat.kick,
+        snareSteps: pat.snare,
       };
       this.onTelemetry?.(this.telemetry);
     }

@@ -17,9 +17,11 @@ import Icon from "@/components/ui/icon";
 import OwnerGuard from "@/components/owner/OwnerGuard";
 import Seo from "@/components/Seo";
 import MusicVisualizer from "@/components/owner/music/MusicVisualizer";
+import BeatGrid from "@/components/owner/music/BeatGrid";
 import SourceCard from "@/components/owner/music/SourceCard";
 import {
   DEFAULT_SETTINGS,
+  PATTERNS,
   PRESETS,
   SCALES,
   SOURCES,
@@ -216,7 +218,7 @@ function MusicInner() {
     <div className="max-w-[1000px] mx-auto px-4 pt-20 md:pt-24 pb-16">
       <div className="flex items-center justify-between gap-3 mb-1">
         <p className="font-gost text-[11px] uppercase tracking-[0.3em] text-[var(--drawing-line-thin)]">
-          Владелец · Генеративный звук
+          Владелец · Музыка для торгового зала
         </p>
         <Link
           to="/account"
@@ -229,7 +231,7 @@ function MusicInner() {
       <div className="flex items-center gap-3 mb-2 flex-wrap">
         <Icon name="AudioWaveform" size={28} fallback="Music" className="text-[var(--drawing-accent)]" />
         <h1 className="font-gost-upright text-2xl md:text-3xl font-black uppercase tracking-wide">
-          Живой звук устройства
+          Музыка для торгового зала
         </h1>
         <span className="inline-flex items-center gap-1 bg-[var(--drawing-line)] text-[var(--drawing-bg)] px-1.5 py-0.5 font-gost text-[9px] uppercase tracking-wider">
           <Icon name="Crown" size={9} /> Только владелец
@@ -237,11 +239,12 @@ function MusicInner() {
       </div>
 
       <p className="text-sm text-[var(--drawing-line-thin)] leading-relaxed mb-5 max-w-[760px]">
-        Синтезатор строит музыку из того, что происходит с устройством прямо сейчас: часы задают
-        тональность и темп, микрофон и датчик освещённости — плотность и яркость тембра, нажатия
-        клавиш и клики мыши превращаются в ноты выбранного лада. Звук считается в браузере на
-        Web&nbsp;Audio&nbsp;API: аудиофайлы не загружаются, показания сенсоров остаются на устройстве
-        и никуда не отправляются, микрофонный поток анализируется без записи.
+        Фоновая музыка для торгового зала, которая никогда не повторяется и не надоедает: живой
+        бит, упругий бас и грув в выбранном стиле рождаются прямо сейчас — от времени на часах,
+        шума в зале и активности за прилавком. Выберите сценарий под время дня, поставьте колонку
+        и оставьте вкладку открытой. Звук считается в браузере на Web&nbsp;Audio&nbsp;API:
+        аудиофайлы и плейлисты не нужны, значит, нет ни лицензионных отчислений за треки, ни
+        рекламных вставок стримингов.
       </p>
 
       {/* Транспорт и сводка */}
@@ -283,6 +286,10 @@ function MusicInner() {
         </div>
 
         <MusicVisualizer telemetryRef={telemetryRef} running={running} />
+
+        <div className="mt-2">
+          <BeatGrid telemetryRef={telemetryRef} running={running} />
+        </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-3">
           {[
@@ -340,7 +347,7 @@ function MusicInner() {
 
       {/* Пресеты */}
       <p className="font-gost text-[11px] uppercase tracking-[0.2em] text-[var(--drawing-accent)] border-b border-[var(--drawing-line)]/30 pb-1 mb-2">
-        Сценарии
+        Сценарии дня магазина
       </p>
       <div className="grid sm:grid-cols-2 gap-2 mb-6">
         {PRESETS.map((p) => (
@@ -358,6 +365,139 @@ function MusicInner() {
             </p>
           </button>
         ))}
+      </div>
+
+      {/* Ритм-секция — то, что даёт драйв */}
+      <p className="font-gost text-[11px] uppercase tracking-[0.2em] text-[var(--drawing-accent)] border-b border-[var(--drawing-line)]/30 pb-1 mb-2">
+        Ритм-секция и драйв
+      </p>
+      <div className="border-2 border-[var(--drawing-line)] bg-[var(--drawing-bg)] p-4 mb-6">
+        <label className="block mb-3">
+          <span className="font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)] block mb-1">
+            Рисунок бита
+          </span>
+          <select
+            value={settings.patternId}
+            onChange={(e) => patch({ patternId: e.target.value })}
+            className="drawing-input w-full"
+          >
+            {PATTERNS.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.title}
+              </option>
+            ))}
+          </select>
+          <span className="font-gost text-[11px] text-[var(--drawing-line-thin)] leading-snug block mt-1">
+            {PATTERNS.find((p) => p.id === settings.patternId)?.description}
+          </span>
+        </label>
+
+        <div className="grid sm:grid-cols-2 gap-x-5 gap-y-3">
+          <div>
+            <label className="inline-flex items-center gap-2 cursor-pointer mb-1">
+              <input
+                type="checkbox"
+                checked={settings.drumsEnabled}
+                onChange={(e) => patch({ drumsEnabled: e.target.checked })}
+              />
+              <span className="font-gost-upright text-[13px] font-bold text-[var(--drawing-line)]">
+                Барабаны
+              </span>
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={settings.drumsLevel}
+                disabled={!settings.drumsEnabled}
+                onChange={(e) => patch({ drumsLevel: Number(e.target.value) })}
+                className="w-full accent-[var(--drawing-accent)] disabled:opacity-40"
+                aria-label="Громкость барабанов"
+              />
+              <span className="font-mono text-[10px] w-9 text-right shrink-0">
+                {Math.round(settings.drumsLevel * 100)}
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <label className="inline-flex items-center gap-2 cursor-pointer mb-1">
+              <input
+                type="checkbox"
+                checked={settings.bassEnabled}
+                onChange={(e) => patch({ bassEnabled: e.target.checked })}
+              />
+              <span className="font-gost-upright text-[13px] font-bold text-[var(--drawing-line)]">
+                Бас-линия
+              </span>
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={settings.bassLevel}
+                disabled={!settings.bassEnabled}
+                onChange={(e) => patch({ bassLevel: Number(e.target.value) })}
+                className="w-full accent-[var(--drawing-accent)] disabled:opacity-40"
+                aria-label="Громкость баса"
+              />
+              <span className="font-mono text-[10px] w-9 text-right shrink-0">
+                {Math.round(settings.bassLevel * 100)}
+              </span>
+            </div>
+          </div>
+
+          <label className="block">
+            <span className="flex items-center justify-between font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)] mb-1">
+              Свинг (качание доли)
+              <span className="font-mono text-[10px] text-[var(--drawing-line)]">
+                {Math.round(settings.swing * 100)}%
+              </span>
+            </span>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={settings.swing}
+              onChange={(e) => patch({ swing: Number(e.target.value) })}
+              className="w-full accent-[var(--drawing-accent)]"
+            />
+          </label>
+
+          <label className="block">
+            <span className="flex items-center justify-between font-gost text-[10px] uppercase tracking-wider text-[var(--drawing-line-thin)] mb-1">
+              Драйв (плотность звука)
+              <span className="font-mono text-[10px] text-[var(--drawing-line)]">
+                {Math.round(settings.drive * 100)}%
+              </span>
+            </span>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={settings.drive}
+              onChange={(e) => patch({ drive: Number(e.target.value) })}
+              className="w-full accent-[var(--drawing-accent)]"
+            />
+          </label>
+        </div>
+
+        <label className="inline-flex items-center gap-2 cursor-pointer mt-3">
+          <input
+            type="checkbox"
+            checked={settings.evolve}
+            onChange={(e) => patch({ evolve: e.target.checked })}
+          />
+          <span className="font-gost text-[11px] text-[var(--drawing-line)]">
+            Развитие: каждые 8 тактов рисунок слегка меняется — музыка не «залипает»
+          </span>
+        </label>
       </div>
 
       {/* Музыкальные параметры */}
@@ -537,10 +677,12 @@ function MusicInner() {
         Источники сигнала
       </p>
       <p className="font-gost text-[11px] text-[var(--drawing-line-thin)] leading-snug mb-3">
-        Микрофон, освещённость и движение устройства требуют разрешения браузера — оно запрашивается
-        при включении источника. Освещённость читается через AmbientLightSensor: он есть в Chrome на
-        Android и в Chrome на десктопе с включённым флагом; если датчика нет, сервис берёт грубую
-        оценку по системной теме и честно помечает это.
+        Источники решают, как музыка отзывается на жизнь магазина. Для зала главный —
+        «Окружающий звук»: чем больше людей и разговоров, тем плотнее становится грув, а в пустом
+        зале музыка сама успокаивается. Микрофон, освещённость и движение устройства требуют
+        разрешения браузера — оно запрашивается при включении источника. Освещённость читается
+        через AmbientLightSensor; если датчика нет, сервис берёт оценку по системной теме и честно
+        помечает это.
       </p>
       <div className="grid gap-2 lg:grid-cols-2 mb-6">
         {SOURCES.map((meta) => (
@@ -562,11 +704,11 @@ function MusicInner() {
       </p>
       <div className="border border-[var(--drawing-line)]/40 p-4 space-y-2">
         {[
-          "Дрон: три расстроенных осциллятора на тонике — основа, которая держит тональность. Тоника считается из часа и минуты, если включён источник «Время устройства».",
-          "Ноты: каждое событие (клавиша, клик, всплеск звука, импульс сети) берёт ступень выбранного лада, поэтому фальшивых нот не появляется независимо от того, что вы нажимаете.",
-          "Фильтр: один низкочастотный фильтр на всю сумму голосов. Его срез ведут освещённость, громкость комнаты и координата X курсора — это главный источник «движения» в звуке.",
-          "Эхо: линия задержки с обратной связью, время привязано к темпу, глубина — к ползунку «Простор». Тембр задаёт свою базовую обратную связь.",
-          "Лимитер: компрессор на выходе с порогом −12 дБ. Гарантирует, что резкий хлопок в микрофон не даст скачка громкости в наушниках.",
+          "Барабаны: бочка, малый и хэт синтезируются осцилляторами и шумом по выбранному рисунку. Идут мимо общего фильтра, поэтому бит остаётся чётким при любых настройках.",
+          "Бас: своя линия по рисунку с подоктавой и фильтром с огибающей — именно он даёт «упругость» и держит танцевальный пульс. Отдельный компрессор выравнивает низ.",
+          "Свинг: нечётные доли сдвигаются позже, и ровная сетка начинает качать. На блюзовом шаффле выкрутите до 60–70%, на диско оставьте 10–20%.",
+          "Ноты и гармония: каждое событие берёт ступень выбранного лада, поэтому фальшивых нот не появляется. Время суток меняет тональность ступенчато — на кварту или квинту, а не «расстраивает».",
+          "Драйв: мягкое насыщение всего микса. Добавляет плотность и громкость без искажений, звук пробивается сквозь шум зала. Лимитер на выходе держит пик и защищает колонки.",
         ].map((text, i) => (
           <div key={i} className="flex gap-2.5">
             <span className="font-mono text-[10px] text-[var(--drawing-accent)] shrink-0 mt-[3px]">
@@ -578,8 +720,11 @@ function MusicInner() {
       </div>
 
       <p className="font-gost text-[11px] text-[var(--drawing-line-thin)] leading-snug mt-4">
-        Настройки хранятся в браузере этого устройства (localStorage) и не покидают его. При уходе со
-        страницы синтез останавливается, микрофон освобождается.
+        Для зала: подключите к устройству колонку, выберите сценарий и оставьте вкладку открытой —
+        музыка будет идти весь день, не повторяясь. Вкладку нельзя закрывать или переводить
+        устройство в сон, иначе браузер остановит звук. Настройки хранятся в браузере этого
+        устройства (localStorage) и не покидают его; при уходе со страницы синтез останавливается и
+        микрофон освобождается.
       </p>
     </div>
   );
@@ -589,8 +734,8 @@ const OwnerMusic = () => (
   <OwnerGuard from="/owner/music">
     <Seo
       noIndex
-      title="Живой звук устройства · панель владельца · Диплом-Инж.рф"
-      description="Генеративный синтезатор реального времени: музыка из времени на часах, окружающего звука, освещённости и действий на устройстве. Доступ только владельцу."
+      title="Музыка для торгового зала · панель владельца · Диплом-Инж.рф"
+      description="Генеративный синтезатор реального времени для магазина: живой грув с басом и битом, который никогда не повторяется. Доступ только владельцу."
     />
     <MusicInner />
   </OwnerGuard>
